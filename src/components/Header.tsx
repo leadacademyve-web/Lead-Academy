@@ -55,6 +55,30 @@ export default function Header() {
         }}
       >
         {loading ? null : user ? (
+  <>
+    <span style={{ opacity: 0.85 }}>
+      👤 {user.user_metadata?.full_name || user.email?.split('@')[0]}
+    </span>
+
+    <Link href="/dashboard" style={{ color: 'white', textDecoration: 'none' }}>
+      Mi portal
+    </Link>
+
+    <button
+      onClick={logout}
+      style={{
+        background: 'transparent',
+        border: 'none',
+        color: 'white',
+        cursor: 'pointer',
+        fontSize: 14,
+        padding: 0,
+      }}
+    >
+      Salir
+    </button>
+  </>
+) : (
           <>
             <Link href="/dashboard" style={{ color: 'white', textDecoration: 'none' }}>Mi portal</Link>
             <button
