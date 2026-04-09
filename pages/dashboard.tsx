@@ -1,0 +1,489 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
+import { supabase } from '@/src/lib/supabaseClient';
+import { getLiveAccessByEmail } from '@/src/lib/liveAccess';
+
+type ClassVideo = {
+  id: string;
+  title: string;
+  description: string | null;
+  video_url: string;
+  kind: 'live' | 'replay';
+  starts_at: string | null;
+  available_until: string | null;
+  is_active: boolean;
+};
+
+const plans = [
+  { key: 'week', title: '$99 x 1 Semana', envKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY' },
+  { key: 'twoWeeks', title: '$189 x 2 Semanas', envKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS' },
+  { key: 'fourWeeks', title: '$369 x 4 Semanas', envKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS' },
+];
+
+function formatDate(value?: string | null) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString();
+}
+
+function isEmbedUrl(url: string) {
+  return /(youtube\.com\/embed|player\.vimeo\.com|youtube-nocookie\.com|loom\.com\/embed)/i.test(url);
+}
+
+function getDisplayName(user: any) {
+  const metadata = user?.user_metadata || {};
+  const rawName =
+    metadata.full_name ||
+    metadata.name ||
+    metadata.first_name ||
+    metadata.display_name ||
+    '';
+
+  const cleaned = String(rawName).trim();
+  if (cleaned) {
+    const firstName = cleaned.split(' ')[0]?.trim();
+    return firstName || cleaned;
+  }
+
+  const email = String(user?.email || '').trim();
+  if (!email) return 'Estudiante';
+
+  const localPart = email.split('@')[0] || '';
+  const normalized = localPart
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!normalized) return 'Estudiante';
+
+  const firstWord = normalized.split(' ')[0] || normalized;
+  return firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
+}
+
+
+function formatNYTime() {
+  try {
+    return new Intl.DateTimeFormat('es-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(new Date());
+  } catch {
+    return '';
+  }
+}
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [checkingOut, setCheckingOut] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
+  const [accessActive, setAccessActive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [videos, setVideos] = useState<ClassVideo[]>([]);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [nowText, setNowText] = useState('');
+
+  const streamUrl = useMemo(() => (process.env.NEXT_PUBLIC_LIVE_STREAM_EMBED_URL || '').trim(), []);
+
+  const selectedVideo = useMemo(
+    () => videos.find((video) => video.id === selectedVideoId) || null,
+    [videos, selectedVideoId]
+  );
+
+  useEffect(() => {
+    setNowText(formatNYTime());
+    const interval = window.setInterval(() => {
+      setNowText(formatNYTime());
+    }, 30000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadVideos() {
+      const nowIso = new Date().toISOString();
+
+      const { data, error } = await supabase
+        .from('class_videos')
+        .select('id,title,description,video_url,kind,starts_at,available_until,is_active')
+        .or(`and(kind.eq.live,is_active.eq.true),and(kind.eq.replay,available_until.gte.${nowIso})`)
+        .order('kind', { ascending: true })
+        .order('starts_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as ClassVideo[];
+    }
+
+    async function run() {
+      try {
+        const { data } = await supabase.auth.getUser();
+        const user = data.user;
+
+        if (!user) {
+          router.replace('/login?next=/dashboard');
+          return;
+        }
+
+        const email = user.email || '';
+        const access = await getLiveAccessByEmail(email);
+
+        if (!mounted) return;
+
+        setUserEmail(email);
+        setUserName(getDisplayName(user));
+        setAccessActive(access.active);
+
+        if (access.active) {
+          const loadedVideos = await loadVideos().catch(() => []);
+          if (!mounted) return;
+
+          const normalizedVideos = [...loadedVideos];
+
+          if (!normalizedVideos.length && streamUrl) {
+            normalizedVideos.push({
+              id: 'env-live',
+              title: 'Clase en vivo',
+              description: 'Streaming configurado desde variable de entorno.',
+              video_url: streamUrl,
+              kind: 'live',
+              starts_at: null,
+              available_until: null,
+              is_active: true,
+            });
+          }
+
+          setVideos(normalizedVideos);
+
+          const preferred =
+            normalizedVideos.find((video) => video.kind === 'live' && video.is_active) ||
+            normalizedVideos[0] ||
+            null;
+
+          setSelectedVideoId(preferred?.id || null);
+        }
+
+        setLoading(false);
+      } catch (e: any) {
+        if (!mounted) return;
+        setError(e?.message || 'No se pudo cargar el portal.');
+        setLoading(false);
+      }
+    }
+
+    run();
+
+    return () => {
+      mounted = false;
+    };
+  }, [router, streamUrl]);
+
+  async function startCheckout(priceEnvKey: string) {
+    try {
+      setCheckingOut(priceEnvKey);
+      setError(null);
+
+      const res = await fetch('/api/stripe/live-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceKey: priceEnvKey }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'No se pudo iniciar el checkout.');
+      if (!json?.url) throw new Error('No se recibió la URL del pago.');
+
+      window.location.href = json.url;
+    } catch (e: any) {
+      setError(e?.message || 'No se pudo iniciar el checkout.');
+      setCheckingOut(null);
+    }
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    router.push('/');
+  }
+
+  if (loading) {
+    return (
+      <main className="container dashboard" style={{ maxWidth: '96vw', width: '96vw' }}>
+        <div className="panel">Cargando portal...</div>
+      </main>
+    );
+  }
+
+  const hasPlayableVideo = !!selectedVideo?.video_url;
+  const showIframe = hasPlayableVideo && isEmbedUrl(selectedVideo.video_url);
+
+  return (
+    <main
+      className="container dashboard"
+      style={{
+        maxWidth: '98vw',
+        width: '98vw',
+        paddingInline: '0.5vw',
+        minHeight: '100vh',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'url("/trading-bg.jpg")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          filter: 'saturate(1.05) contrast(1.03)',
+          transform: 'scale(1.02)',
+          zIndex: 0,
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(180deg, rgba(2,6,23,0.18) 0%, rgba(2,6,23,0.32) 100%)',
+          zIndex: 0,
+        }}
+      />
+      <div
+        className="dashboard-grid"
+        style={{
+          gridTemplateColumns: accessActive ? '83.5% 16.5%' : undefined,
+          alignItems: 'stretch',
+          gap: '20px',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <section
+          className="panel"
+          style={{
+            height: '84vh',
+            minHeight: '84vh',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: 14,
+            background: 'linear-gradient(180deg, rgba(11,29,58,0.28) 0%, rgba(5,18,40,0.28) 100%)',
+            boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(148,163,184,0.18)',
+          }}
+        >
+{accessActive ? (
+            <>
+              <div
+                className="video-shell"
+                style={{
+                  flex: 1,
+                  height: '100%',
+                  borderRadius: 24,
+                  overflow: 'hidden',
+                  display: 'grid',
+                  background: '#000',
+                  boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 0 1px rgba(96,165,250,0.06), 0 20px 40px rgba(0,0,0,0.28)',
+                }}
+              >
+                {showIframe ? (
+                  <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                    <iframe
+                      src={selectedVideo!.video_url + "?autoplay=1&controls=0&disablekb=1&playsinline=1&rel=0&modestbranding=1"}
+                      title={selectedVideo?.title || 'Clase'}
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                      style={{ width: '100%', height: '100%', border: 0, pointerEvents: 'none' }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        zIndex: 2,
+                      }}
+                    />
+                  </div>
+                ) : hasPlayableVideo ? (
+                  <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
+                    <div>
+                      <div className="eyebrow" style={{ marginBottom: 10 }}>
+                        {selectedVideo?.kind === 'replay' ? 'Repetición disponible' : 'Video configurado'}
+                      </div>
+                      <h2 style={{ marginTop: 0, marginBottom: 10 }}>{selectedVideo?.title}</h2>
+                      <p className="helper" style={{ maxWidth: 620, margin: '0 auto 16px' }}>
+                        {selectedVideo?.description || 'Este video fue cargado, pero la URL no parece ser un enlace embebible compatible.'}
+                      </p>
+                      <a
+                        href={selectedVideo?.video_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-primary"
+                      >
+                        Abrir video
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
+                    <div>
+                      <div className="eyebrow" style={{ marginBottom: 10 }}>Streaming pendiente</div>
+                      <h2 style={{ marginTop: 0, fontSize: 54, lineHeight: 1.05, marginBottom: 16 }}>La clase comenzará pronto</h2>
+                      <p className="helper" style={{ maxWidth: 620, fontSize: 18, lineHeight: 1.5 }}>
+                        Carga una clase en vivo o una repetición en la tabla <code>class_videos</code>. También puedes seguir usando <code>NEXT_PUBLIC_LIVE_STREAM_EMBED_URL</code> como respaldo.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="notice">Tu usuario ya está listo. Activa una suscripción para entrar a la clase en vivo.</div>
+              <div className="cards" style={{ marginBottom: 0 }}>
+                {plans.map((plan) => (
+                  <div className="card" key={plan.key}>
+                    <h3>{plan.title}</h3>
+                    <p className="small">Pago por suscripción con Stripe.</p>
+                    <button
+                      className="btn btn-primary"
+                      style={{ width: '100%' }}
+                      onClick={() => startCheckout(plan.envKey)}
+                      disabled={checkingOut === plan.envKey}
+                    >
+                      {checkingOut === plan.envKey ? 'Abriendo pago...' : 'Entrar a la clase en vivo'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {error && <p className="error">{error}</p>}
+        </section>
+
+        <aside
+          className="panel"
+          style={{
+            height: '84vh',
+            minHeight: '84vh',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: 18,
+            background: 'linear-gradient(180deg, rgba(9,25,54,0.22) 0%, rgba(4,15,35,0.22) 100%)',
+            boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(96,165,250,0.10)',
+          }}
+        >
+          {accessActive ? (
+            <>
+              <div
+                style={{
+                  height: 4,
+                  width: 74,
+                  borderRadius: 999,
+                  marginBottom: 14,
+                  background: 'linear-gradient(90deg, #22c55e 0%, #f59e0b 50%, #3b82f6 100%)',
+                  boxShadow: '0 0 18px rgba(59,130,246,0.22)',
+                }}
+              />
+              <div className="eyebrow">Biblioteca</div>
+              <h2 style={{ marginTop: 12, marginBottom: 18 }}>Clases disponibles</h2>
+
+              <div style={{ display: 'grid', gap: 10, marginBottom: 12, flex: 1, alignContent: 'start' }}>
+                {videos.length ? (
+                  videos.map((video) => {
+                    const selected = selectedVideoId === video.id;
+                    return (
+                      <button
+                        key={video.id}
+                        onClick={() => setSelectedVideoId(video.id)}
+                        style={{
+                          textAlign: 'left',
+                          padding: '14px 16px',
+                          borderRadius: 16,
+                          border: selected ? '1px solid rgba(245, 158, 11, 0.72)' : '1px solid rgba(255,255,255,0.08)',
+                          background: selected ? 'linear-gradient(180deg, rgba(245,158,11,0.14) 0%, rgba(30,41,59,0.72) 100%)' : 'rgba(255,255,255,0.03)',
+                          color: 'white',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
+                          {video.kind === 'live' ? 'Clase en vivo' : 'Repetición 7 días'}
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{video.title}</div>
+                        {video.starts_at ? (
+                          <div style={{ fontSize: 14, opacity: 0.8 }}>{formatDate(video.starts_at)}</div>
+                        ) : null}
+                        {video.kind === 'replay' && video.available_until ? (
+                          <div style={{ fontSize: 13, opacity: 0.7, marginTop: 6 }}>
+                            Disponible hasta {formatDate(video.available_until)}
+                          </div>
+                        ) : null}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="support-item">Aún no hay clases cargadas.</div>
+                )}
+              </div>
+
+
+              <div
+                style={{
+                  marginTop: 'auto',
+                  padding: '12px 14px',
+                  borderRadius: 14,
+                  background: 'linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.025) 100%)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  fontSize: 12,
+                  lineHeight: 1.45,
+                  opacity: 0.88,
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>Soporte</div>
+                <div>Leadacademyve@gmail.com</div>
+                <div>+1 786 557 1816</div>
+              </div>
+
+              <div
+                className="state-pill state-active"
+                style={{ alignSelf: 'flex-end', marginTop: 12 }}
+              >
+                Suscripción activa
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
+                <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => router.push('/')}>
+                  Inicio
+                </button>
+                <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} onClick={signOut}>
+                  Salir
+                </button>
+              </div>
+
+            </>
+          ) : (
+            <>
+              <div className="eyebrow">Soporte</div>
+              <h2 style={{ marginTop: 12 }}>Clases en Vivo</h2>
+              <div className="support-list">
+                <div className="support-item"><strong>Email:</strong><br />Leadacademyve@gmail.com</div>
+                <div className="support-item"><strong>WhatsApp:</strong><br />+1 786 557 1816</div>
+                <div className="support-item"><strong>Acceso:</strong><br />Tu suscripción activa desbloquea la clase en vivo y repeticiones recientes.</div>
+              </div>
+            </>
+          )}
+        </aside>
+      </div>
+    </main>
+  );
+}
