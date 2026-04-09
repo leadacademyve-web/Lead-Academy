@@ -20,13 +20,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { priceKey } = req.body || {};
+    const { priceKey, userEmail } = req.body || {};
     const priceId = PRICE_KEYS[String(priceKey || '')];
     if (!priceId) {
       return res.status(400).json({ error: 'Price ID no configurado para ese plan.' });
     }
 
-    const origin = req.headers.origin || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const normalizedEmail = String(userEmail || '').trim().toLowerCase();
+    if (!normalizedEmail) {
+      return res.status(400).json({ error: 'No se recibió el correo del usuario.' });
+    }
+
+    const origin =
+      req.headers.origin ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      'http://localhost:3000';
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -34,16 +43,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       success_url: `${origin}/dashboard?paid=1`,
       cancel_url: `${origin}/dashboard?canceled=1`,
       allow_promotion_codes: true,
+      customer_email: normalizedEmail,
       metadata: {
         product: 'LIVE_CLASS',
         plan: 'LIVE_CLASS',
         level: PLAN_META[String(priceKey)] || 'LIVE',
+        user_email: normalizedEmail,
       },
       subscription_data: {
         metadata: {
           product: 'LIVE_CLASS',
           plan: 'LIVE_CLASS',
           level: PLAN_META[String(priceKey)] || 'LIVE',
+        user_email: normalizedEmail,
         },
       },
     });

@@ -51,14 +51,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
-      const email = (session.customer_details?.email || session.customer_email || '').toLowerCase();
+      const email = (
+        session.metadata?.user_email ||
+        session.customer_details?.email ||
+        session.customer_email ||
+        ''
+      ).toLowerCase();
       const level = (session.metadata?.level || 'LIVE').toUpperCase();
       if (email) await upsertEntitlement({ email, level, status: 'active', eventId: event.id });
     }
 
     if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as Stripe.Subscription;
-      const email = (await customerEmail(subscription.customer))?.toLowerCase();
+      const email = (
+        subscription.metadata?.user_email ||
+        (await customerEmail(subscription.customer)) ||
+        ''
+      ).toLowerCase();
       const level = String(subscription.metadata?.level || 'LIVE').toUpperCase();
       if (email) {
         await upsertEntitlement({
