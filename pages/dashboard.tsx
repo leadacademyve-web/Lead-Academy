@@ -94,6 +94,47 @@ export default function DashboardPage() {
     [videos, selectedVideoId]
   );
 
+  async function syncAccessForEmail(email: string) {
+    const access = await getLiveAccessByEmail(email);
+    setAccessActive(access.active);
+
+    if (access.active) {
+      const nowIso = new Date().toISOString();
+      const { data } = await supabase
+        .from('class_videos')
+        .select('id,title,description,video_url,kind,starts_at,available_until,is_active')
+        .or(`and(kind.eq.live,is_active.eq.true),and(kind.eq.replay,available_until.gte.${nowIso})`)
+        .order('kind', { ascending: true })
+        .order('starts_at', { ascending: false });
+
+      const normalizedVideos = ([...(data || [])] as ClassVideo[]);
+
+      if (!normalizedVideos.length && streamUrl) {
+        normalizedVideos.push({
+          id: 'env-live',
+          title: 'Clase en vivo',
+          description: 'Streaming configurado desde variable de entorno.',
+          video_url: streamUrl,
+          kind: 'live',
+          starts_at: null,
+          available_until: null,
+          is_active: true,
+        });
+      }
+
+      setVideos(normalizedVideos);
+
+      const preferred =
+        normalizedVideos.find((video) => video.kind === 'live' && video.is_active) ||
+        normalizedVideos[0] ||
+        null;
+
+      setSelectedVideoId(preferred?.id || null);
+    }
+
+    return access.active;
+  }
+
   useEffect(() => {
     setNowText(formatNYTime());
     const interval = window.setInterval(() => {
@@ -191,7 +232,7 @@ export default function DashboardPage() {
       const res = await fetch('/api/stripe/live-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceKey: priceEnvKey }),
+        body: JSON.stringify({ priceKey: priceEnvKey, userEmail }),
       });
 
       const json = await res.json().catch(() => ({}));
