@@ -44,21 +44,22 @@ export default function HomePage() {
 
   return (
     <main style={{ background: 'url("/trading-bg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', minHeight: '100vh', color: 'white' }}>
-      <section style={{ padding: '0px', display: 'flex', justifyContent: 'center' }}>
+      <section style={{ padding: '100px', display: 'flex', justifyContent: 'center' }}>
         <div style={{
-          maxWidth: 1100,
+          maxWidth: 1200,
           width: '100%',
           display: 'grid',
           gridTemplateColumns: '2fr 1fr',
           gap: 30,
-          background: 'rgba(2,6,23,0.65)', backdropFilter: 'blur(6px)',
+          background: 'rgba(2,6,23,0.9)', backdropFilter: 'blur(6px)',
           borderRadius: 20,
-          padding: 10,
+          padding: 30,
           border: '1px solid rgba(255,255,255,0.05)'
         }}>
           <div>
             <h1 style={{ fontSize: 48, lineHeight: 1.1 }}>
-             Lead Academy - Trading & Investing
+             Lead Academy <br />
+Trading & Investing
             </h1>
 
             <p style={{ marginTop: 20, opacity: 0.7 }}>
@@ -121,7 +122,7 @@ export default function HomePage() {
         }}>
           {plans.map((plan) => (
             <div key={plan.id} style={{
-              background: 'rgba(2,6,23,0.65)', backdropFilter: 'blur(6px)',
+              background: 'rgba(2,6,23,0.80)', backdropFilter: 'blur(6px)',
               padding: 25,
               borderRadius: 16,
               border: '1px solid rgba(255,255,255,0.05)'
