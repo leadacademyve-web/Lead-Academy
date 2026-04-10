@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 import { getLiveAccessByEmail } from '@/src/lib/liveAccess';
@@ -114,6 +114,11 @@ export default function DashboardPage() {
   const [videos, setVideos] = useState<ClassVideo[]>([]);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [nowText, setNowText] = useState('');
+  const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', email: '' });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const streamUrl = useMemo(() => (process.env.NEXT_PUBLIC_LIVE_STREAM_EMBED_URL || '').trim(), []);
 
@@ -230,8 +235,15 @@ export default function DashboardPage() {
 
         if (!mounted) return;
 
+        const nextDisplayName = getDisplayName(user);
+
         setUserEmail(email);
-        setUserName(getDisplayName(user));
+        setUserName(nextDisplayName);
+        setProfileForm({
+          fullName: String(user.user_metadata?.full_name || user.user_metadata?.name || ''),
+          phone: String(user.user_metadata?.phone || ''),
+          email,
+        });
         setAccessActive(access.active);
 
         if (access.active) {
@@ -296,6 +308,87 @@ export default function DashboardPage() {
 
     return () => window.clearInterval(interval);
   }, [router]);
+
+  async function updateProfile(e: FormEvent) {
+    e.preventDefault();
+    setSavingProfile(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+
+    const fullName = profileForm.fullName.trim();
+    const phone = profileForm.phone.trim();
+    const nextEmail = profileForm.email.trim().toLowerCase();
+
+    if (!fullName) {
+      setSavingProfile(false);
+      return setProfileError('Debes ingresar tu nombre completo.');
+    }
+
+    if (!nextEmail) {
+      setSavingProfile(false);
+      return setProfileError('Debes ingresar tu correo electrónico.');
+    }
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        throw new Error('Tu sesión expiró. Inicia sesión nuevamente.');
+      }
+
+      const emailChanged = nextEmail !== userEmail.trim().toLowerCase();
+      const { data, error } = await supabase.auth.updateUser({
+        email: emailChanged ? nextEmail : undefined,
+        data: {
+          full_name: fullName,
+          phone,
+        },
+      });
+
+      if (error) throw error;
+
+      if (emailChanged) {
+        const syncRes = await fetch('/api/account/sync-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ newEmail: nextEmail }),
+        });
+
+        const syncJson = await syncRes.json().catch(() => ({}));
+        if (!syncRes.ok) {
+          throw new Error(syncJson?.error || 'No se pudo sincronizar el acceso con el nuevo correo.');
+        }
+      }
+
+      const refreshedUser = data.user;
+      const updatedName = getDisplayName(refreshedUser);
+      const currentEmail = refreshedUser?.email || nextEmail;
+
+      setUserName(updatedName);
+      setUserEmail(currentEmail);
+      setProfileForm({
+        fullName: String(refreshedUser?.user_metadata?.full_name || fullName),
+        phone: String(refreshedUser?.user_metadata?.phone || phone),
+        email: currentEmail,
+      });
+
+      await syncAccessForEmail(nextEmail);
+
+      setProfileSuccess(
+        emailChanged
+          ? 'Tus datos fueron actualizados. Revisa tu correo actual y el nuevo para confirmar el cambio de email.'
+          : 'Tus datos personales fueron actualizados correctamente.'
+      );
+    } catch (e: any) {
+      setProfileError(e?.message || 'No se pudieron actualizar tus datos personales.');
+    } finally {
+      setSavingProfile(false);
+    }
+  }
 
   async function startCheckout(priceEnvKey: string) {
     try {
@@ -412,7 +505,11 @@ export default function DashboardPage() {
                 {showIframe ? (
                   <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                     <iframe
-                      src={selectedVideo!.video_url + "?autoplay=1&controls=0&disablekb=1&playsinline=1&rel=0&modestbranding=1"}
+                      src={
+  selectedVideo!.video_url +
+  (selectedVideo!.video_url.includes('?') ? '&' : '?') +
+  'autoplay=1&controls=0&disablekb=1&playsinline=1&rel=0&modestbranding=1'
+}
                       title={selectedVideo?.title || 'Clase'}
                       allow="autoplay; encrypted-media"
                       allowFullScreen
@@ -456,7 +553,7 @@ export default function DashboardPage() {
                       <p className="helper" style={{ maxWidth: 760, fontSize: 20, lineHeight: 1.6, margin: '0 auto 14px' }}>
                         {nextScheduledClass
                           ? formatNextClassDateNY(nextScheduledClass.starts_at)
-                          : 'Estamos preparando la próxima transmisión para tu acceso.'}
+                          : 'Estamos preparando la próxima transmisión para tu acceso'}
                       </p>
                       {nextScheduledClass?.title ? (
                         <p className="helper" style={{ maxWidth: 620, margin: '0 auto', fontSize: 16, opacity: 0.82 }}>
@@ -464,7 +561,7 @@ export default function DashboardPage() {
                         </p>
                       ) : (
                         <p className="helper" style={{ maxWidth: 620, margin: '0 auto', fontSize: 16, opacity: 0.82 }}>
-                          Puede seleccionar un video de su biblioteca para reproducir
+                          Puede seleccionar un video de su biblioteca para reproducir.
                         </p>
                       )}
                     </div>
@@ -561,6 +658,108 @@ export default function DashboardPage() {
                   })
                 ) : (
                   <div className="support-item">Aún no hay clases cargadas.</div>
+                )}
+              </div>
+
+              <div
+                style={{
+                  padding: '14px 14px 12px',
+                  borderRadius: 16,
+                  background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.025) 100%)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  marginBottom: 12,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                    marginBottom: isEditingProfile ? 8 : 0,
+                  }}
+                >
+                  <div className="eyebrow" style={{ marginBottom: 0 }}>Mi perfil</div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
+                    onClick={() => {
+                      setIsEditingProfile((prev) => !prev);
+                      setProfileError(null);
+                      setProfileSuccess(null);
+                    }}
+                  >
+                    {isEditingProfile ? 'Ocultar perfil' : 'Modificar perfil'}
+                  </button>
+                </div>
+
+                {isEditingProfile ? (
+                  <form onSubmit={updateProfile}>
+                    <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
+                      Nombre completo
+                      <input
+                        className="input"
+                        value={profileForm.fullName}
+                        onChange={(e) => setProfileForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                        autoComplete="name"
+                        required
+                      />
+                    </label>
+
+                    <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
+                      Número telefónico
+                      <input
+                        className="input"
+                        type="tel"
+                        value={profileForm.phone}
+                        onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: e.target.value }))}
+                        autoComplete="tel"
+                      />
+                    </label>
+
+                    <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
+                      Correo electrónico
+                      <input
+                        className="input"
+                        type="email"
+                        value={profileForm.email}
+                        onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
+                        autoComplete="email"
+                        required
+                      />
+                    </label>
+
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                      <button className="btn btn-primary" type="submit" disabled={savingProfile} style={{ width: '100%' }}>
+                        {savingProfile ? 'Guardando...' : 'Guardar datos'}
+                      </button>
+                      <button
+                        className="btn btn-ghost"
+                        type="button"
+                        disabled={savingProfile}
+                        style={{ width: '100%' }}
+                        onClick={() => {
+                          setIsEditingProfile(false);
+                          setProfileError(null);
+                          setProfileSuccess(null);
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+
+                    <p className="helper" style={{ marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.45 }}>
+                      Si cambias tu correo, el sistema te pedirá confirmarlo por email antes de usarlo como acceso principal.
+                    </p>
+
+                    {profileError && <p className="error" style={{ marginTop: 10, marginBottom: 0 }}>{profileError}</p>}
+                    {profileSuccess && <p className="success" style={{ marginTop: 10, marginBottom: 0 }}>{profileSuccess}</p>}
+                  </form>
+                ) : (
+                  <p className="helper" style={{ marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.45 }}>
+                    Aquí puedes corregir tu nombre, teléfono o correo electrónico cuando lo necesites.
+                  </p>
                 )}
               </div>
 
