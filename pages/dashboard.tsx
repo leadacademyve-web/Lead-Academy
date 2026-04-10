@@ -376,11 +376,13 @@ export default function DashboardPage() {
         email: currentEmail,
       });
 
-      await syncAccessForEmail(nextEmail);
+      if (!emailChanged) {
+        await syncAccessForEmail(nextEmail);
+      }
 
       setProfileSuccess(
         emailChanged
-          ? 'Tus datos fueron actualizados. Revisa tu correo actual y el nuevo para confirmar el cambio de email.'
+          ? 'Solicitud enviada. Revisa tu nuevo correo para confirmar el cambio. Hasta que lo confirmes, seguirás usando tu correo actual.'
           : 'Tus datos personales fueron actualizados correctamente.'
       );
     } catch (e: any) {
