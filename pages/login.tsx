@@ -14,10 +14,14 @@ export default function LoginPage() {
 
   // 🔥 NUEVO: mostrar mensaje si fue expulsado por otra sesión
   useEffect(() => {
-    if (router.query.reason === 'other_device') {
-      setError('Tu cuenta fue abierta en otro dispositivo. Por seguridad, cerramos esta sesión.');
-    }
-  }, [router.query]);
+  if (router.query.reason === 'other_device') {
+    setError('Tu cuenta fue abierta en otro dispositivo. Por seguridad, cerramos esta sesión.');
+  }
+
+  if (router.query.email_changed === '1') {
+    setError('Tu correo fue actualizado correctamente. Inicia sesión con tu nuevo email.');
+  }
+}, [router.query]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
