@@ -763,7 +763,7 @@ export default function DashboardPage() {
                     </div>
 
                     <p className="helper" style={{ marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.45 }}>
-                      Si cambias tu correo, el sistema te pedirá confirmarlo por email antes de usarlo como acceso principal.
+                      Si cambias tu correo, el sistema te pedirá confirmarlo por email antes de usarlo como acceso principal. No cambies mas de dos veces el mismo día y evita bloquear tu cuenta por seguridad.
                     </p>
 
                     {profileError && <p className="error" style={{ marginTop: 10, marginBottom: 0 }}>{profileError}</p>}
