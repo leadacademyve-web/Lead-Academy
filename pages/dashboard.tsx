@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 import { getLiveAccessByEmail } from '@/src/lib/liveAccess';
+import { clearLocalSessionToken, validateSingleSession } from '@/src/lib/singleSession';
 
 type ClassVideo = {
   id: string;
@@ -60,7 +61,6 @@ function getDisplayName(user: any) {
   const firstWord = normalized.split(' ')[0] || normalized;
   return firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
 }
-
 
 function formatNYTime() {
   try {
@@ -171,6 +171,15 @@ export default function DashboardPage() {
           return;
         }
 
+        const isValidSession = await validateSingleSession(user.id);
+
+        if (!isValidSession) {
+          await supabase.auth.signOut();
+          clearLocalSessionToken();
+          router.replace('/login?reason=other_device');
+          return;
+        }
+
         const email = user.email || '';
         const access = await getLiveAccessByEmail(email);
 
@@ -224,6 +233,25 @@ export default function DashboardPage() {
     };
   }, [router, streamUrl]);
 
+  useEffect(() => {
+    const interval = window.setInterval(async () => {
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+
+      if (!user) return;
+
+      const isValidSession = await validateSingleSession(user.id);
+
+      if (!isValidSession) {
+        await supabase.auth.signOut();
+        clearLocalSessionToken();
+        router.replace('/login?reason=other_device');
+      }
+    }, 10000);
+
+    return () => window.clearInterval(interval);
+  }, [router]);
+
   async function startCheckout(priceEnvKey: string) {
     try {
       setCheckingOut(priceEnvKey);
@@ -247,6 +275,7 @@ export default function DashboardPage() {
   }
 
   async function signOut() {
+    clearLocalSessionToken();
     await supabase.auth.signOut();
     router.push('/');
   }
@@ -321,7 +350,7 @@ export default function DashboardPage() {
             border: '1px solid rgba(148,163,184,0.18)',
           }}
         >
-{accessActive ? (
+          {accessActive ? (
             <>
               <div
                 className="video-shell"
@@ -477,7 +506,6 @@ export default function DashboardPage() {
                 )}
               </div>
 
-
               <div
                 style={{
                   marginTop: 'auto',
@@ -510,7 +538,6 @@ export default function DashboardPage() {
                   Salir
                 </button>
               </div>
-
             </>
           ) : (
             <>
