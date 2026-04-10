@@ -578,6 +578,35 @@ export default function DashboardPage() {
                         {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
                       </button>
                     </div>
+
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: 'calc(50% + 78px)',
+                        transform: 'translateX(-50%)',
+                        zIndex: 3,
+                        width: 'min(92%, 460px)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => setVideoUnavailable(true)}
+                        style={{
+                          width: '100%',
+                          minHeight: 58,
+                          fontSize: 18,
+                          fontWeight: 800,
+                          borderRadius: 18,
+                          boxShadow: '0 10px 30px rgba(0,0,0,0.28)',
+                        }}
+                      >
+                        Click aquí para ver el estado de la transmisión
+                      </button>
+                    </div>
                   </div>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
