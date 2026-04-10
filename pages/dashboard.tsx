@@ -28,6 +28,34 @@ function formatDate(value?: string | null) {
   return d.toLocaleString();
 }
 
+function formatNextClassDateNY(value?: string | null) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+
+  try {
+    const datePart = new Intl.DateTimeFormat('es-ES', {
+      timeZone: 'America/New_York',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(d);
+
+    const timePart = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(d);
+
+    const normalizedDate = datePart.charAt(0).toUpperCase() + datePart.slice(1);
+    return `${normalizedDate} - ${timePart} - New York Time`;
+  } catch {
+    return formatDate(value);
+  }
+}
+
 function isEmbedUrl(url: string) {
   return /(youtube\.com\/embed|player\.vimeo\.com|youtube-nocookie\.com|loom\.com\/embed)/i.test(url);
 }
@@ -93,6 +121,23 @@ export default function DashboardPage() {
     () => videos.find((video) => video.id === selectedVideoId) || null,
     [videos, selectedVideoId]
   );
+
+  const nextScheduledClass = useMemo(() => {
+    const now = Date.now();
+    return (
+      videos
+        .filter((video) => video.starts_at)
+        .filter((video) => {
+          const ts = new Date(video.starts_at as string).getTime();
+          return !Number.isNaN(ts) && ts > now;
+        })
+        .sort((a, b) => {
+          const aTs = new Date(a.starts_at as string).getTime();
+          const bTs = new Date(b.starts_at as string).getTime();
+          return aTs - bTs;
+        })[0] || null
+    );
+  }, [videos]);
 
   async function syncAccessForEmail(email: string) {
     const access = await getLiveAccessByEmail(email);
@@ -404,11 +449,24 @@ export default function DashboardPage() {
                 ) : (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
                     <div>
-                      <div className="eyebrow" style={{ marginBottom: 10 }}>Streaming pendiente</div>
-                      <h2 style={{ marginTop: 0, fontSize: 54, lineHeight: 1.05, marginBottom: 16 }}>La clase comenzará pronto</h2>
-                      <p className="helper" style={{ maxWidth: 620, fontSize: 18, lineHeight: 1.5 }}>
-                        Carga una clase en vivo o una repetición en la tabla <code>class_videos</code>. También puedes seguir usando <code>NEXT_PUBLIC_LIVE_STREAM_EMBED_URL</code> como respaldo.
+                      <div className="eyebrow" style={{ marginBottom: 10 }}>Próxima clase programada</div>
+                      <h2 style={{ marginTop: 0, fontSize: 54, lineHeight: 1.05, marginBottom: 16 }}>
+                        {nextScheduledClass ? 'La próxima clase comenzará' : 'La clase comenzará pronto'}
+                      </h2>
+                      <p className="helper" style={{ maxWidth: 760, fontSize: 20, lineHeight: 1.6, margin: '0 auto 14px' }}>
+                        {nextScheduledClass
+                          ? formatNextClassDateNY(nextScheduledClass.starts_at)
+                          : 'Estamos preparando la próxima transmisión en vivo para tu acceso.'}
                       </p>
+                      {nextScheduledClass?.title ? (
+                        <p className="helper" style={{ maxWidth: 620, margin: '0 auto', fontSize: 16, opacity: 0.82 }}>
+                          {nextScheduledClass.title}
+                        </p>
+                      ) : (
+                        <p className="helper" style={{ maxWidth: 620, margin: '0 auto', fontSize: 16, opacity: 0.82 }}>
+                          Carga una clase en vivo o una repetición en la tabla <code>class_videos</code>. También puedes seguir usando <code>NEXT_PUBLIC_LIVE_STREAM_EMBED_URL</code> como respaldo.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
