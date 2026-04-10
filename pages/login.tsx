@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
+import { registerSingleSession } from '@/src/lib/singleSession';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,6 +39,7 @@ export default function LoginPage() {
       return setError('No se pudo recuperar tu usuario.');
     }
 
+    await registerSingleSession(data.user.id);
     router.push(next);
   }
 
