@@ -119,6 +119,7 @@ export default function DashboardPage() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [videoUnavailable, setVideoUnavailable] = useState(false);
 
   const streamUrl = useMemo(() => (process.env.NEXT_PUBLIC_LIVE_STREAM_EMBED_URL || '').trim(), []);
 
@@ -291,6 +292,10 @@ export default function DashboardPage() {
   }, [router, streamUrl]);
 
   useEffect(() => {
+    setVideoUnavailable(false);
+  }, [selectedVideoId]);
+
+  useEffect(() => {
     const interval = window.setInterval(async () => {
       const { data } = await supabase.auth.getUser();
       const user = data.user;
@@ -439,7 +444,7 @@ export default function DashboardPage() {
     );
   }
 
-  const hasPlayableVideo = !!selectedVideo?.video_url;
+  const hasPlayableVideo = !!selectedVideo?.video_url && !videoUnavailable;
   const showIframe = hasPlayableVideo && isEmbedUrl(selectedVideo.video_url);
 
   return (
@@ -519,13 +524,14 @@ export default function DashboardPage() {
                   <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                     <iframe
                       src={
-  selectedVideo!.video_url +
-  (selectedVideo!.video_url.includes('?') ? '&' : '?') +
-  'autoplay=1&controls=0&disablekb=1&playsinline=1&rel=0&modestbranding=1'
-}
+                        selectedVideo!.video_url +
+                        (selectedVideo!.video_url.includes('?') ? '&' : '?') +
+                        'autoplay=1&controls=0&disablekb=1&playsinline=1&rel=0&modestbranding=1'
+                      }
                       title={selectedVideo?.title || 'Clase'}
                       allow="autoplay; encrypted-media"
                       allowFullScreen
+                      onError={() => setVideoUnavailable(true)}
                       style={{ width: '100%', height: '100%', border: 0, pointerEvents: 'none' }}
                     />
                     <div
@@ -533,8 +539,22 @@ export default function DashboardPage() {
                         position: 'absolute',
                         inset: 0,
                         zIndex: 2,
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'flex-end',
+                        padding: 18,
+                        pointerEvents: 'none',
                       }}
-                    />
+                    >
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ pointerEvents: 'auto' }}
+                        onClick={() => setVideoUnavailable(true)}
+                      >
+                        Mostrar pantalla de espera
+                      </button>
+                    </div>
                   </div>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
@@ -559,16 +579,28 @@ export default function DashboardPage() {
                 ) : (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
                     <div>
-                      <div className="eyebrow" style={{ marginBottom: 10 }}>Próxima clase programada</div>
+                      <div className="eyebrow" style={{ marginBottom: 10 }}>
+                        {videoUnavailable ? 'Transmisión temporalmente no disponible' : 'Próxima clase programada'}
+                      </div>
                       <h2 style={{ marginTop: 0, fontSize: 54, lineHeight: 1.05, marginBottom: 16 }}>
-                        {nextScheduledClass ? 'La próxima clase se reproducirá en este portal' : 'Transmisión en VIVO'}
+                        {videoUnavailable
+                          ? 'Transmisión en VIVO'
+                          : nextScheduledClass
+                            ? 'La próxima clase se reproducirá en este portal'
+                            : 'Transmisión en VIVO'}
                       </h2>
                       <p className="helper" style={{ maxWidth: 760, fontSize: 20, lineHeight: 1.6, margin: '0 auto 14px' }}>
-                        {nextScheduledClass
-                          ? formatNextClassDateNY(nextScheduledClass.starts_at)
-                          : 'Estamos preparando la próxima transmisión para tu acceso'}
+                        {videoUnavailable
+                          ? 'Estamos preparando la próxima transmisión para tu acceso.'
+                          : nextScheduledClass
+                            ? formatNextClassDateNY(nextScheduledClass.starts_at)
+                            : 'Estamos preparando la próxima transmisión para tu acceso'}
                       </p>
-                      {nextScheduledClass?.title ? (
+                      {videoUnavailable ? (
+                        <p className="helper" style={{ maxWidth: 620, margin: '0 auto', fontSize: 16, opacity: 0.82 }}>
+                          El video actual no está disponible en este momento. Puedes volver a intentarlo más tarde.
+                        </p>
+                      ) : nextScheduledClass?.title ? (
                         <p className="helper" style={{ maxWidth: 620, margin: '0 auto', fontSize: 16, opacity: 0.82 }}>
                           {nextScheduledClass.title}
                         </p>
