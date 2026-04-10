@@ -451,12 +451,12 @@ export default function DashboardPage() {
                     <div>
                       <div className="eyebrow" style={{ marginBottom: 10 }}>Próxima clase programada</div>
                       <h2 style={{ marginTop: 0, fontSize: 54, lineHeight: 1.05, marginBottom: 16 }}>
-                        {nextScheduledClass ? 'La próxima clase comenzará' : 'La clase comenzará pronto'}
+                        {nextScheduledClass ? 'La próxima clase se reproducirá en este portal' : 'Transmisión en VIVO'}
                       </h2>
                       <p className="helper" style={{ maxWidth: 760, fontSize: 20, lineHeight: 1.6, margin: '0 auto 14px' }}>
                         {nextScheduledClass
                           ? formatNextClassDateNY(nextScheduledClass.starts_at)
-                          : 'Estamos preparando la próxima transmisión en vivo para tu acceso.'}
+                          : 'Estamos preparando la próxima transmisión para tu acceso.'}
                       </p>
                       {nextScheduledClass?.title ? (
                         <p className="helper" style={{ maxWidth: 620, margin: '0 auto', fontSize: 16, opacity: 0.82 }}>
@@ -464,7 +464,7 @@ export default function DashboardPage() {
                         </p>
                       ) : (
                         <p className="helper" style={{ maxWidth: 620, margin: '0 auto', fontSize: 16, opacity: 0.82 }}>
-                          Carga una clase en vivo o una repetición en la tabla <code>class_videos</code>. También puedes seguir usando <code>NEXT_PUBLIC_LIVE_STREAM_EMBED_URL</code> como respaldo.
+                          Tu próxima clase se transmitirá <code> EN </code>. VIVO <code>NEXT_PUBLIC_LIVE_STREAM_EMBED_URL</code> como respaldo.
                         </p>
                       )}
                     </div>
