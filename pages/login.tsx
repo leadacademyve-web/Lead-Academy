@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
@@ -11,6 +11,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 🔥 NUEVO: mostrar mensaje si fue expulsado por otra sesión
+  useEffect(() => {
+    if (router.query.reason === 'other_device') {
+      setError('Tu cuenta fue abierta en otro dispositivo. Por seguridad, cerramos esta sesión.');
+    }
+  }, [router.query]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
