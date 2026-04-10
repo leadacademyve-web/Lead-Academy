@@ -366,7 +366,7 @@ export default function DashboardPage() {
 
       const refreshedUser = data.user;
       const updatedName = getDisplayName(refreshedUser);
-      const currentEmail = refreshedUser?.email || nextEmail;
+      const currentEmail = refreshedUser?.email || userEmail;
 
       setUserName(updatedName);
       setUserEmail(currentEmail);
@@ -378,28 +378,30 @@ export default function DashboardPage() {
 
       if (!emailChanged) {
         await syncAccessForEmail(nextEmail);
+        setProfileSuccess('Tus datos personales fueron actualizados correctamente.');
+      } else {
+        setProfileSuccess(
+          'Solicitud enviada. Revisa tu nuevo correo para confirmar el cambio. Hasta que lo confirmes, seguirás usando tu correo actual.'
+        );
       }
-
-      setProfileSuccess(
-        emailChanged
-          ? 'Solicitud enviada. Revisa tu nuevo correo para confirmar el cambio. Hasta que lo confirmes, seguirás usando tu correo actual.'
-          : 'Tus datos personales fueron actualizados correctamente.'
-      );
     } catch (e: any) {
-  const message = String(e?.message || '').toLowerCase();
+      const message = String(e?.message || '').toLowerCase();
 
-  if (message.includes('email rate limit exceeded')) {
-    setProfileError('Has intentado cambiar el correo varias veces en poco tiempo. Espera unos minutos e inténtalo nuevamente.');
-  } else if (message.includes('invalid email')) {
-    setProfileError('El correo electrónico no es válido.');
-  } else if (message.includes('already registered')) {
-    setProfileError('Este correo ya está registrado en el sistema.');
-  } else {
-    setProfileError('No se pudieron actualizar tus datos personales. Inténtalo nuevamente.');
+      if (message.includes('email rate limit exceeded')) {
+        setProfileError(
+          'Has intentado cambiar el correo varias veces en poco tiempo. Espera unos minutos e inténtalo nuevamente.'
+        );
+      } else if (message.includes('invalid email')) {
+        setProfileError('El correo electrónico no es válido.');
+      } else if (message.includes('already registered')) {
+        setProfileError('Este correo ya está registrado en el sistema.');
+      } else {
+        setProfileError('No se pudieron actualizar tus datos personales. Inténtalo nuevamente.');
+      }
+    } finally {
+      setSavingProfile(false);
+    }
   }
-} finally {
-  setSavingProfile(false);
-}
 
   async function startCheckout(priceEnvKey: string) {
     try {
