@@ -4,9 +4,21 @@ import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 import { useAuthUser } from '@/src/context/AuthUserProvider';
 
+function getUserName(user: any) {
+  const metadata = user?.user_metadata || {};
+
+  return (
+    metadata.full_name ||
+    metadata.name ||
+    metadata.first_name ||
+    (user?.email ? user.email.split('@')[0] : '')
+  );
+}
+
 export default function Header() {
   const { user, setUser, loading } = useAuthUser();
   const router = useRouter();
+  const userName = getUserName(user);
 
   async function logout() {
     await supabase.auth.signOut();
@@ -56,7 +68,10 @@ export default function Header() {
       >
         {loading ? null : user ? (
           <>
-            <Link href="/dashboard" style={{ color: 'white', textDecoration: 'none' }}>Mi portal</Link>
+            <span style={{ opacity: 0.8 }}>👤 {userName}</span>
+            <Link href="/dashboard" style={{ color: 'white', textDecoration: 'none' }}>
+              Mi portal
+            </Link>
             <button
               onClick={logout}
               style={{
