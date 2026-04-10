@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 import { getLiveAccessByEmail } from '@/src/lib/liveAccess';
@@ -120,6 +120,8 @@ export default function DashboardPage() {
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const videoShellRef = useRef<HTMLDivElement | null>(null);
 
   const streamUrl = useMemo(() => (process.env.NEXT_PUBLIC_LIVE_STREAM_EMBED_URL || '').trim(), []);
 
@@ -294,6 +296,30 @@ export default function DashboardPage() {
   useEffect(() => {
     setVideoUnavailable(false);
   }, [selectedVideoId]);
+
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setIsFullscreen(document.fullscreenElement === videoShellRef.current);
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  async function toggleFullscreen() {
+    const element = videoShellRef.current;
+    if (!element) return;
+
+    try {
+      if (document.fullscreenElement === element) {
+        await document.exitFullscreen();
+      } else {
+        await element.requestFullscreen();
+      }
+    } catch {
+      // ignore fullscreen errors
+    }
+  }
 
   useEffect(() => {
     const interval = window.setInterval(async () => {
@@ -509,6 +535,7 @@ export default function DashboardPage() {
           {accessActive ? (
             <>
               <div
+                ref={videoShellRef}
                 className="video-shell"
                 style={{
                   flex: 1,
@@ -529,7 +556,7 @@ export default function DashboardPage() {
                         'autoplay=1&controls=0&disablekb=1&playsinline=1&rel=0&modestbranding=1'
                       }
                       title={selectedVideo?.title || 'Clase'}
-                      allow="autoplay; encrypted-media"
+                      allow="autoplay; encrypted-media; fullscreen"
                       allowFullScreen
                       onError={() => setVideoUnavailable(true)}
                       style={{ width: '100%', height: '100%', border: 0, pointerEvents: 'none' }}
@@ -537,22 +564,18 @@ export default function DashboardPage() {
                     <div
                       style={{
                         position: 'absolute',
-                        inset: 0,
-                        zIndex: 2,
-                        display: 'flex',
-                        alignItems: 'flex-end',
-                        justifyContent: 'flex-end',
-                        padding: 18,
-                        pointerEvents: 'none',
+                        top: 16,
+                        right: 16,
+                        zIndex: 3,
                       }}
                     >
                       <button
                         type="button"
                         className="btn btn-secondary"
-                        style={{ pointerEvents: 'auto' }}
-                        onClick={() => setVideoUnavailable(true)}
+                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        onClick={toggleFullscreen}
                       >
-                        Mostrar pantalla de espera
+                        {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
                       </button>
                     </div>
                   </div>
@@ -577,7 +600,23 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
+                  <div style={{ position: 'relative', display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 16,
+                        right: 16,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        onClick={toggleFullscreen}
+                      >
+                        {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                      </button>
+                    </div>
                     <div>
                       <div className="eyebrow" style={{ marginBottom: 10 }}>
                         {videoUnavailable ? 'Transmisión temporalmente no disponible' : 'Próxima clase programada'}
