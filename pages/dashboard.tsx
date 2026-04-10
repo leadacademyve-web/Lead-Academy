@@ -386,11 +386,20 @@ export default function DashboardPage() {
           : 'Tus datos personales fueron actualizados correctamente.'
       );
     } catch (e: any) {
-      setProfileError(e?.message || 'No se pudieron actualizar tus datos personales.');
-    } finally {
-      setSavingProfile(false);
-    }
+  const message = String(e?.message || '').toLowerCase();
+
+  if (message.includes('email rate limit exceeded')) {
+    setProfileError('Has intentado cambiar el correo varias veces en poco tiempo. Espera unos minutos e inténtalo nuevamente.');
+  } else if (message.includes('invalid email')) {
+    setProfileError('El correo electrónico no es válido.');
+  } else if (message.includes('already registered')) {
+    setProfileError('Este correo ya está registrado en el sistema.');
+  } else {
+    setProfileError('No se pudieron actualizar tus datos personales. Inténtalo nuevamente.');
   }
+} finally {
+  setSavingProfile(false);
+}
 
   async function startCheckout(priceEnvKey: string) {
     try {
