@@ -1,4 +1,32 @@
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { supabase } from '@/src/lib/supabaseClient';
+
 export default function EmailConfirmedPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    let active = true;
+
+    async function run() {
+      try {
+        await supabase.auth.signOut();
+      } catch {}
+
+      if (!active) return;
+
+      setTimeout(() => {
+        router.replace('/login?email_changed=1');
+      }, 1800);
+    }
+
+    run();
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
   return (
     <main
       style={{
@@ -75,7 +103,7 @@ export default function EmailConfirmedPage() {
             color: 'rgba(255,255,255,0.84)',
           }}
         >
-          Ya puedes cerrar esta pestaña y continuar usando tu portal normalmente.
+          Cerrando tu sesión actual y redirigiendo al inicio de sesión...
         </p>
       </div>
     </main>
