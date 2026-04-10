@@ -464,7 +464,7 @@ export default function DashboardPage() {
                         </p>
                       ) : (
                         <p className="helper" style={{ maxWidth: 620, margin: '0 auto', fontSize: 16, opacity: 0.82 }}>
-                          Tu próxima clase se transmitirá <code> EN </code>. VIVO <code>NEXT_PUBLIC_LIVE_STREAM_EMBED_URL</code> como respaldo.
+                          Puede seleccionar un video de su biblioteca para reproducir
                         </p>
                       )}
                     </div>
