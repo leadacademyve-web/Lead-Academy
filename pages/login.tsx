@@ -96,6 +96,7 @@ export default function LoginPage() {
               {loading ? 'Ingresando...' : 'Entrar'}
             </button>
             <Link href="/signup" className="btn btn-secondary">Crear cuenta</Link>
+            <Link href="/" className="btn btn-ghost">Inicio</Link>
           </div>
 
           {error && <p className="error">{error}</p>}

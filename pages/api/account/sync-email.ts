@@ -69,6 +69,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (upsertError) throw upsertError;
 
+    const { error: updateClassAccessError } = await supabase
+      .from('user_class_access')
+      .update({ email: requestedNewEmail })
+      .eq('email', currentEmail);
+
+    if (updateClassAccessError) {
+      console.error('[sync-email] user_class_access update error', updateClassAccessError);
+    }
+
     return res.status(200).json({ copied: payload.length });
   } catch (error: any) {
     console.error('[sync-email] error', error);

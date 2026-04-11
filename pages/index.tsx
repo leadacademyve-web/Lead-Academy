@@ -5,35 +5,41 @@ import { useAuthUser } from '@/src/context/AuthUserProvider'
 const plans = [
   {
     id: 'week',
-    title: '1 Semana',
+    title: '5 clases',
     price: '$99',
-    note: 'Suscripción semanal',
+    note: 'Renovación semanal si eliges suscripción',
+    priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY',
+    oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME',
     bullets: [
       'Acceso al portal privado',
       'Acceso a la clase en vivo',
-      'Grabaciones disponibles por 7 dias',
+      'Se agregan 5 clases a tu saldo',
     ],
   },
   {
     id: 'two-weeks',
-    title: '2 Semanas',
+    title: '10 clases',
     price: '$189',
-    note: 'Suscripción de dos semanas',
+    note: 'Renovación quincenal si eliges suscripción',
+    priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS',
+    oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME',
     bullets: [
       'Acceso al portal privado',
       'Acceso a la clase en vivo',
-      'Mejor relación costo / acceso',
+      'Se agregan 10 clases a tu saldo',
     ],
   },
   {
     id: 'month',
-    title: '4 Semanas',
+    title: '20 clases',
     price: '$369',
-    note: 'Suscripción de cuatro semanas',
+    note: 'Renovación mensual si eliges suscripción',
+    priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
+    oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME',
     bullets: [
       'Acceso al portal privado',
       'Acceso a la clase en vivo',
-      'Consolida tu plan y estrategia',
+      'Se agregan 20 clases a tu saldo',
     ],
   },
 ]
@@ -69,7 +75,7 @@ Trading & Investing
 
             <div style={{ marginTop: 30, display: 'flex', gap: 15 }}>
               <Link href={user ? '/dashboard' : '/signup'} className="btn btn-primary">
-                Entrar a la clase en vivo
+                {user ? 'Ir al portal' : 'Crear cuenta'}
               </Link>
 
               <Link href="/login" className="btn btn-secondary">
@@ -93,8 +99,8 @@ Trading & Investing
             <p style={{ marginTop: 10, opacity: 0.7, lineHeight: 1.8 }}>
               1. Crea tu cuenta o inicia sesión.<br />
               2. Selecciona el plan de acceso que prefieras.<br />
-              3. Activa tu suscripción de preferencia.<br />
-              4. Entra al dashboard y mira la clase en vivo o las repeticiones disponibles.
+              3. Antes de pagar deberás aceptar los términos y condiciones.<br />
+              4. Si eliges suscripción, Stripe hará recargos automáticos según la frecuencia del plan.
             </p>
 
             <button
@@ -123,7 +129,7 @@ Trading & Investing
           {plans.map((plan) => (
             <div key={plan.id} style={{
               background: 'rgba(2,6,23,0.80)', backdropFilter: 'blur(6px)',
-              padding: 25,
+              padding: 30,
               borderRadius: 16,
               border: '1px solid rgba(255,255,255,0.05)'
             }}>
@@ -136,11 +142,15 @@ Trading & Investing
               </ul>
 
               <Link
-                href={user ? '/dashboard' : '/signup'}
+                href={
+                  user
+                    ? `/checkout-confirm?subscriptionPriceKey=${encodeURIComponent(plan.priceKey)}&oneTimePriceKey=${encodeURIComponent(plan.oneTimePriceKey)}&title=${encodeURIComponent(plan.title)}&price=${encodeURIComponent(plan.price)}`
+                    : '/signup'
+                }
                 className="btn btn-primary"
                 style={{ width: '100%', marginTop: 20 }}
               >
-                Entrar a la clase en vivo
+                Comprar este plan
               </Link>
             </div>
           ))}

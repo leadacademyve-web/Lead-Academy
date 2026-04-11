@@ -5,12 +5,21 @@ const PRICE_KEYS: Record<string, string | undefined> = {
   NEXT_PUBLIC_STRIPE_PRICE_WEEKLY: process.env.STRIPE_PRICE_WEEKLY || process.env.NEXT_PUBLIC_STRIPE_PRICE_WEEKLY,
   NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS: process.env.STRIPE_PRICE_TWO_WEEKS || process.env.NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS,
   NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS: process.env.STRIPE_PRICE_FOUR_WEEKS || process.env.NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS,
+  NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME:
+    process.env.STRIPE_PRICE_WEEKLY_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME || 'price_1TKl9rIlpt6ACkWDBdKn9CZj',
+  NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME:
+    process.env.STRIPE_PRICE_TWO_WEEKS_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME || 'price_1TKlBGIlpt6ACkWDNGKXySNp',
+  NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME:
+    process.env.STRIPE_PRICE_FOUR_WEEKS_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME || 'price_1TKlC1Ilpt6ACkWDW05okTns',
 };
 
 const PLAN_META: Record<string, string> = {
   NEXT_PUBLIC_STRIPE_PRICE_WEEKLY: 'WEEKLY',
   NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS: 'TWO_WEEKS',
   NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS: 'FOUR_WEEKS',
+  NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME: 'WEEKLY',
+  NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME: 'TWO_WEEKS',
+  NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME: 'FOUR_WEEKS',
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -20,7 +29,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { priceKey, userEmail } = req.body || {};
+    const { priceKey, userEmail, purchaseType, acceptedTerms } = req.body || {};
+    const normalizedPurchaseType =
+      String(purchaseType || '').toLowerCase() === 'subscription' ? 'subscription' : 'one_time';
+
     const priceId = PRICE_KEYS[String(priceKey || '')];
     if (!priceId) {
       return res.status(400).json({ error: 'Price ID no configurado para ese plan.' });
@@ -31,33 +43,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'No se recibió el correo del usuario.' });
     }
 
+    if (!acceptedTerms) {
+      return res.status(400).json({ error: 'Debes aceptar los términos y condiciones antes de continuar.' });
+    }
+
     const origin =
       req.headers.origin ||
       process.env.NEXT_PUBLIC_SITE_URL ||
       process.env.NEXT_PUBLIC_APP_URL ||
       'http://localhost:3000';
 
+    const sharedMetadata = {
+      product: 'LIVE_CLASS',
+      plan: 'LIVE_CLASS',
+      level: PLAN_META[String(priceKey)] || 'LIVE',
+      user_email: normalizedEmail,
+      purchase_type: normalizedPurchaseType,
+    };
+
     const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
+      mode: normalizedPurchaseType === 'subscription' ? 'subscription' : 'payment',
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/dashboard?paid=1`,
       cancel_url: `${origin}/dashboard?canceled=1`,
       allow_promotion_codes: true,
       customer_email: normalizedEmail,
-      metadata: {
-        product: 'LIVE_CLASS',
-        plan: 'LIVE_CLASS',
-        level: PLAN_META[String(priceKey)] || 'LIVE',
-        user_email: normalizedEmail,
-      },
-      subscription_data: {
-        metadata: {
-          product: 'LIVE_CLASS',
-          plan: 'LIVE_CLASS',
-          level: PLAN_META[String(priceKey)] || 'LIVE',
-        user_email: normalizedEmail,
-        },
-      },
+      metadata: sharedMetadata,
+      ...(normalizedPurchaseType === 'subscription'
+        ? {
+            subscription_data: {
+              metadata: sharedMetadata,
+            },
+          }
+        : {}),
     });
 
     return res.status(200).json({ url: session.url });

@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 import { getLiveAccessByEmail } from '@/src/lib/liveAccess';
+import { COUNTRY_OPTIONS, DEFAULT_COUNTRY_CODE, findCountryByCode } from '@/src/lib/countries';
 import { clearLocalSessionToken, validateSingleSession } from '@/src/lib/singleSession';
 
 type ClassVideo = {
@@ -16,9 +17,24 @@ type ClassVideo = {
 };
 
 const plans = [
-  { key: 'week', title: '$99 x 1 Semana', envKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY' },
-  { key: 'twoWeeks', title: '$189 x 2 Semanas', envKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS' },
-  { key: 'fourWeeks', title: '$369 x 4 Semanas', envKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS' },
+  {
+    key: 'week',
+    title: '$99 x 5 clases',
+    subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY',
+    oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME',
+  },
+  {
+    key: 'twoWeeks',
+    title: '$189 x 10 clases',
+    subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS',
+    oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME',
+  },
+  {
+    key: 'fourWeeks',
+    title: '$369 x 20 clases',
+    subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
+    oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME',
+  },
 ];
 
 function formatDate(value?: string | null) {
@@ -58,6 +74,28 @@ function formatNextClassDateNY(value?: string | null) {
 
 function isEmbedUrl(url: string) {
   return /(youtube\.com\/embed|player\.vimeo\.com|youtube-nocookie\.com|loom\.com\/embed)/i.test(url);
+}
+
+function splitPhone(fullPhone?: string | null) {
+  const raw = String(fullPhone || '').replace(/\s+/g, '').trim();
+  if (!raw) return { code: DEFAULT_COUNTRY_CODE, number: '' };
+
+  const match = COUNTRY_OPTIONS
+    .slice()
+    .sort((a, b) => b.code.length - a.code.length)
+    .find((item) => raw.startsWith(item.code));
+
+  if (match) {
+    return {
+      code: match.code,
+      number: raw.slice(match.code.length).replace(/\D/g, ''),
+    };
+  }
+
+  return {
+    code: DEFAULT_COUNTRY_CODE,
+    number: raw.replace(/\D/g, ''),
+  };
 }
 
 function getDisplayName(user: any) {
@@ -103,6 +141,20 @@ function formatNYTime() {
   }
 }
 
+
+function totalClassesForPlan(plan?: string | null) {
+  switch (String(plan || '').toUpperCase()) {
+    case 'WEEKLY':
+      return 5;
+    case 'TWO_WEEKS':
+      return 10;
+    case 'FOUR_WEEKS':
+      return 20;
+    default:
+      return null;
+  }
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -110,11 +162,16 @@ export default function DashboardPage() {
   const [userEmail, setUserEmail] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
   const [accessActive, setAccessActive] = useState(false);
+  const [accessPlan, setAccessPlan] = useState<string | null>(null);
+  const [classesRemaining, setClassesRemaining] = useState<number | null>(null);
+  const [lastClassWarning, setLastClassWarning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [videos, setVideos] = useState<ClassVideo[]>([]);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [nowText, setNowText] = useState('');
   const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', email: '' });
+  const [selectedCountryCode, setSelectedCountryCode] = useState(DEFAULT_COUNTRY_CODE);
+  const [phoneLocal, setPhoneLocal] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
@@ -150,6 +207,9 @@ export default function DashboardPage() {
   async function syncAccessForEmail(email: string) {
     const access = await getLiveAccessByEmail(email);
     setAccessActive(access.active);
+    setAccessPlan(access.plan ?? null);
+    setClassesRemaining(access.classesRemaining ?? null);
+    setLastClassWarning(Boolean(access.lastClassWarning));
 
     if (access.active) {
       const nowIso = new Date().toISOString();
@@ -242,12 +302,20 @@ export default function DashboardPage() {
 
         setUserEmail(email);
         setUserName(nextDisplayName);
+        const initialPhone = String(user.user_metadata?.phone || '');
+        const initialSplitPhone = splitPhone(initialPhone);
+
         setProfileForm({
           fullName: String(user.user_metadata?.full_name || user.user_metadata?.name || ''),
-          phone: String(user.user_metadata?.phone || ''),
+          phone: initialPhone,
           email,
         });
+        setSelectedCountryCode(initialSplitPhone.code);
+        setPhoneLocal(initialSplitPhone.number);
         setAccessActive(access.active);
+        setAccessPlan(access.plan ?? null);
+        setClassesRemaining(access.classesRemaining ?? null);
+        setLastClassWarning(Boolean(access.lastClassWarning));
 
         if (access.active) {
           const loadedVideos = await loadVideos().catch(() => []);
@@ -347,12 +415,23 @@ export default function DashboardPage() {
     setProfileSuccess(null);
 
     const fullName = profileForm.fullName.trim();
-    const phone = profileForm.phone.trim();
+    const digitsOnlyPhone = phoneLocal.replace(/\D/g, '');
+    const phone = `${selectedCountryCode}${digitsOnlyPhone}`;
     const nextEmail = profileForm.email.trim().toLowerCase();
 
     if (!fullName) {
       setSavingProfile(false);
       return setProfileError('Debes ingresar tu nombre completo.');
+    }
+
+    if (!digitsOnlyPhone) {
+      setSavingProfile(false);
+      return setProfileError('Debes ingresar tu número telefónico.');
+    }
+
+    if (digitsOnlyPhone.length < 7 || digitsOnlyPhone.length > 15) {
+      setSavingProfile(false);
+      return setProfileError('Ingresa un número telefónico válido para el país seleccionado.');
     }
 
     if (!nextEmail) {
@@ -401,11 +480,16 @@ export default function DashboardPage() {
 
       setUserName(updatedName);
       setUserEmail(currentEmail);
+      const refreshedPhone = String(refreshedUser?.user_metadata?.phone || phone);
+      const refreshedSplitPhone = splitPhone(refreshedPhone);
+
       setProfileForm({
         fullName: String(refreshedUser?.user_metadata?.full_name || fullName),
-        phone: String(refreshedUser?.user_metadata?.phone || phone),
+        phone: refreshedPhone,
         email: currentEmail,
       });
+      setSelectedCountryCode(refreshedSplitPhone.code);
+      setPhoneLocal(refreshedSplitPhone.number);
 
       if (!emailChanged) {
         await syncAccessForEmail(nextEmail);
@@ -434,15 +518,17 @@ export default function DashboardPage() {
     }
   }
 
-  async function startCheckout(priceEnvKey: string) {
+  async function startCheckout(priceEnvKey: string, purchaseType: 'one_time' | 'subscription') {
+    const checkoutKey = `${priceEnvKey}:${purchaseType}`;
+
     try {
-      setCheckingOut(priceEnvKey);
+      setCheckingOut(checkoutKey);
       setError(null);
 
       const res = await fetch('/api/stripe/live-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceKey: priceEnvKey, userEmail }),
+        body: JSON.stringify({ priceKey: priceEnvKey, userEmail, purchaseType }),
       });
 
       const json = await res.json().catch(() => ({}));
@@ -472,6 +558,11 @@ export default function DashboardPage() {
 
   const hasPlayableVideo = !!selectedVideo?.video_url && !videoUnavailable;
   const showIframe = hasPlayableVideo && isEmbedUrl(selectedVideo.video_url);
+  const totalClassesForCurrentPlan = totalClassesForPlan(accessPlan);
+  const classesUsed =
+    totalClassesForCurrentPlan !== null && classesRemaining !== null
+      ? Math.max(totalClassesForCurrentPlan - classesRemaining, 0)
+      : null;
 
   return (
     <main
@@ -686,20 +777,31 @@ export default function DashboardPage() {
             <>
               <div className="notice">Tu usuario ya está listo. Activa una suscripción para entrar a la clase en vivo.</div>
               <div className="cards" style={{ marginBottom: 0 }}>
-                {plans.map((plan) => (
-                  <div className="card" key={plan.key}>
-                    <h3>{plan.title}</h3>
-                    <p className="small">Pago por suscripción con Stripe.</p>
-                    <button
-                      className="btn btn-primary"
-                      style={{ width: '100%' }}
-                      onClick={() => startCheckout(plan.envKey)}
-                      disabled={checkingOut === plan.envKey}
-                    >
-                      {checkingOut === plan.envKey ? 'Abriendo pago...' : 'Entrar a la clase en vivo'}
-                    </button>
-                  </div>
-                ))}
+                {plans.map((plan) => {
+                  return (
+                    <div className="card" key={plan.key}>
+                      <h3>{plan.title}</h3>
+                      <p className="small" style={{ marginBottom: 12 }}>
+                        Elige cómo quieres pagar este acceso al portal.
+                      </p>
+
+                      <div style={{ display: 'grid', gap: 10 }}>
+                        <button
+                          className="btn btn-primary"
+                          style={{ width: '100%' }}
+                          onClick={() =>
+                            router.push(
+                              `/checkout-confirm?subscriptionPriceKey=${encodeURIComponent(plan.subscriptionPriceKey)}&oneTimePriceKey=${encodeURIComponent(plan.oneTimePriceKey)}&title=${encodeURIComponent(plan.title)}`
+                            )
+                          }
+                          disabled={checkingOut !== null}
+                        >
+                          Comprar este plan
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}
@@ -774,6 +876,24 @@ export default function DashboardPage() {
                 )}
               </div>
 
+              {lastClassWarning ? (
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 16,
+                    background: 'linear-gradient(180deg, rgba(245,158,11,0.16) 0%, rgba(120,53,15,0.18) 100%)',
+                    border: '1px solid rgba(245,158,11,0.40)',
+                    marginBottom: 12,
+                    boxShadow: '0 12px 28px rgba(0,0,0,0.16)',
+                  }}
+                >
+                  <div className="eyebrow" style={{ marginBottom: 8 }}>Aviso de suscripción</div>
+                  <div style={{ fontSize: 15, lineHeight: 1.5, color: 'rgba(255,255,255,0.92)' }}>
+                    Estás entrando en tu última clase disponible. Para seguir accediendo al portal deberás renovar tu suscripción.
+                  </div>
+                </div>
+              ) : null}
+
               <div
                 style={{
                   padding: '14px 14px 12px',
@@ -822,13 +942,33 @@ export default function DashboardPage() {
 
                     <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
                       Número telefónico
-                      <input
-                        className="input"
-                        type="tel"
-                        value={profileForm.phone}
-                        onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: e.target.value }))}
-                        autoComplete="tel"
-                      />
+                      <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', gap: 10 }}>
+                        <select
+                          className="input"
+                          value={selectedCountryCode}
+                          onChange={(e) => setSelectedCountryCode(e.target.value)}
+                          aria-label="Código de país"
+                        >
+                          {COUNTRY_OPTIONS.map((option) => (
+                            <option key={`${option.code}-${option.label}`} value={option.code}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        <input
+                          className="input"
+                          type="tel"
+                          value={phoneLocal}
+                          onChange={(e) => setPhoneLocal(e.target.value.replace(/[^\d]/g, ''))}
+                          autoComplete="tel-national"
+                          inputMode="numeric"
+                          placeholder={findCountryByCode(selectedCountryCode).placeholder}
+                        />
+                      </div>
+                      <p className="helper" style={{ marginTop: 8, marginBottom: 0 }}>
+                        Se guardará en formato internacional, por ejemplo: {selectedCountryCode}{findCountryByCode(selectedCountryCode).placeholder}
+                      </p>
                     </label>
 
                     <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
@@ -897,7 +1037,9 @@ export default function DashboardPage() {
                 className="state-pill state-active"
                 style={{ alignSelf: 'flex-end', marginTop: 12 }}
               >
-                Suscripción activa
+                {classesRemaining !== null
+                  ? `Suscripción activa: ${classesRemaining} clases restantes`
+                  : 'Suscripción activa'}
               </div>
 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
