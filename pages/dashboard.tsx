@@ -274,6 +274,12 @@ export default function DashboardPage() {
     [videos, selectedVideoId]
   );
 
+  const visibleLibraryVideos = useMemo(() => {
+    if (!isEditingProfile) return videos;
+    const liveOnly = videos.filter((video) => video.is_live);
+    return liveOnly.length ? liveOnly : videos.slice(0, 1);
+  }, [isEditingProfile, videos]);
+
   const nextScheduledClass = useMemo(() => {
     const now = Date.now();
     return (
@@ -874,6 +880,7 @@ export default function DashboardPage() {
             minHeight: '84vh',
             display: 'flex',
             flexDirection: 'column',
+            overflowY: 'auto',
             padding: 18,
             background: 'linear-gradient(180deg, rgba(9,25,54,0.22) 0%, rgba(4,15,35,0.22) 100%)',
             boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
@@ -897,8 +904,8 @@ export default function DashboardPage() {
               <h2 style={{ marginTop: 12, marginBottom: 18 }}>Clases disponibles</h2>
 
               <div style={{ display: 'grid', gap: 10, marginBottom: 12, flex: 1, alignContent: 'start' }}>
-                {videos.length ? (
-                  videos.map((video) => {
+                {visibleLibraryVideos.length ? (
+                  visibleLibraryVideos.map((video) => {
                     const selected = selectedVideoId === video.id;
                     return (
                       <button
@@ -925,6 +932,12 @@ export default function DashboardPage() {
                   <div className="support-item">Aún no hay clases cargadas.</div>
                 )}
               </div>
+
+              {isEditingProfile ? (
+                <p className="helper" style={{ marginTop: 0, marginBottom: 12, fontSize: 12, lineHeight: 1.45 }}>
+                  Mientras editas tu perfil, las clases grabadas se ocultan temporalmente para mantener este panel ordenado.
+                </p>
+              ) : null}
 
               {lastClassWarning ? (
                 <div
