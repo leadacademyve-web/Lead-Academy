@@ -152,8 +152,8 @@ export default function CheckoutConfirmPage() {
               <div>
                 <div style={{ fontWeight: 700 }}>Suscripción automática</div>
                 <div className="helper">
-                  Las clases se sumarán a tu saldo y Stripe hará recargos automáticos usando la tarjeta registrada.
-                  La renovación se procesará por calendario según el plan, aunque aún tengas clases disponibles.
+                  Se harán cargos por suscripción según el plan que escojas.
+                  
                 </div>
               </div>
             </label>
@@ -170,14 +170,22 @@ export default function CheckoutConfirmPage() {
             background: 'rgba(255,255,255,0.03)',
           }}
         >
-          <div className="eyebrow" style={{ marginBottom: 10 }}>Términos y condiciones provisionales</div>
+          <div className="eyebrow" style={{ marginBottom: 10 }}>Términos y condiciones</div>
+
           <div className="helper" style={{ lineHeight: 1.7 }}>
-            Al continuar, aceptas que este portal ofrece acceso privado a clases de trading e inversión. Los pagos
-            realizados activan o amplían tu saldo de clases según el plan seleccionado. Si eliges suscripción,
-            autorizas a Stripe a realizar recargos automáticos con la misma tarjeta registrada en la frecuencia del plan
-            correspondiente. Las compras realizadas se agregan a tu saldo, y el acceso al portal depende de mantener
-            clases disponibles o una suscripción vigente según la lógica del sistema. La aceptación de estos términos es
-            obligatoria antes de continuar al pago.
+            Al continuar, aceptas que estás adquiriendo acceso a un portal educativo privado enfocado en trading e inversiones.<br /><br />
+
+            Este servicio tiene fines exclusivamente educativos y no constituye asesoría financiera, legal o de inversión.<br /><br />
+
+            Reconoces que el trading en mercados financieros implica riesgos significativos, incluyendo la posible pérdida total del capital, y que no existen garantías de resultados.<br /><br />
+
+            Los pagos realizados son finales y no reembolsables. Al elegir suscripción, autorizas a Stripe a realizar recargos automáticos según la frecuencia del plan seleccionado, independientemente del uso o saldo de clases disponible.<br /><br />
+
+            El acceso al portal depende de mantener clases disponibles o una suscripción activa.<br /><br />
+
+            Todo el contenido del portal, incluyendo clases, estrategias y materiales, es propiedad de la plataforma y está estrictamente prohibido copiar, grabar, distribuir o enseñar este contenido sin autorización.<br /><br />
+
+            Al continuar, aceptas estos términos y asumes total responsabilidad por tus decisiones y resultados.
           </div>
 
           <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 16 }}>
@@ -187,10 +195,13 @@ export default function CheckoutConfirmPage() {
               onChange={(e) => setAcceptedTerms(e.target.checked)}
             />
             <span className="helper" style={{ lineHeight: 1.6 }}>
-              Acepto los términos y condiciones de la plataforma y entiendo las reglas de pago, recargos automáticos y
-              acceso a clases.
+              Acepto los términos y condiciones, política de no reembolsos, recargos automáticos y uso personal del contenido.
             </span>
           </label>
+        </div>
+
+        <div style={{ fontSize: 12, opacity: 0.6, textAlign: 'center', marginBottom: 10 }}>
+          🔒 Pago seguro procesado por Stripe
         </div>
 
         <div className="actions">
