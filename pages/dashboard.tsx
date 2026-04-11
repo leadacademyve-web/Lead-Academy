@@ -726,34 +726,36 @@ export default function DashboardPage() {
                       </button>
                     </div>
 
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: 'calc(50% + 78px)',
-                        transform: 'translateX(-50%)',
-                        zIndex: 3,
-                        width: 'min(92%, 460px)',
-                        display: 'flex',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={() => setVideoUnavailable(true)}
+                    {selectedVideo?.is_live ? (
+                      <div
                         style={{
-                          width: '100%',
-                          minHeight: 58,
-                          fontSize: 18,
-                          fontWeight: 800,
-                          borderRadius: 18,
-                          boxShadow: '0 10px 30px rgba(0,0,0,0.28)',
+                          position: 'absolute',
+                          left: '50%',
+                          top: 'calc(50% + 78px)',
+                          transform: 'translateX(-50%)',
+                          zIndex: 3,
+                          width: 'min(92%, 460px)',
+                          display: 'flex',
+                          justifyContent: 'center',
                         }}
                       >
-                        Click aquí para ver el estado de la transmisión
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={() => setVideoUnavailable(true)}
+                          style={{
+                            width: '100%',
+                            minHeight: 58,
+                            fontSize: 18,
+                            fontWeight: 800,
+                            borderRadius: 18,
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.28)',
+                          }}
+                        >
+                          Click aquí para ver el estado de la transmisión
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
@@ -915,10 +917,7 @@ export default function DashboardPage() {
                         <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
                           {sublabelForVideo(video)}
                         </div>
-                        <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{labelForVideo(video)}</div>
-                        {video.published_at ? (
-                          <div style={{ fontSize: 14, opacity: 0.8 }}>{formatDate(video.published_at)}</div>
-                        ) : null}
+                        <div style={{ fontWeight: 700, fontSize: 18 }}>{labelForVideo(video)}</div>
                       </button>
                     );
                   })
