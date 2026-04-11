@@ -10,10 +10,9 @@ type ClassVideo = {
   title: string;
   description: string | null;
   video_url: string;
-  kind: 'live' | 'replay';
-  starts_at: string | null;
-  available_until: string | null;
-  is_active: boolean;
+  published_at: string | null;
+  is_live: boolean;
+  is_published: boolean;
 };
 
 const plans = [
@@ -70,6 +69,93 @@ function formatNextClassDateNY(value?: string | null) {
   } catch {
     return formatDate(value);
   }
+}
+
+function formatReplayTitle(publishedAt?: string | null, fallbackTitle?: string | null) {
+  const custom = String(fallbackTitle || '').trim();
+  if (custom) return custom;
+  if (!publishedAt) return 'Clase grabada';
+
+  const d = new Date(publishedAt);
+  if (Number.isNaN(d.getTime())) return 'Clase grabada';
+
+  try {
+    const parts = new Intl.DateTimeFormat('es-ES', {
+      timeZone: 'America/New_York',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).formatToParts(d);
+
+    const day = parts.find((part) => part.type === 'day')?.value || '';
+    const month = parts.find((part) => part.type === 'month')?.value || '';
+    const year = parts.find((part) => part.type === 'year')?.value || '';
+
+    if (day && month && year) {
+      return `Clase del dia ${day} de ${month} de ${year}`;
+    }
+  } catch {
+    // ignore Intl formatting errors
+  }
+
+  return `Clase del dia ${d.getDate()} de ${d.getMonth() + 1} de ${d.getFullYear()}`;
+}
+
+function labelForVideo(video: ClassVideo) {
+  return video.is_live ? 'Clase en vivo' : formatReplayTitle(video.published_at, video.title);
+}
+
+function sublabelForVideo(video: ClassVideo) {
+  return video.is_live ? 'Clase en vivo' : 'Clase grabada';
+}
+
+function buildLiveVideo(streamUrl: string): ClassVideo | null {
+  if (!streamUrl) return null;
+
+  return {
+    id: 'env-live',
+    title: 'Clase en vivo',
+    description: 'Streaming configurado desde variable de entorno.',
+    video_url: streamUrl,
+    published_at: null,
+    is_live: true,
+    is_published: true,
+  };
+}
+
+function normalizeLibraryVideos(rows: Partial<ClassVideo>[], streamUrl: string) {
+  const liveFromDb = rows.find((video) => video.is_live && video.video_url);
+  const replayRows = rows
+    .filter((video) => !video.is_live && video.video_url)
+    .sort((a, b) => {
+      const aTs = new Date(String(a.published_at || '')).getTime();
+      const bTs = new Date(String(b.published_at || '')).getTime();
+      return bTs - aTs;
+    })
+    .slice(0, 5)
+    .map((video) => ({
+      id: String(video.id || ''),
+      title: formatReplayTitle(String(video.published_at || ''), String(video.title || '')),
+      description: video.description ? String(video.description) : null,
+      video_url: String(video.video_url || ''),
+      published_at: video.published_at ? String(video.published_at) : null,
+      is_live: false,
+      is_published: true,
+    } as ClassVideo));
+
+  const liveVideo = liveFromDb
+    ? ({
+        id: String(liveFromDb.id || 'db-live'),
+        title: 'Clase en vivo',
+        description: liveFromDb.description ? String(liveFromDb.description) : null,
+        video_url: String(liveFromDb.video_url || ''),
+        published_at: liveFromDb.published_at ? String(liveFromDb.published_at) : null,
+        is_live: true,
+        is_published: true,
+      } as ClassVideo)
+    : buildLiveVideo(streamUrl);
+
+  return liveVideo ? [liveVideo, ...replayRows] : replayRows;
 }
 
 function isEmbedUrl(url: string) {
@@ -164,6 +250,7 @@ export default function DashboardPage() {
   const [accessActive, setAccessActive] = useState(false);
   const [accessPlan, setAccessPlan] = useState<string | null>(null);
   const [classesRemaining, setClassesRemaining] = useState<number | null>(null);
+  const [accessStartAt, setAccessStartAt] = useState<string | null>(null);
   const [lastClassWarning, setLastClassWarning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [videos, setVideos] = useState<ClassVideo[]>([]);
@@ -191,58 +278,56 @@ export default function DashboardPage() {
     const now = Date.now();
     return (
       videos
-        .filter((video) => video.starts_at)
+        .filter((video) => video.is_live && video.published_at)
         .filter((video) => {
-          const ts = new Date(video.starts_at as string).getTime();
+          const ts = new Date(video.published_at as string).getTime();
           return !Number.isNaN(ts) && ts > now;
         })
         .sort((a, b) => {
-          const aTs = new Date(a.starts_at as string).getTime();
-          const bTs = new Date(b.starts_at as string).getTime();
+          const aTs = new Date(a.published_at as string).getTime();
+          const bTs = new Date(b.published_at as string).getTime();
           return aTs - bTs;
         })[0] || null
     );
   }, [videos]);
+
+  async function loadLibraryVideos(accessStartValue: string | null) {
+    const query = supabase
+      .from('class_videos')
+      .select('id,title,description,video_url,published_at,is_live,is_published')
+      .eq('is_published', true)
+      .order('published_at', { ascending: false });
+
+    if (accessStartValue) {
+      query.or(`is_live.eq.true,and(is_live.eq.false,published_at.gte.${accessStartValue})`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return normalizeLibraryVideos((data || []) as Partial<ClassVideo>[], streamUrl);
+  }
 
   async function syncAccessForEmail(email: string) {
     const access = await getLiveAccessByEmail(email);
     setAccessActive(access.active);
     setAccessPlan(access.plan ?? null);
     setClassesRemaining(access.classesRemaining ?? null);
+    setAccessStartAt(access.accessStartAt ?? null);
     setLastClassWarning(Boolean(access.lastClassWarning));
 
     if (access.active) {
-      const nowIso = new Date().toISOString();
-      const { data } = await supabase
-        .from('class_videos')
-        .select('id,title,description,video_url,kind,starts_at,available_until,is_active')
-        .or(`and(kind.eq.live,is_active.eq.true),and(kind.eq.replay,available_until.gte.${nowIso})`)
-        .order('kind', { ascending: true })
-        .order('starts_at', { ascending: false });
-
-      const normalizedVideos = ([...(data || [])] as ClassVideo[]);
-
-      if (!normalizedVideos.length && streamUrl) {
-        normalizedVideos.push({
-          id: 'env-live',
-          title: 'Clase en vivo',
-          description: 'Streaming configurado desde variable de entorno.',
-          video_url: streamUrl,
-          kind: 'live',
-          starts_at: null,
-          available_until: null,
-          is_active: true,
-        });
-      }
+      const normalizedVideos = await loadLibraryVideos(access.accessStartAt ?? null).catch(() => {
+        const liveOnly = buildLiveVideo(streamUrl);
+        return liveOnly ? [liveOnly] : [];
+      });
 
       setVideos(normalizedVideos);
 
-      const preferred =
-        normalizedVideos.find((video) => video.kind === 'live' && video.is_active) ||
-        normalizedVideos[0] ||
-        null;
-
+      const preferred = normalizedVideos.find((video) => video.is_live) || normalizedVideos[0] || null;
       setSelectedVideoId(preferred?.id || null);
+    } else {
+      setVideos([]);
+      setSelectedVideoId(null);
     }
 
     return access.active;
@@ -259,20 +344,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let mounted = true;
-
-    async function loadVideos() {
-      const nowIso = new Date().toISOString();
-
-      const { data, error } = await supabase
-        .from('class_videos')
-        .select('id,title,description,video_url,kind,starts_at,available_until,is_active')
-        .or(`and(kind.eq.live,is_active.eq.true),and(kind.eq.replay,available_until.gte.${nowIso})`)
-        .order('kind', { ascending: true })
-        .order('starts_at', { ascending: false });
-
-      if (error) throw error;
-      return (data || []) as ClassVideo[];
-    }
 
     async function run() {
       try {
@@ -315,34 +386,19 @@ export default function DashboardPage() {
         setAccessActive(access.active);
         setAccessPlan(access.plan ?? null);
         setClassesRemaining(access.classesRemaining ?? null);
+        setAccessStartAt(access.accessStartAt ?? null);
         setLastClassWarning(Boolean(access.lastClassWarning));
 
         if (access.active) {
-          const loadedVideos = await loadVideos().catch(() => []);
+          const normalizedVideos = await loadLibraryVideos(access.accessStartAt ?? null).catch(() => {
+            const liveOnly = buildLiveVideo(streamUrl);
+            return liveOnly ? [liveOnly] : [];
+          });
           if (!mounted) return;
-
-          const normalizedVideos = [...loadedVideos];
-
-          if (!normalizedVideos.length && streamUrl) {
-            normalizedVideos.push({
-              id: 'env-live',
-              title: 'Clase en vivo',
-              description: 'Streaming configurado desde variable de entorno.',
-              video_url: streamUrl,
-              kind: 'live',
-              starts_at: null,
-              available_until: null,
-              is_active: true,
-            });
-          }
 
           setVideos(normalizedVideos);
 
-          const preferred =
-            normalizedVideos.find((video) => video.kind === 'live' && video.is_active) ||
-            normalizedVideos[0] ||
-            null;
-
+          const preferred = normalizedVideos.find((video) => video.is_live) || normalizedVideos[0] || null;
           setSelectedVideoId(preferred?.id || null);
         }
 
@@ -703,9 +759,9 @@ export default function DashboardPage() {
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
                     <div>
                       <div className="eyebrow" style={{ marginBottom: 10 }}>
-                        {selectedVideo?.kind === 'replay' ? 'Repetición disponible' : 'Video configurado'}
+                        {selectedVideo?.is_live ? 'Clase en vivo' : 'Clase grabada'}
                       </div>
-                      <h2 style={{ marginTop: 0, marginBottom: 10 }}>{selectedVideo?.title}</h2>
+                      <h2 style={{ marginTop: 0, marginBottom: 10 }}>{selectedVideo ? labelForVideo(selectedVideo) : ''}</h2>
                       <p className="helper" style={{ maxWidth: 620, margin: '0 auto 16px' }}>
                         {selectedVideo?.description || 'Este video fue cargado, pero la URL no parece ser un enlace embebible compatible.'}
                       </p>
@@ -752,7 +808,7 @@ export default function DashboardPage() {
                         {videoUnavailable
                           ? 'Estamos preparando la próxima transmisión para tu acceso.'
                           : nextScheduledClass
-                            ? formatNextClassDateNY(nextScheduledClass.starts_at)
+                            ? formatNextClassDateNY(nextScheduledClass.published_at)
                             : 'Estamos preparando la próxima transmisión para tu acceso'}
                       </p>
                       {videoUnavailable ? (
@@ -857,16 +913,11 @@ export default function DashboardPage() {
                         }}
                       >
                         <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
-                          {video.kind === 'live' ? 'Clase en vivo' : 'Repetición 7 días'}
+                          {sublabelForVideo(video)}
                         </div>
-                        <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{video.title}</div>
-                        {video.starts_at ? (
-                          <div style={{ fontSize: 14, opacity: 0.8 }}>{formatDate(video.starts_at)}</div>
-                        ) : null}
-                        {video.kind === 'replay' && video.available_until ? (
-                          <div style={{ fontSize: 13, opacity: 0.7, marginTop: 6 }}>
-                            Disponible hasta {formatDate(video.available_until)}
-                          </div>
+                        <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{labelForVideo(video)}</div>
+                        {video.published_at ? (
+                          <div style={{ fontSize: 14, opacity: 0.8 }}>{formatDate(video.published_at)}</div>
                         ) : null}
                       </button>
                     );
