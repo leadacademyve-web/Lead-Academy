@@ -11,9 +11,9 @@ const plans = [
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME',
     bullets: [
-      'Acceso al portal privado',
-      'Acceso a la clase en vivo',
-      'Se agregan 5 clases a tu saldo',
+      { text: 'Acceso a la clase en vivo y repeticiones', available: true },
+      { text: 'Acceso a la biblioteca de instrucciones', available: false },
+      { text: 'Acceso completo al portal y a las estrategias', available: false },
     ],
   },
   {
@@ -24,10 +24,10 @@ const plans = [
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME',
     bullets: [
-      'Acceso al portal privado',
-      'Acceso a la clase en vivo',
-      'Se agregan 10 clases a tu saldo',
-    ],
+      { text: 'Acceso a la clase en vivo y repeticiones', available: true },
+      { text: 'Acceso a la biblioteca de instrucciones', available: true },
+      { text: 'Acceso completo al portal y a las estrategias', available: false },
+     ],
   },
   {
     id: 'month',
@@ -37,9 +37,9 @@ const plans = [
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME',
     bullets: [
-      'Acceso al portal privado',
-      'Acceso a la clase en vivo',
-      'Se agregan 20 clases a tu saldo',
+      { text: 'Acceso a la clase en vivo y repeticiones', available: true },
+      { text: 'Acceso a la biblioteca de instrucciones', available: true },
+      { text: 'Acceso completo al portal y a las estrategias', available: true },
     ],
   },
 ]
@@ -52,7 +52,7 @@ export default function HomePage() {
     <main style={{ background: 'url("/trading-bg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', minHeight: '100vh', color: 'white' }}>
       <section style={{ padding: '100px', display: 'flex', justifyContent: 'center' }}>
         <div style={{
-          maxWidth: 1200,
+          maxWidth: 1500,
           width: '100%',
           display: 'grid',
           gridTemplateColumns: '2fr 1fr',
@@ -97,10 +97,10 @@ Trading & Investing
             <h3>¿Cómo funciona?</h3>
 
             <p style={{ marginTop: 10, opacity: 0.7, lineHeight: 1.8 }}>
-              1. Crea tu cuenta o inicia sesión.<br />
-              2. Selecciona el plan de acceso que prefieras.<br />
+              1. Crea tu cuenta, confirma correo electrónico e inicia sesión.<br />
+              2. Selecciona el plan de acceso que prefieras y agrega clases a tu saldo.<br />
               3. Antes de pagar deberás aceptar los términos y condiciones.<br />
-              4. Si eliges suscripción, Stripe hará recargos automáticos según la frecuencia del plan.
+              4. Si eliges suscripción, los cargos serán según la frecuencia calendario que escojas.
             </p>
 
             <button
@@ -123,13 +123,13 @@ Trading & Investing
           display: 'grid',
           gridTemplateColumns: 'repeat(3,1fr)',
           gap: 20,
-          maxWidth: 1100,
+          maxWidth: 1500,
           margin: '0 auto'
         }}>
           {plans.map((plan) => (
             <div key={plan.id} style={{
               background: 'rgba(2,6,23,0.80)', backdropFilter: 'blur(6px)',
-              padding: 30,
+              padding: 40,
               borderRadius: 16,
               border: '1px solid rgba(255,255,255,0.05)'
             }}>
@@ -137,8 +137,19 @@ Trading & Investing
               <div style={{ fontSize: 28, fontWeight: 600 }}>{plan.price}</div>
               <div style={{ opacity: 0.6 }}>{plan.note}</div>
 
-              <ul style={{ marginTop: 15 }}>
-                {plan.bullets.map((b) => <li key={b}>{b}</li>)}
+              <ul style={{ marginTop: 25, paddingLeft: 24, display: 'grid', gap: 14, lineHeight: 1.45 }}>
+                {plan.bullets.map((bullet) => (
+                  <li
+                    key={bullet.text}
+                    style={{
+                      color: bullet.available ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.42)',
+                      textDecoration: bullet.available ? 'none' : 'line-through',
+                      textDecorationThickness: bullet.available ? undefined : '2px',
+                    }}
+                  >
+                    {bullet.text}
+                  </li>
+                ))}
               </ul>
 
               <Link
@@ -148,7 +159,7 @@ Trading & Investing
                     : '/signup'
                 }
                 className="btn btn-primary"
-                style={{ width: '100%', marginTop: 20 }}
+                style={{ width: '100%', marginTop: 24 }}
               >
                 Comprar este plan
               </Link>
@@ -157,7 +168,7 @@ Trading & Investing
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 40, opacity: 0.6 }}>
-          Soporte: Leadacademyve@gmail.com · WhatsApp: +1 786 557 1816
+          Soporte: Escríbenos a Leadacademyve@gmail.com · WhatsApp: +1 786 620 4377
         </div>
       </section>
     </main>
