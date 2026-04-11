@@ -6,6 +6,7 @@ export type LiveAccess = {
   status: string | null;
   classesRemaining: number | null;
   lastClassWarning: boolean;
+  accessStartAt: string | null;
 };
 
 type AccessRow = {
@@ -19,18 +20,6 @@ type AccessRow = {
   created_at: string | null;
 };
 
-function normalizeClassDay(value: string) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(d);
-}
-
 export async function getLiveAccessByEmail(email?: string | null): Promise<LiveAccess> {
   if (!email) {
     return {
@@ -39,6 +28,7 @@ export async function getLiveAccessByEmail(email?: string | null): Promise<LiveA
       status: null,
       classesRemaining: null,
       lastClassWarning: false,
+      accessStartAt: null,
     };
   }
 
@@ -55,66 +45,6 @@ export async function getLiveAccessByEmail(email?: string | null): Promise<LiveA
     const accessRows = (Array.isArray(classAccessRows) ? classAccessRows : []) as AccessRow[];
 
     if (accessRows.length > 0) {
-      const firstAnchor = accessRows[0]?.start_date || accessRows[0]?.created_at || null;
-
-      if (firstAnchor) {
-        const { data: classRows, error: classRowsError } = await supabase
-          .from('class_videos')
-          .select('starts_at,kind')
-          .eq('kind', 'live')
-          .not('starts_at', 'is', null)
-          .gte('starts_at', firstAnchor)
-          .order('starts_at', { ascending: true });
-
-        if (!classRowsError) {
-          const uniqueClassDays: string[] = [];
-
-          for (const row of classRows || []) {
-            const normalizedDay = row?.starts_at ? normalizeClassDay(row.starts_at) : null;
-            if (!normalizedDay) continue;
-            if (!uniqueClassDays.includes(normalizedDay)) {
-              uniqueClassDays.push(normalizedDay);
-            }
-          }
-
-          const packages = accessRows.map((row) => ({
-            ...row,
-            anchorDay: normalizeClassDay(String(row.start_date || row.created_at || '')) || '',
-            total: Number(row.total_classes || 0),
-            consumed: 0,
-          }));
-
-          // Restar una clase por cada día de clase impartida, consumiendo primero los paquetes más antiguos.
-          for (const classDay of uniqueClassDays) {
-            const targetPackage = packages.find(
-              (pkg) => pkg.anchorDay && pkg.anchorDay <= classDay && pkg.consumed < pkg.total
-            );
-
-            if (targetPackage) {
-              targetPackage.consumed += 1;
-            }
-          }
-
-          const remainingClasses = packages.reduce(
-            (sum, pkg) => sum + Math.max(pkg.total - pkg.consumed, 0),
-            0
-          );
-
-          const latestPackage = packages[packages.length - 1] || null;
-
-          return {
-            active: remainingClasses > 0,
-            plan: latestPackage?.plan_name ?? 'LIVE_CLASS',
-            status: remainingClasses > 0 ? 'active' : 'inactive',
-            classesRemaining: remainingClasses,
-            lastClassWarning: remainingClasses === 1,
-          };
-        }
-
-        console.error('[live access] class_videos check error:', classRowsError.message);
-      }
-
-      // Fallback si no se puede consultar class_videos
       const remainingClasses = accessRows.reduce((sum, row) => {
         const total = Number(row.total_classes || 0);
         const used = Number(row.classes_used || 0);
@@ -122,6 +52,8 @@ export async function getLiveAccessByEmail(email?: string | null): Promise<LiveA
       }, 0);
 
       const latestRow = accessRows[accessRows.length - 1] || null;
+      const firstRow = accessRows[0] || null;
+      const accessStartAt = firstRow?.start_date || firstRow?.created_at || null;
 
       return {
         active: remainingClasses > 0,
@@ -129,6 +61,7 @@ export async function getLiveAccessByEmail(email?: string | null): Promise<LiveA
         status: remainingClasses > 0 ? 'active' : 'inactive',
         classesRemaining: remainingClasses,
         lastClassWarning: remainingClasses === 1,
+        accessStartAt,
       };
     }
   } else {
@@ -151,6 +84,7 @@ export async function getLiveAccessByEmail(email?: string | null): Promise<LiveA
       status: null,
       classesRemaining: null,
       lastClassWarning: false,
+      accessStartAt: null,
     };
   }
 
@@ -171,5 +105,6 @@ export async function getLiveAccessByEmail(email?: string | null): Promise<LiveA
     status: row?.status ?? null,
     classesRemaining: fallbackTotal,
     lastClassWarning: false,
+    accessStartAt: null,
   };
 }
