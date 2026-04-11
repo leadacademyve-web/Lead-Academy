@@ -31,6 +31,7 @@ export default function CheckoutConfirmPage() {
   );
 
   const selectedPriceKey = purchaseType === 'subscription' ? subscriptionPriceKey : oneTimePriceKey;
+  const termsHref = `/terms?returnTo=${encodeURIComponent(router.asPath)}`;
 
   async function handleContinue() {
     try {
@@ -152,8 +153,8 @@ export default function CheckoutConfirmPage() {
               <div>
                 <div style={{ fontWeight: 700 }}>Suscripción automática</div>
                 <div className="helper">
-                  Se harán cargos por suscripción según el plan que escojas.
-                  
+                  Las clases se sumarán a tu saldo y Stripe hará recargos automáticos usando la tarjeta registrada.
+                  La renovación se procesará por calendario según el plan, aunque aún tengas clases disponibles.
                 </div>
               </div>
             </label>
@@ -195,7 +196,7 @@ export default function CheckoutConfirmPage() {
               onChange={(e) => setAcceptedTerms(e.target.checked)}
             />
             <span className="helper" style={{ lineHeight: 1.6 }}>
-              Acepto los términos y condiciones, política de no reembolsos, recargos automáticos y uso personal del contenido.
+              Acepto los <Link href={termsHref} style={{ textDecoration: 'underline' }}>términos y condiciones</Link>, política de no reembolsos, recargos automáticos y uso personal del contenido.
             </span>
           </label>
         </div>
