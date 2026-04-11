@@ -935,7 +935,7 @@ export default function DashboardPage() {
 
               {isEditingProfile ? (
                 <p className="helper" style={{ marginTop: 0, marginBottom: 12, fontSize: 12, lineHeight: 1.45 }}>
-                  Mientras editas tu perfil, las clases grabadas se ocultan temporalmente para mantener este panel ordenado.
+                  Edita tu perfil y presiona "Guardar datos".
                 </p>
               ) : null}
 
