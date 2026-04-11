@@ -33,7 +33,7 @@ export default function Header() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '18px 32px',
+        padding: '08px 32px',
         background: '#020617',
         color: 'white',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -45,15 +45,15 @@ export default function Header() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
+          gap: 30,
           textDecoration: 'none',
           color: 'white',
         }}
       >
-        <Image src="/Logo.png" alt="Lead Academy - Trading & Investing" width={26} height={26} />
-        <div style={{ lineHeight: 1.1 }}>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>Lead Academy - Trading & Investing</div>
-          <div style={{ fontSize: 12, opacity: 0.75 }}>Portal Privado</div>
+        <Image src="/Logo.png" alt="Lead Academy - Trading & Investing" width={66} height={66} />
+        <div style={{ lineHeight: 1.5 }}>
+          <div style={{ fontWeight: 600, fontSize: 20 }}>Lead Academy - Trading & Investing</div>
+          <div style={{ fontSize: 16, opacity: 0.75 }}>Portal Privado</div>
         </div>
       </Link>
 
@@ -63,7 +63,7 @@ export default function Header() {
           display: 'flex',
           alignItems: 'center',
           gap: 14,
-          fontSize: 14,
+          fontSize: 16,
         }}
       >
         {loading ? null : user ? (
@@ -79,7 +79,7 @@ export default function Header() {
                 border: 'none',
                 color: 'white',
                 cursor: 'pointer',
-                fontSize: 14,
+                fontSize: 16,
                 padding: 0,
               }}
             >
