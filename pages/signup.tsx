@@ -60,7 +60,7 @@ export default function SignupPage() {
       email: email.trim(),
       password,
       options: {
-        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/email-confirmed` : undefined,
+        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/email-confirmed` : undefined,
         data: {
           full_name: fullName.trim(),
           phone: normalizedPhone,
