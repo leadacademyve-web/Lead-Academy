@@ -1,110 +1,99 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 
 export default function EmailConfirmedPage() {
   const router = useRouter();
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [message, setMessage] = useState('Estamos confirmando tu correo electrónico...');
+
+  const nextLoginHref = useMemo(() => {
+    const next = typeof router.query.next === 'string' ? router.query.next : '/dashboard';
+    return `/login?next=${encodeURIComponent(next)}`;
+  }, [router.query.next]);
 
   useEffect(() => {
-    let active = true;
+    let mounted = true;
 
-    async function run() {
+    async function confirmEmail() {
       try {
-        await supabase.auth.signOut();
-      } catch {}
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get('code');
+        const errorDescription = url.searchParams.get('error_description');
+        const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+        const accessToken = hash.get('access_token');
+        const type = hash.get('type');
 
-      if (!active) return;
+        if (errorDescription) {
+          throw new Error(errorDescription);
+        }
 
-      setTimeout(() => {
-        router.replace('/login?email_changed=1');
-      }, 1800);
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+        }
+
+        if (accessToken || type === 'signup' || code) {
+          await supabase.auth.signOut();
+          if (!mounted) return;
+          setStatus('success');
+          setMessage('Correo confirmado. Ya puede iniciar sesión.');
+          return;
+        }
+
+        if (!mounted) return;
+        setStatus('success');
+        setMessage('Tu correo ya fue confirmado. Ya puede iniciar sesión.');
+      } catch (error: any) {
+        if (!mounted) return;
+        setStatus('error');
+        setMessage(error?.message || 'No pudimos confirmar el correo electrónico. Intenta abrir nuevamente el enlace del correo.');
+      }
     }
 
-    run();
+    confirmEmail();
 
     return () => {
-      active = false;
+      mounted = false;
     };
-  }, [router]);
+  }, []);
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        background:
-          'linear-gradient(180deg, #0f172a 0%, #111827 45%, #0b1120 100%)',
-        padding: '24px',
-        fontFamily:
-          'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 560,
-          borderRadius: 24,
-          padding: '36px 30px',
-          background: 'rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
-          backdropFilter: 'blur(10px)',
-          textAlign: 'center',
-          color: '#ffffff',
-        }}
-      >
-        <div
-          style={{
-            width: 72,
-            height: 72,
-            margin: '0 auto 20px',
-            borderRadius: '999px',
-            display: 'grid',
-            placeItems: 'center',
-            background:
-              'linear-gradient(135deg, rgba(34,197,94,0.22), rgba(59,130,246,0.22))',
-            border: '1px solid rgba(255,255,255,0.14)',
-            fontSize: 34,
-          }}
-        >
-          ✅
-        </div>
-
-        <p
-          style={{
-            margin: 0,
-            fontSize: 12,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.72)',
-          }}
-        >
-          Confirmación exitosa
-        </p>
-
-        <h1
-          style={{
-            margin: '12px 0 14px',
-            fontSize: 'clamp(30px, 5vw, 42px)',
-            lineHeight: 1.08,
-            fontWeight: 800,
-          }}
-        >
-          Tu correo fue confirmado correctamente
+    <main className="auth-wrap">
+      <div className="auth-card">
+        <h1>
+          {status === 'loading'
+            ? 'Confirmando correo'
+            : status === 'success'
+              ? 'Correo confirmado'
+              : 'No se pudo confirmar'}
         </h1>
-
-        <p
-          style={{
-            margin: '0 auto',
-            maxWidth: 420,
-            fontSize: 17,
-            lineHeight: 1.65,
-            color: 'rgba(255,255,255,0.84)',
-          }}
-        >
-          Cerrando tu sesión actual y redirigiendo al inicio de sesión...
+        <p className="helper" style={{ marginBottom: 16 }}>
+          {message}
         </p>
+
+        {status === 'loading' ? (
+          <div className="notice">Espere un momento...</div>
+        ) : status === 'success' ? (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <Link href={nextLoginHref} className="btn btn-primary" style={{ textAlign: 'center' }}>
+              Ir a iniciar sesión
+            </Link>
+            <Link href="/" className="btn btn-secondary" style={{ textAlign: 'center' }}>
+              Volver al inicio
+            </Link>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <Link href="/signup" className="btn btn-primary" style={{ textAlign: 'center' }}>
+              Intentar de nuevo
+            </Link>
+            <Link href="/login" className="btn btn-secondary" style={{ textAlign: 'center' }}>
+              Ir a iniciar sesión
+            </Link>
+          </div>
+        )}
       </div>
     </main>
   );
