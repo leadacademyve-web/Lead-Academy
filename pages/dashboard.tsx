@@ -270,22 +270,43 @@ export default function DashboardPage() {
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
-  const executedRef = useRef(false);
+  function goToInicioThenBackToPortal() {
+    if (recoveryNavigationTriggeredRef.current) return;
+    recoveryNavigationTriggeredRef.current = true;
+    router.replace('/?recoverPortal=1');
+  }
 
   useEffect(() => {
     if (!router.isReady) return;
 
-    const navEntries = performance.getEntriesByType('navigation');
-    const navType =
-      navEntries && navEntries.length > 0
-        ? (navEntries[0] as PerformanceNavigationTiming).type
-        : '';
+    try {
+      const skipOnce = sessionStorage.getItem('lead_portal_skip_reload_once') === '1';
+      if (skipOnce) {
+        sessionStorage.removeItem('lead_portal_skip_reload_once');
+        recoveryNavigationTriggeredRef.current = false;
+        return;
+      }
 
-    if (navType === 'reload' && !executedRef.current) {
-      executedRef.current = true;
-      router.push('/dashboard');
+      if (router.query.portalReturn === '1') {
+        sessionStorage.setItem('lead_portal_skip_reload_once', '1');
+        recoveryNavigationTriggeredRef.current = false;
+        router.replace('/dashboard', undefined, { shallow: true });
+        return;
+      }
+
+      const navEntries = window.performance.getEntriesByType('navigation');
+      const navType =
+        navEntries && navEntries.length > 0
+          ? (navEntries[0] as PerformanceNavigationTiming).type
+          : '';
+
+      if (navType === 'reload') {
+        goToInicioThenBackToPortal();
+      }
+    } catch {
+      // ignore navigation/storage errors
     }
-  }, [router.isReady]);
+  }, [router.isReady, router.query.portalReturn, router]);
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,
