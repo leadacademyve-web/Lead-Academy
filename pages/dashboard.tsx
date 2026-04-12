@@ -272,14 +272,12 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   useEffect(() => {
     if (!router.isReady) return;
 
+    if (router.query.fromPortalRefresh === '1') {
+      router.replace('/dashboard', undefined, { shallow: true });
+      return;
+    }
+
     try {
-      const cameBackFromIndex = sessionStorage.getItem('lead_go_portal_once') === '1';
-
-      if (cameBackFromIndex) {
-        sessionStorage.removeItem('lead_go_portal_once');
-        return;
-      }
-
       const navEntries = window.performance.getEntriesByType('navigation');
       const navType =
         navEntries && navEntries.length > 0
@@ -292,7 +290,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     } catch {
       // ignore navigation detection errors
     }
-  }, [router.isReady, router]);
+  }, [router.isReady, router.query.fromPortalRefresh, router]);
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,

@@ -49,22 +49,16 @@ export default function HomePage() {
   const router = useRouter()
   const { user } = useAuthUser()
 
+  function handleGoPortal() {
+    router.replace('/dashboard?fromPortalRefresh=1')
+  }
+
   useEffect(() => {
     if (!router.isReady) return
+    if (router.query.goPortal !== '1' && router.query.recoverPortal !== '1') return
 
-    const shouldGoPortal =
-      router.query.goPortal === '1' || router.query.recoverPortal === '1'
-
-    if (!shouldGoPortal) return
-
-    try {
-      sessionStorage.setItem('lead_go_portal_once', '1')
-    } catch {
-      // ignore storage errors
-    }
-
-    router.replace('/dashboard')
-  }, [router.isReady, router.query.goPortal, router.query.recoverPortal, router])
+    handleGoPortal()
+  }, [router.isReady, router.query.goPortal, router.query.recoverPortal])
 
   return (
     <main style={{ background: 'url("/trading-bg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', minHeight: '100vh', color: 'white' }}>
@@ -124,7 +118,7 @@ Trading & Investing
             <button
               className="btn btn-secondary"
               style={{ marginTop: 20, width: '100%' }}
-              onClick={() => router.push('/dashboard')}
+              onClick={handleGoPortal}
             >
               Ir al portal
             </button>
