@@ -270,10 +270,8 @@ export default function DashboardPage() {
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
-  function goToInicioThenBackToPortal() {
-    if (recoveryNavigationTriggeredRef.current) return;
-    recoveryNavigationTriggeredRef.current = true;
-    router.replace('/?recoverPortal=1');
+  function handleGoHome() {
+    router.push('/')
   }
 
   useEffect(() => {
@@ -295,7 +293,9 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
           : '';
 
       if (navType === 'reload') {
-        goToInicioThenBackToPortal();
+        if (recoveryNavigationTriggeredRef.current) return;
+        recoveryNavigationTriggeredRef.current = true;
+        handleGoHome()
       }
     } catch {
       // ignore navigation/storage errors
@@ -1113,7 +1113,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
               </div>
 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
-                <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => router.push('/')}>
+                <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 12 }} onClick={handleGoHome}>
                   Inicio
                 </button>
                 <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} onClick={signOut}>
