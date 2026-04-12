@@ -267,6 +267,8 @@ export default function DashboardPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoShellRef = useRef<HTMLDivElement | null>(null);
   const hasTriggeredPortalRecoveryRef = useRef(false);
+  const recoveryOverlayTimeoutRef = useRef<number | null>(null);
+  const [showPortalRecoveryOverlay, setShowPortalRecoveryOverlay] = useState(false);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
@@ -423,12 +425,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
           setSelectedVideoId(preferred?.id || null);
         }
 
-        try {
-          sessionStorage.removeItem('lead_portal_recovery');
-        } catch {
-          // ignore storage errors
-        }
-
         setLoading(false);
       } catch (e: any) {
         if (!mounted) return;
@@ -443,6 +439,37 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       mounted = false;
     };
   }, [router, streamUrl]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.portalRecovered !== '1') return;
+
+    setShowPortalRecoveryOverlay(true);
+
+    if (recoveryOverlayTimeoutRef.current) {
+      window.clearTimeout(recoveryOverlayTimeoutRef.current);
+    }
+
+    recoveryOverlayTimeoutRef.current = window.setTimeout(() => {
+      setShowPortalRecoveryOverlay(false);
+
+      try {
+        sessionStorage.removeItem('lead_portal_recovery');
+      } catch {
+        // ignore storage errors
+      }
+
+      router.replace('/dashboard', undefined, { shallow: true });
+      recoveryOverlayTimeoutRef.current = null;
+    }, 5000);
+
+    return () => {
+      if (recoveryOverlayTimeoutRef.current) {
+        window.clearTimeout(recoveryOverlayTimeoutRef.current);
+        recoveryOverlayTimeoutRef.current = null;
+      }
+    };
+  }, [router, router.isReady, router.query.portalRecovered]);
 
   useEffect(() => {
     setVideoUnavailable(false);
@@ -703,6 +730,46 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
         overflow: 'hidden',
       }}
     >
+      {showPortalRecoveryOverlay ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(2,6,23,0.96)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            gap: 14,
+            textAlign: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: '50%',
+              border: '3px solid rgba(255,255,255,0.18)',
+              borderTopColor: 'rgba(255,255,255,0.92)',
+              animation: 'lead-spin 1s linear infinite',
+            }}
+          />
+          <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: 0.2 }}>
+            Cargando transmisión...
+          </div>
+          <div style={{ fontSize: 14, opacity: 0.72, maxWidth: 520 }}>
+            Estamos restaurando el portal para que la clase vuelva a mostrarse limpia.
+          </div>
+          <style jsx>{`
+            @keyframes lead-spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      ) : null}
       <div
         aria-hidden="true"
         style={{

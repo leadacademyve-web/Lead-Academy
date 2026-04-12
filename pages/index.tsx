@@ -55,12 +55,7 @@ export default function HomePage() {
     if (!router.query.portalRecovery) return
 
     setShowRecoveryOverlay(true)
-
-    const timeout = window.setTimeout(() => {
-      router.replace('/dashboard?portalRecovered=1')
-    }, 5000)
-
-    return () => window.clearTimeout(timeout)
+    router.replace('/dashboard?portalRecovered=1')
   }, [router])
 
   return (
