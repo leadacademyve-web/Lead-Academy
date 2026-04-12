@@ -53,7 +53,7 @@ export default function Header() {
         <Image src="/Logo.png" alt="Lead Academy - Trading & Investing" width={66} height={66} />
         <div style={{ lineHeight: 1.5 }}>
           <div style={{ fontWeight: 600, fontSize: 20 }}>Lead Academy - Trading & Investing</div>
-          <div style={{ fontSize: 16, opacity: 0.75 }}>Portal Privado</div>
+          <div style={{ fontSize: 16, opacity: 0.75 }}>Portal Privado - Version WEB page para desktop no compatible con mobiles</div>
         </div>
       </Link>
 
