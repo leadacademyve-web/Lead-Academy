@@ -65,7 +65,7 @@ export default function HomePage() {
       }
 
       handleGoPortal()
-    }, 300)
+    }, 1500)
 
     return () => window.clearTimeout(timer)
   }, [router.isReady, router.query.recoverPortal])
