@@ -265,12 +265,46 @@ export default function DashboardPage() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showRecoveryOverlay, setShowRecoveryOverlay] = useState(false);
   const videoShellRef = useRef<HTMLDivElement | null>(null);
-  const recoveryStartedRef = useRef(false);
-  const recoveryOverlayTimeoutRef = useRef<number | null>(null);
+  const recoveryNavigationTriggeredRef = useRef(false);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
+
+  function goToInicioThenBackToPortal() {
+    if (recoveryNavigationTriggeredRef.current) return;
+    recoveryNavigationTriggeredRef.current = true;
+    router.push('/?recoverPortal=1');
+  }
+
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    try {
+      const returningFromIndex = sessionStorage.getItem('lead_portal_recovery_returning') === '1';
+      if (returningFromIndex) {
+        sessionStorage.removeItem('lead_portal_recovery_returning');
+        recoveryNavigationTriggeredRef.current = false;
+        return;
+      }
+    } catch {
+      // ignore storage errors
+    }
+
+    const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    if (navigationEntry?.type === 'reload') {
+      goToInicioThenBackToPortal();
+      return;
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        goToInicioThenBackToPortal();
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [router, router.isReady]);
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,
@@ -425,89 +459,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       mounted = false;
     };
   }, [router, streamUrl]);
-
-  useEffect(() => {
-    if (!router.isReady) return;
-
-    if (router.query.resumePortal === '1') {
-      setShowRecoveryOverlay(true);
-
-      if (recoveryOverlayTimeoutRef.current) {
-        window.clearTimeout(recoveryOverlayTimeoutRef.current);
-      }
-
-      recoveryOverlayTimeoutRef.current = window.setTimeout(() => {
-        setShowRecoveryOverlay(false);
-        recoveryStartedRef.current = false;
-
-        try {
-          sessionStorage.removeItem('lead_portal_refresh_recovery');
-        } catch {
-          // ignore storage errors
-        }
-
-        router.replace('/dashboard', undefined, { shallow: true });
-        recoveryOverlayTimeoutRef.current = null;
-      }, 5000);
-
-      return () => {
-        if (recoveryOverlayTimeoutRef.current) {
-          window.clearTimeout(recoveryOverlayTimeoutRef.current);
-          recoveryOverlayTimeoutRef.current = null;
-        }
-      };
-    }
-
-    setShowRecoveryOverlay(false);
-  }, [router, router.isReady, router.query.resumePortal]);
-
-  useEffect(() => {
-    function startRefreshRecovery() {
-      if (recoveryStartedRef.current) return;
-      recoveryStartedRef.current = true;
-
-      try {
-        sessionStorage.setItem('lead_portal_refresh_recovery', '1');
-      } catch {
-        // ignore storage errors
-      }
-
-      router.replace('/?recoverPortal=1');
-    }
-
-    function handleVisibilityChange() {
-      if (document.visibilityState === 'visible') {
-        startRefreshRecovery();
-      }
-    }
-
-    function handlePageShow() {
-      try {
-        const shouldRecover = sessionStorage.getItem('lead_portal_refresh_recovery') === '1';
-        if (shouldRecover && router.query.resumePortal !== '1') {
-          startRefreshRecovery();
-        }
-      } catch {
-        // ignore storage errors
-      }
-    }
-
-    window.addEventListener('beforeunload', () => {
-      try {
-        sessionStorage.setItem('lead_portal_refresh_recovery', '1');
-      } catch {
-        // ignore storage errors
-      }
-    });
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('pageshow', handlePageShow);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pageshow', handlePageShow);
-    };
-  }, [router]);
 
   useEffect(() => {
     setVideoUnavailable(false);
@@ -724,43 +675,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
         overflow: 'hidden',
       }}
     >
-      {showRecoveryOverlay ? (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            background: 'rgba(2,6,23,0.96)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
-            gap: 14,
-            textAlign: 'center',
-            padding: 24,
-          }}
-        >
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              border: '3px solid rgba(255,255,255,0.18)',
-              borderTopColor: 'rgba(255,255,255,0.92)',
-              animation: 'lead-spin 1s linear infinite',
-            }}
-          />
-          <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: 0.2 }}>
-            Cargando transmisión...
-          </div>
-          <style jsx>{`
-            @keyframes lead-spin {
-              from { transform: rotate(0deg); }
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
-        </div>
-      ) : null}
       <div
         aria-hidden="true"
         style={{
