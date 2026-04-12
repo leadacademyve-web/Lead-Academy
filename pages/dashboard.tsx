@@ -159,7 +159,7 @@ function normalizeLibraryVideos(rows: Partial<ClassVideo>[], streamUrl: string) 
 }
 
 function isEmbedUrl(url: string) {
-  return /(youtube\.com\/embed|player\.vimeo\.com|youtube-nocookie\.com|loom\.com\/embed)/i.test(url);
+  return /(player\.vimeo\.com|vimeo\.com\/event|loom\.com\/embed)/i.test(url);
 }
 
 function splitPhone(fullPhone?: string | null) {
@@ -267,7 +267,7 @@ export default function DashboardPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoShellRef = useRef<HTMLDivElement | null>(null);
 
-const streamUrl = useMemo(() => 'https://www.youtube.com/embed/32NtwIm_12w', []);
+const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,
@@ -703,16 +703,12 @@ const streamUrl = useMemo(() => 'https://www.youtube.com/embed/32NtwIm_12w', [])
                 {showIframe ? (
                   <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                     <iframe
-                      src={
-                        selectedVideo!.video_url +
-                        (selectedVideo!.video_url.includes('?') ? '&' : '?') +
-                        'autoplay=1&controls=0&disablekb=1&playsinline=1&rel=0&modestbranding=1'
-                      }
+                      src={selectedVideo!.video_url}
                       title={selectedVideo?.title || 'Clase'}
-                      allow="autoplay; encrypted-media; fullscreen"
+                      allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
                       allowFullScreen
                       onError={() => setVideoUnavailable(true)}
-                      style={{ width: '100%', height: '100%', border: 0, pointerEvents: 'none' }}
+                      style={{ width: '100%', height: '100%', border: 0 }}
                     />
                     <div
                       style={{
@@ -731,37 +727,6 @@ const streamUrl = useMemo(() => 'https://www.youtube.com/embed/32NtwIm_12w', [])
                         {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
                       </button>
                     </div>
-
-                    {selectedVideo?.is_live ? (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: '50%',
-                          top: 'calc(50% + 78px)',
-                          transform: 'translateX(-50%)',
-                          zIndex: 3,
-                          width: 'min(92%, 460px)',
-                          display: 'flex',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() => setVideoUnavailable(true)}
-                          style={{
-                            width: '100%',
-                            minHeight: 58,
-                            fontSize: 18,
-                            fontWeight: 800,
-                            borderRadius: 18,
-                            boxShadow: '0 10px 30px rgba(0,0,0,0.28)',
-                          }}
-                        >
-                          Click aquí para ver el estado de la transmisión
-                        </button>
-                      </div>
-                    ) : null}
                   </div>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
