@@ -718,8 +718,39 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                         inset: 0,
                         zIndex: 2,
                         background: 'transparent',
+                        pointerEvents: 'none',
                       }}
                     />
+
+                    <button
+                      type="button"
+                      aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Entrar a pantalla completa'}
+                      title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                      onClick={toggleFullscreen}
+                      style={{
+                        position: 'absolute',
+                        right: 14,
+                        bottom: 14,
+                        zIndex: 3,
+                        width: 38,
+                        height: 38,
+                        minWidth: 38,
+                        borderRadius: 12,
+                        border: '1px solid rgba(255,255,255,0.16)',
+                        background: 'rgba(15,23,42,0.72)',
+                        color: '#fff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 18,
+                        lineHeight: 1,
+                        boxShadow: '0 10px 24px rgba(0,0,0,0.28)',
+                        backdropFilter: 'blur(8px)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {isFullscreen ? '⤡' : '⤢'}
+                    </button>
 
                   </div>
                 ) : hasPlayableVideo ? (
@@ -1051,11 +1082,24 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center', marginTop: 10, flexWrap: 'wrap' }}>
                 <button
                   type="button"
+                  aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Entrar a pantalla completa'}
+                  title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
                   className="btn btn-secondary"
-                  style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
+                  style={{
+                    width: 38,
+                    height: 38,
+                    minWidth: 38,
+                    padding: 0,
+                    fontSize: 18,
+                    lineHeight: 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 12,
+                  }}
                   onClick={toggleFullscreen}
                 >
-                  {isFullscreen ? 'Salir pantalla completa' : 'Pantalla completa'}
+                  {isFullscreen ? '⤡' : '⤢'}
                 </button>
                 <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => router.push('/')}>
                   Inicio
