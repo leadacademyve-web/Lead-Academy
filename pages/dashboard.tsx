@@ -273,6 +273,13 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   function goToInicioThenBackToPortal() {
     if (recoveryNavigationTriggeredRef.current) return;
     recoveryNavigationTriggeredRef.current = true;
+
+    try {
+      sessionStorage.setItem('lead_portal_recover_once', '1');
+    } catch {
+      // ignore storage errors
+    }
+
     router.replace('/?recoverPortal=1');
   }
 
@@ -280,6 +287,14 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     if (!router.isReady) return;
 
     try {
+      const alreadyRecovering = sessionStorage.getItem('lead_portal_recover_once') === '1';
+
+      if (alreadyRecovering) {
+        sessionStorage.removeItem('lead_portal_recover_once');
+        recoveryNavigationTriggeredRef.current = false;
+        return;
+      }
+
       const navEntries = window.performance.getEntriesByType('navigation');
       const navType =
         navEntries && navEntries.length > 0
