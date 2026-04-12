@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 import { getLiveAccessByEmail } from '@/src/lib/liveAccess';
@@ -265,9 +265,27 @@ export default function DashboardPage() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [playerKey, setPlayerKey] = useState(0);
+  const [isPlayerRecovering, setIsPlayerRecovering] = useState(true);
   const videoShellRef = useRef<HTMLDivElement | null>(null);
+  const playerRecoveryTimeoutRef = useRef<number | null>(null);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
+
+  const restartPlayerView = useCallback((delayMs = 1800) => {
+    if (playerRecoveryTimeoutRef.current) {
+      window.clearTimeout(playerRecoveryTimeoutRef.current);
+    }
+
+    setIsPlayerRecovering(true);
+    setPlayerKey((prev) => prev + 1);
+
+    playerRecoveryTimeoutRef.current = window.setTimeout(() => {
+      setIsPlayerRecovering(false);
+      playerRecoveryTimeoutRef.current = null;
+    }, delayMs);
+  }, []);
+
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,
@@ -436,7 +454,37 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  useEffect(() => {
+    restartPlayerView(1800);
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        restartPlayerView(1800);
+      }
+    }
+
+    function handleWindowFocus() {
+      if (document.visibilityState === 'visible') {
+        restartPlayerView(1800);
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleWindowFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleWindowFocus);
+
+      if (playerRecoveryTimeoutRef.current) {
+        window.clearTimeout(playerRecoveryTimeoutRef.current);
+        playerRecoveryTimeoutRef.current = null;
+      }
+    };
+  }, [restartPlayerView]);
+
   async function toggleFullscreen() {
+
     const element = videoShellRef.current;
     if (!element) return;
 
@@ -703,6 +751,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                 {showIframe ? (
                   <div style={{ position: 'relative', width: '100%', height: '100%', background: '#000' }}>
                     <iframe
+                      key={`player-${selectedVideo?.id || 'live'}-${playerKey}`}
                       src={`${selectedVideo!.video_url}${selectedVideo!.video_url.includes('?') ? '&' : '?'}quality=1080p&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
                       title={selectedVideo?.title || 'Clase'}
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
@@ -722,6 +771,28 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       }}
                     />
 
+                    {isPlayerRecovering ? (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          zIndex: 5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'rgba(0,0,0,0.92)',
+                          color: 'rgba(255,255,255,0.94)',
+                          fontSize: 18,
+                          fontWeight: 700,
+                          letterSpacing: 0.2,
+                          textAlign: 'center',
+                          padding: 24,
+                        }}
+                      >
+                        Cargando transmisión...
+                      </div>
+                    ) : null}
+
                     <button
                       type="button"
                       aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Entrar a pantalla completa'}
@@ -731,7 +802,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                         position: 'absolute',
                         right: 14,
                         bottom: 14,
-                        zIndex: 3,
+                        zIndex: isPlayerRecovering ? 4 : 6,
                         width: 34,
                         height: 34,
                         minWidth: 34,
