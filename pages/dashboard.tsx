@@ -267,7 +267,7 @@ export default function DashboardPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoShellRef = useRef<HTMLDivElement | null>(null);
 
-  const streamUrl = useMemo(() => (process.env.NEXT_PUBLIC_LIVE_STREAM_EMBED_URL || '').trim(), []);
+const streamUrl = useMemo(() => 'https://www.youtube.com/embed/32NtwIm_12w', []);
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,
