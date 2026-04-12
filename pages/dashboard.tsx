@@ -265,18 +265,6 @@ export default function DashboardPage() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showRecoveryShield, setShowRecoveryShield] = useState(() => {
-    if (typeof window === 'undefined') return false;
-
-    try {
-      const refreshPending = sessionStorage.getItem('lead_portal_refresh_pending') === '1';
-      const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-      const isReloadNavigation = navigationEntry?.type === 'reload';
-      return refreshPending || isReloadNavigation;
-    } catch {
-      return false;
-    }
-  });
   const videoShellRef = useRef<HTMLDivElement | null>(null);
   const recoveryNavigationTriggeredRef = useRef(false);
 
@@ -285,55 +273,26 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   function goToInicioThenBackToPortal() {
     if (recoveryNavigationTriggeredRef.current) return;
     recoveryNavigationTriggeredRef.current = true;
-    router.push('/?recoverPortal=1');
+    router.replace('/?recoverPortal=1');
   }
 
   useEffect(() => {
     if (!router.isReady) return;
 
     try {
-      const returningFromIndex = sessionStorage.getItem('lead_portal_recovery_returning') === '1';
-      if (returningFromIndex) {
-        sessionStorage.removeItem('lead_portal_recovery_returning');
-        sessionStorage.removeItem('lead_portal_refresh_pending');
-        recoveryNavigationTriggeredRef.current = false;
-        setShowRecoveryShield(false);
-        return;
-      }
+      const navEntries = window.performance.getEntriesByType('navigation');
+      const navType =
+        navEntries && navEntries.length > 0
+          ? (navEntries[0] as PerformanceNavigationTiming).type
+          : '';
 
-      const refreshPending = sessionStorage.getItem('lead_portal_refresh_pending') === '1';
-      if (refreshPending) {
-        setShowRecoveryShield(true);
-        sessionStorage.removeItem('lead_portal_refresh_pending');
+      if (navType === 'reload') {
         goToInicioThenBackToPortal();
-        return;
       }
     } catch {
-      // ignore storage errors
+      // ignore navigation detection errors
     }
-
-    function markRefreshPending() {
-      try {
-        sessionStorage.setItem('lead_portal_refresh_pending', '1');
-      } catch {
-        // ignore storage errors
-      }
-    }
-
-    function handleVisibilityChange() {
-      if (document.visibilityState === 'visible') {
-        goToInicioThenBackToPortal();
-      }
-    }
-
-    window.addEventListener('beforeunload', markRefreshPending);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('beforeunload', markRefreshPending);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [router, router.isReady]);
+  }, [router.isReady]);
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,
@@ -685,7 +644,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   }
 
   const hasPlayableVideo = !!selectedVideo?.video_url && !videoUnavailable;
-  const showIframe = hasPlayableVideo && isEmbedUrl(selectedVideo.video_url) && !showRecoveryShield;
+  const showIframe = hasPlayableVideo && isEmbedUrl(selectedVideo.video_url);
   const totalClassesForCurrentPlan = totalClassesForPlan(accessPlan);
   const classesUsed =
     totalClassesForCurrentPlan !== null && classesRemaining !== null
@@ -704,43 +663,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
         overflow: 'hidden',
       }}
     >
-      {showRecoveryShield ? (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            background: 'rgba(2,6,23,0.96)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
-            gap: 14,
-            textAlign: 'center',
-            padding: 24,
-          }}
-        >
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              border: '3px solid rgba(255,255,255,0.18)',
-              borderTopColor: 'rgba(255,255,255,0.92)',
-              animation: 'lead-spin 1s linear infinite',
-            }}
-          />
-          <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: 0.2 }}>
-            Cargando transmisión...
-          </div>
-          <style jsx>{`
-            @keyframes lead-spin {
-              from { transform: rotate(0deg); }
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
-        </div>
-      ) : null}
       <div
         aria-hidden="true"
         style={{
