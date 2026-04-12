@@ -688,6 +688,30 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
           {accessActive ? (
             <>
               <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  marginBottom: 8,
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: 12,
+                    background: 'rgba(2, 6, 23, 0.88)',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.16)',
+                    boxShadow: '0 10px 24px rgba(0,0,0,0.22)',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                  onClick={toggleFullscreen}
+                >
+                  {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                </button>
+              </div>
+              <div
                 ref={videoShellRef}
                 className="video-shell"
                 style={{
@@ -720,24 +744,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                         background: 'transparent',
                       }}
                     />
-
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 16,
-                        right: 16,
-                        zIndex: 3,
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: '8px 12px', fontSize: 12 }}
-                        onClick={toggleFullscreen}
-                      >
-                        {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                      </button>
-                    </div>
                   </div>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
@@ -761,22 +767,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   </div>
                 ) : (
                   <div style={{ position: 'relative', display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 16,
-                        right: 16,
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: '8px 12px', fontSize: 12 }}
-                        onClick={toggleFullscreen}
-                      >
-                        {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                      </button>
-                    </div>
                     <div>
                       <div className="eyebrow" style={{ marginBottom: 10 }}>
                         {videoUnavailable ? 'Transmisión temporalmente no disponible' : 'Próxima clase programada'}
