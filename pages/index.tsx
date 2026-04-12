@@ -57,6 +57,12 @@ export default function HomePage() {
 
     if (!shouldGoPortal) return
 
+    try {
+      sessionStorage.setItem('lead_go_portal_once', '1')
+    } catch {
+      // ignore storage errors
+    }
+
     router.replace('/dashboard')
   }, [router.isReady, router.query.goPortal, router.query.recoverPortal, router])
 

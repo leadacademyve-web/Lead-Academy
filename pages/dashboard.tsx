@@ -273,6 +273,13 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     if (!router.isReady) return;
 
     try {
+      const cameBackFromIndex = sessionStorage.getItem('lead_go_portal_once') === '1';
+
+      if (cameBackFromIndex) {
+        sessionStorage.removeItem('lead_go_portal_once');
+        return;
+      }
+
       const navEntries = window.performance.getEntriesByType('navigation');
       const navType =
         navEntries && navEntries.length > 0
