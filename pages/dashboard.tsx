@@ -266,31 +266,26 @@ export default function DashboardPage() {
   const [videoUnavailable, setVideoUnavailable] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoShellRef = useRef<HTMLDivElement | null>(null);
+  const recoveryNavigationTriggeredRef = useRef(false);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
+
+  const executedRef = useRef(false);
 
   useEffect(() => {
     if (!router.isReady) return;
 
-    if (router.query.fromPortalRefresh === '1') {
-      router.replace('/dashboard', undefined, { shallow: true });
-      return;
-    }
+    const navEntries = performance.getEntriesByType('navigation');
+    const navType =
+      navEntries && navEntries.length > 0
+        ? (navEntries[0] as PerformanceNavigationTiming).type
+        : '';
 
-    try {
-      const navEntries = window.performance.getEntriesByType('navigation');
-      const navType =
-        navEntries && navEntries.length > 0
-          ? (navEntries[0] as PerformanceNavigationTiming).type
-          : '';
-
-      if (navType === 'reload') {
-        router.replace('/?goPortal=1');
-      }
-    } catch {
-      // ignore navigation detection errors
+    if (navType === 'reload' && !executedRef.current) {
+      executedRef.current = true;
+      router.push('/dashboard');
     }
-  }, [router.isReady, router.query.fromPortalRefresh, router]);
+  }, [router.isReady]);
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,
