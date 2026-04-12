@@ -721,23 +721,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       }}
                     />
 
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 16,
-                        right: 16,
-                        zIndex: 3,
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: '8px 12px', fontSize: 12 }}
-                        onClick={toggleFullscreen}
-                      >
-                        {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                      </button>
-                    </div>
                   </div>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
@@ -761,22 +744,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   </div>
                 ) : (
                   <div style={{ position: 'relative', display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 16,
-                        right: 16,
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: '8px 12px', fontSize: 12 }}
-                        onClick={toggleFullscreen}
-                      >
-                        {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                      </button>
-                    </div>
                     <div>
                       <div className="eyebrow" style={{ marginBottom: 10 }}>
                         {videoUnavailable ? 'Transmisión temporalmente no disponible' : 'Próxima clase programada'}
@@ -1081,7 +1048,15 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   : 'Suscripción activa'}
               </div>
 
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center', marginTop: 10, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
+                  onClick={toggleFullscreen}
+                >
+                  {isFullscreen ? 'Salir pantalla completa' : 'Pantalla completa'}
+                </button>
                 <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => router.push('/')}>
                   Inicio
                 </button>
