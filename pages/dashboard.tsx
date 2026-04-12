@@ -283,17 +283,27 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       const returningFromIndex = sessionStorage.getItem('lead_portal_recovery_returning') === '1';
       if (returningFromIndex) {
         sessionStorage.removeItem('lead_portal_recovery_returning');
+        sessionStorage.removeItem('lead_portal_refresh_pending');
         recoveryNavigationTriggeredRef.current = false;
+        return;
+      }
+
+      const refreshPending = sessionStorage.getItem('lead_portal_refresh_pending') === '1';
+      if (refreshPending) {
+        sessionStorage.removeItem('lead_portal_refresh_pending');
+        goToInicioThenBackToPortal();
         return;
       }
     } catch {
       // ignore storage errors
     }
 
-    const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-    if (navigationEntry?.type === 'reload') {
-      goToInicioThenBackToPortal();
-      return;
+    function markRefreshPending() {
+      try {
+        sessionStorage.setItem('lead_portal_refresh_pending', '1');
+      } catch {
+        // ignore storage errors
+      }
     }
 
     function handleVisibilityChange() {
@@ -302,8 +312,13 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       }
     }
 
+    window.addEventListener('beforeunload', markRefreshPending);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', markRefreshPending);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [router, router.isReady]);
 
   const selectedVideo = useMemo(
