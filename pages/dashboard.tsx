@@ -265,26 +265,23 @@ export default function DashboardPage() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [playerKey, setPlayerKey] = useState(0);
-  const [isPlayerRecovering, setIsPlayerRecovering] = useState(true);
   const videoShellRef = useRef<HTMLDivElement | null>(null);
-  const playerRecoveryTimeoutRef = useRef<number | null>(null);
+  const hasTriggeredPortalRecoveryRef = useRef(false);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
-  const restartPlayerView = useCallback((delayMs = 1800) => {
-    if (playerRecoveryTimeoutRef.current) {
-      window.clearTimeout(playerRecoveryTimeoutRef.current);
+  const goThroughPortalRecovery = useCallback(() => {
+    if (hasTriggeredPortalRecoveryRef.current) return;
+    hasTriggeredPortalRecoveryRef.current = true;
+
+    try {
+      sessionStorage.setItem('lead_portal_recovery', '1');
+    } catch {
+      // ignore storage errors
     }
 
-    setIsPlayerRecovering(true);
-    setPlayerKey((prev) => prev + 1);
-
-    playerRecoveryTimeoutRef.current = window.setTimeout(() => {
-      setIsPlayerRecovering(false);
-      playerRecoveryTimeoutRef.current = null;
-    }, delayMs);
-  }, []);
+    router.replace('/?portalRecovery=1');
+  }, [router]);
 
 
   const selectedVideo = useMemo(
@@ -426,6 +423,12 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
           setSelectedVideoId(preferred?.id || null);
         }
 
+        try {
+          sessionStorage.removeItem('lead_portal_recovery');
+        } catch {
+          // ignore storage errors
+        }
+
         setLoading(false);
       } catch (e: any) {
         if (!mounted) return;
@@ -455,33 +458,47 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   }, []);
 
   useEffect(() => {
-    restartPlayerView(1800);
+    try {
+      const shouldRecover = sessionStorage.getItem('lead_portal_recovery') === '1';
+      if (shouldRecover) {
+        goThroughPortalRecovery();
+        return;
+      }
+    } catch {
+      // ignore storage errors
+    }
+
+    function markRefreshRecovery() {
+      try {
+        sessionStorage.setItem('lead_portal_recovery', '1');
+      } catch {
+        // ignore storage errors
+      }
+    }
 
     function handleVisibilityChange() {
+      if (document.visibilityState === 'hidden') {
+        try {
+          sessionStorage.setItem('lead_portal_recovery', '1');
+        } catch {
+          // ignore storage errors
+        }
+        return;
+      }
+
       if (document.visibilityState === 'visible') {
-        restartPlayerView(1800);
+        goThroughPortalRecovery();
       }
     }
 
-    function handleWindowFocus() {
-      if (document.visibilityState === 'visible') {
-        restartPlayerView(1800);
-      }
-    }
-
+    window.addEventListener('beforeunload', markRefreshRecovery);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleWindowFocus);
 
     return () => {
+      window.removeEventListener('beforeunload', markRefreshRecovery);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleWindowFocus);
-
-      if (playerRecoveryTimeoutRef.current) {
-        window.clearTimeout(playerRecoveryTimeoutRef.current);
-        playerRecoveryTimeoutRef.current = null;
-      }
     };
-  }, [restartPlayerView]);
+  }, [goThroughPortalRecovery]);
 
   async function toggleFullscreen() {
 
@@ -751,7 +768,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                 {showIframe ? (
                   <div style={{ position: 'relative', width: '100%', height: '100%', background: '#000' }}>
                     <iframe
-                      key={`player-${selectedVideo?.id || 'live'}-${playerKey}`}
                       src={`${selectedVideo!.video_url}${selectedVideo!.video_url.includes('?') ? '&' : '?'}quality=1080p&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
                       title={selectedVideo?.title || 'Clase'}
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
@@ -771,28 +787,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       }}
                     />
 
-                    {isPlayerRecovering ? (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          zIndex: 5,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: 'rgba(0,0,0,0.92)',
-                          color: 'rgba(255,255,255,0.94)',
-                          fontSize: 18,
-                          fontWeight: 700,
-                          letterSpacing: 0.2,
-                          textAlign: 'center',
-                          padding: 24,
-                        }}
-                      >
-                        Cargando transmisión...
-                      </div>
-                    ) : null}
-
                     <button
                       type="button"
                       aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Entrar a pantalla completa'}
@@ -802,7 +796,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                         position: 'absolute',
                         right: 14,
                         bottom: 14,
-                        zIndex: isPlayerRecovering ? 4 : 6,
+                        zIndex: 3,
                         width: 34,
                         height: 34,
                         minWidth: 34,
@@ -822,7 +816,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                     >
                       {isFullscreen ? '⤡' : '⤢'}
                     </button>
-
                   </div>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>

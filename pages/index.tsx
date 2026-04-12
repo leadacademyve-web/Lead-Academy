@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAuthUser } from '@/src/context/AuthUserProvider'
@@ -47,9 +48,63 @@ const plans = [
 export default function HomePage() {
   const router = useRouter()
   const { user } = useAuthUser()
+  const [showRecoveryOverlay, setShowRecoveryOverlay] = useState(false)
+
+  useEffect(() => {
+    if (!router.isReady) return
+    if (!router.query.portalRecovery) return
+
+    setShowRecoveryOverlay(true)
+
+    const timeout = window.setTimeout(() => {
+      router.replace('/dashboard?portalRecovered=1')
+    }, 5000)
+
+    return () => window.clearTimeout(timeout)
+  }, [router])
 
   return (
-    <main style={{ background: 'url("/trading-bg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', minHeight: '100vh', color: 'white' }}>
+    <main style={{ background: 'url("/trading-bg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', minHeight: '100vh', color: 'white', position: 'relative', overflow: 'hidden' }}>
+      {showRecoveryOverlay ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(2,6,23,0.96)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            gap: 14,
+            textAlign: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: '50%',
+              border: '3px solid rgba(255,255,255,0.18)',
+              borderTopColor: 'rgba(255,255,255,0.92)',
+              animation: 'lead-spin 1s linear infinite',
+            }}
+          />
+          <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: 0.2 }}>
+            Cargando transmisión...
+          </div>
+          <div style={{ fontSize: 14, opacity: 0.72, maxWidth: 520 }}>
+            Estamos restaurando el portal para que la clase vuelva a mostrarse limpia.
+          </div>
+          <style jsx>{`
+            @keyframes lead-spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      ) : null}
       <section style={{ padding: '100px', display: 'flex', justifyContent: 'center' }}>
         <div style={{
           maxWidth: 1500,
