@@ -52,10 +52,15 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!router.isReady) return
-    if (!router.query.portalRecovery) return
+    if (router.query.recoverPortal !== '1') return
 
     setShowRecoveryOverlay(true)
-    router.replace('/dashboard?portalRecovered=1')
+
+    const timeout = window.setTimeout(() => {
+      router.replace('/dashboard?resumePortal=1')
+    }, 120)
+
+    return () => window.clearTimeout(timeout)
   }, [router])
 
   return (
@@ -88,9 +93,6 @@ export default function HomePage() {
           />
           <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: 0.2 }}>
             Cargando transmisión...
-          </div>
-          <div style={{ fontSize: 14, opacity: 0.72, maxWidth: 520 }}>
-            Estamos restaurando el portal para que la clase vuelva a mostrarse limpia.
           </div>
           <style jsx>{`
             @keyframes lead-spin {

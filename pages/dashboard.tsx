@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 import { getLiveAccessByEmail } from '@/src/lib/liveAccess';
@@ -265,26 +265,12 @@ export default function DashboardPage() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showRecoveryOverlay, setShowRecoveryOverlay] = useState(false);
   const videoShellRef = useRef<HTMLDivElement | null>(null);
-  const hasTriggeredPortalRecoveryRef = useRef(false);
+  const recoveryStartedRef = useRef(false);
   const recoveryOverlayTimeoutRef = useRef<number | null>(null);
-  const [showPortalRecoveryOverlay, setShowPortalRecoveryOverlay] = useState(false);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
-
-  const goThroughPortalRecovery = useCallback(() => {
-    if (hasTriggeredPortalRecoveryRef.current) return;
-    hasTriggeredPortalRecoveryRef.current = true;
-
-    try {
-      sessionStorage.setItem('lead_portal_recovery', '1');
-    } catch {
-      // ignore storage errors
-    }
-
-    router.replace('/?portalRecovery=1');
-  }, [router]);
-
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,
@@ -442,34 +428,86 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
   useEffect(() => {
     if (!router.isReady) return;
-    if (router.query.portalRecovered !== '1') return;
 
-    setShowPortalRecoveryOverlay(true);
+    if (router.query.resumePortal === '1') {
+      setShowRecoveryOverlay(true);
 
-    if (recoveryOverlayTimeoutRef.current) {
-      window.clearTimeout(recoveryOverlayTimeoutRef.current);
+      if (recoveryOverlayTimeoutRef.current) {
+        window.clearTimeout(recoveryOverlayTimeoutRef.current);
+      }
+
+      recoveryOverlayTimeoutRef.current = window.setTimeout(() => {
+        setShowRecoveryOverlay(false);
+        recoveryStartedRef.current = false;
+
+        try {
+          sessionStorage.removeItem('lead_portal_refresh_recovery');
+        } catch {
+          // ignore storage errors
+        }
+
+        router.replace('/dashboard', undefined, { shallow: true });
+        recoveryOverlayTimeoutRef.current = null;
+      }, 5000);
+
+      return () => {
+        if (recoveryOverlayTimeoutRef.current) {
+          window.clearTimeout(recoveryOverlayTimeoutRef.current);
+          recoveryOverlayTimeoutRef.current = null;
+        }
+      };
     }
 
-    recoveryOverlayTimeoutRef.current = window.setTimeout(() => {
-      setShowPortalRecoveryOverlay(false);
+    setShowRecoveryOverlay(false);
+  }, [router, router.isReady, router.query.resumePortal]);
+
+  useEffect(() => {
+    function startRefreshRecovery() {
+      if (recoveryStartedRef.current) return;
+      recoveryStartedRef.current = true;
 
       try {
-        sessionStorage.removeItem('lead_portal_recovery');
+        sessionStorage.setItem('lead_portal_refresh_recovery', '1');
       } catch {
         // ignore storage errors
       }
 
-      router.replace('/dashboard', undefined, { shallow: true });
-      recoveryOverlayTimeoutRef.current = null;
-    }, 5000);
+      router.replace('/?recoverPortal=1');
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        startRefreshRecovery();
+      }
+    }
+
+    function handlePageShow() {
+      try {
+        const shouldRecover = sessionStorage.getItem('lead_portal_refresh_recovery') === '1';
+        if (shouldRecover && router.query.resumePortal !== '1') {
+          startRefreshRecovery();
+        }
+      } catch {
+        // ignore storage errors
+      }
+    }
+
+    window.addEventListener('beforeunload', () => {
+      try {
+        sessionStorage.setItem('lead_portal_refresh_recovery', '1');
+      } catch {
+        // ignore storage errors
+      }
+    });
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handlePageShow);
 
     return () => {
-      if (recoveryOverlayTimeoutRef.current) {
-        window.clearTimeout(recoveryOverlayTimeoutRef.current);
-        recoveryOverlayTimeoutRef.current = null;
-      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
     };
-  }, [router, router.isReady, router.query.portalRecovered]);
+  }, [router]);
 
   useEffect(() => {
     setVideoUnavailable(false);
@@ -484,51 +522,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  useEffect(() => {
-    try {
-      const shouldRecover = sessionStorage.getItem('lead_portal_recovery') === '1';
-      if (shouldRecover) {
-        goThroughPortalRecovery();
-        return;
-      }
-    } catch {
-      // ignore storage errors
-    }
-
-    function markRefreshRecovery() {
-      try {
-        sessionStorage.setItem('lead_portal_recovery', '1');
-      } catch {
-        // ignore storage errors
-      }
-    }
-
-    function handleVisibilityChange() {
-      if (document.visibilityState === 'hidden') {
-        try {
-          sessionStorage.setItem('lead_portal_recovery', '1');
-        } catch {
-          // ignore storage errors
-        }
-        return;
-      }
-
-      if (document.visibilityState === 'visible') {
-        goThroughPortalRecovery();
-      }
-    }
-
-    window.addEventListener('beforeunload', markRefreshRecovery);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('beforeunload', markRefreshRecovery);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [goThroughPortalRecovery]);
-
   async function toggleFullscreen() {
-
     const element = videoShellRef.current;
     if (!element) return;
 
@@ -730,7 +724,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
         overflow: 'hidden',
       }}
     >
-      {showPortalRecoveryOverlay ? (
+      {showRecoveryOverlay ? (
         <div
           style={{
             position: 'fixed',
@@ -758,9 +752,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
           />
           <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: 0.2 }}>
             Cargando transmisión...
-          </div>
-          <div style={{ fontSize: 14, opacity: 0.72, maxWidth: 520 }}>
-            Estamos restaurando el portal para que la clase vuelva a mostrarse limpia.
           </div>
           <style jsx>{`
             @keyframes lead-spin {
@@ -883,6 +874,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                     >
                       {isFullscreen ? '⤡' : '⤢'}
                     </button>
+
                   </div>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
