@@ -710,68 +710,12 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       onError={() => setVideoUnavailable(true)}
                       style={{ width: '100%', height: '100%', border: 0, display: 'block', pointerEvents: 'none' }}
                     />
-
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        zIndex: 2,
-                        background: 'transparent',
-                      }}
-                    />
-
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: 390,
-                        height: 86,
-                        background: '#000',
-                        zIndex: 4,
-                        pointerEvents: 'none',
-                      }}
-                    />
-
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: 420,
-                        height: 54,
-                        background: '#000',
-                        zIndex: 4,
-                        pointerEvents: 'none',
-                        borderBottomLeftRadius: 12,
-                        borderBottomRightRadius: 12,
-                      }}
-                    />
-
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        height: 54,
-                        background: '#000',
-                        zIndex: 4,
-                        pointerEvents: 'none',
-                      }}
-                    />
-
                     <div
                       style={{
                         position: 'absolute',
                         top: 16,
                         right: 16,
-                        zIndex: 5,
+                        zIndex: 3,
                       }}
                     >
                       <button
