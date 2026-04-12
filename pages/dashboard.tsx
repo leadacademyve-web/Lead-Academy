@@ -674,8 +674,8 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
         <section
           className="panel"
           style={{
-            height: '84vh',
-            minHeight: '84vh',
+            height: '88vh',
+            minHeight: '88vh',
             display: 'flex',
             flexDirection: 'column',
             padding: 14,
@@ -695,20 +695,20 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   height: '100%',
                   borderRadius: 24,
                   overflow: 'hidden',
-                  display: 'grid',
+                  display: 'block',
                   background: '#000',
                   boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 0 1px rgba(96,165,250,0.06), 0 20px 40px rgba(0,0,0,0.28)',
                 }}
               >
                 {showIframe ? (
-                  <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                  <div style={{ width: '100%', height: '100%', background: '#000' }}>
                     <iframe
-                      src={selectedVideo!.video_url}
+                      src={`${selectedVideo!.video_url}${selectedVideo!.video_url.includes('?') ? '&' : '?'}quality=1080p&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
                       title={selectedVideo?.title || 'Clase'}
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
                       allowFullScreen
                       onError={() => setVideoUnavailable(true)}
-                      style={{ width: '100%', height: '100%', border: 0 }}
+                      style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
                     />
                     <div
                       style={{
@@ -841,8 +841,8 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
         <aside
           className="panel"
           style={{
-            height: '84vh',
-            minHeight: '84vh',
+            height: '88vh',
+            minHeight: '88vh',
             display: 'flex',
             flexDirection: 'column',
             overflowY: 'auto',
