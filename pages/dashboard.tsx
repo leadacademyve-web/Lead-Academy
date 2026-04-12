@@ -268,6 +268,10 @@ export default function DashboardPage() {
   const videoShellRef = useRef<HTMLDivElement | null>(null);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
+  const vimeoEmbedUrl = useMemo(
+    () => `${streamUrl}${streamUrl.includes('?') ? '&' : '?'}quality=1080p&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&controls=0&dnt=1`,
+    [streamUrl]
+  );
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,
@@ -701,15 +705,71 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                 }}
               >
                 {showIframe ? (
-                  <div style={{ position: 'relative', width: '100%', height: '100%', background: '#000' }}>
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: '100%',
+                      background: '#000',
+                      overflow: 'hidden',
+                    }}
+                  >
                     <iframe
-                      src={`${selectedVideo!.video_url}${selectedVideo!.video_url.includes('?') ? '&' : '?'}quality=1080p&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
+                      src={selectedVideo?.video_url === streamUrl ? vimeoEmbedUrl : selectedVideo!.video_url}
                       title={selectedVideo?.title || 'Clase'}
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
                       allowFullScreen
                       onError={() => setVideoUnavailable(true)}
-                      style={{ width: '100%', height: '100%', border: 0, display: 'block', pointerEvents: 'none' }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 0,
+                        display: 'block',
+                        background: '#000',
+                      }}
                     />
+
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: 220,
+                        height: 74,
+                        background: 'linear-gradient(180deg, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.86) 70%, rgba(0,0,0,0) 100%)',
+                        pointerEvents: 'none',
+                        zIndex: 2,
+                      }}
+                    />
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 320,
+                        height: 58,
+                        background: 'linear-gradient(180deg, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.82) 70%, rgba(0,0,0,0) 100%)',
+                        pointerEvents: 'none',
+                        zIndex: 2,
+                      }}
+                    />
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 64,
+                        background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.84) 45%, rgba(0,0,0,0.98) 100%)',
+                        pointerEvents: 'none',
+                        zIndex: 2,
+                      }}
+                    />
+
                     <div
                       style={{
                         position: 'absolute',
@@ -721,7 +781,13 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       <button
                         type="button"
                         className="btn btn-secondary"
-                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        style={{
+                          padding: '8px 12px',
+                          fontSize: 12,
+                          background: 'rgba(15, 23, 42, 0.82)',
+                          border: '1px solid rgba(255,255,255,0.10)',
+                          backdropFilter: 'blur(10px)',
+                        }}
                         onClick={toggleFullscreen}
                       >
                         {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
