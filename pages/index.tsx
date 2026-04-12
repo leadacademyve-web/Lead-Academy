@@ -51,16 +51,14 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!router.isReady) return
-    if (router.query.recoverPortal !== '1') return
 
-    try {
-      sessionStorage.setItem('lead_portal_recovery_returning', '1')
-    } catch {
-      // ignore storage errors
-    }
+    const shouldGoPortal =
+      router.query.goPortal === '1' || router.query.recoverPortal === '1'
 
-    router.push('/dashboard')
-  }, [router])
+    if (!shouldGoPortal) return
+
+    router.replace('/dashboard')
+  }, [router.isReady, router.query.goPortal, router.query.recoverPortal, router])
 
   return (
     <main style={{ background: 'url("/trading-bg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', minHeight: '100vh', color: 'white' }}>
