@@ -688,35 +688,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
           {accessActive ? (
             <>
               <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  alignItems: 'center',
-                  marginBottom: 8,
-                  paddingRight: 2,
-                  minHeight: 28,
-                }}
-              >
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{
-                    padding: '6px 12px',
-                    fontSize: 12,
-                    lineHeight: 1.1,
-                    background: 'rgba(15,23,42,0.72)',
-                    border: '1px solid rgba(255,255,255,0.16)',
-                    boxShadow: '0 10px 24px rgba(0,0,0,0.22)',
-                    backdropFilter: 'blur(8px)',
-                    whiteSpace: 'nowrap',
-                  }}
-                  onClick={toggleFullscreen}
-                >
-                  {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                </button>
-              </div>
-
-              <div
                 ref={videoShellRef}
                 className="video-shell"
                 style={{
@@ -737,7 +708,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
                       allowFullScreen
                       onError={() => setVideoUnavailable(true)}
-                      style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
+                      style={{ width: '100%', height: '100%', border: 0, display: 'block', pointerEvents: 'none' }}
                     />
 
                     <div
@@ -750,6 +721,68 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       }}
                     />
 
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: 390,
+                        height: 86,
+                        background: '#000',
+                        zIndex: 4,
+                        pointerEvents: 'none',
+                      }}
+                    />
+
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 420,
+                        height: 54,
+                        background: '#000',
+                        zIndex: 4,
+                        pointerEvents: 'none',
+                        borderBottomLeftRadius: 12,
+                        borderBottomRightRadius: 12,
+                      }}
+                    />
+
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 54,
+                        background: '#000',
+                        zIndex: 4,
+                        pointerEvents: 'none',
+                      }}
+                    />
+
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 16,
+                        right: 16,
+                        zIndex: 5,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        onClick={toggleFullscreen}
+                      >
+                        {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                      </button>
+                    </div>
                   </div>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
@@ -773,6 +806,22 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   </div>
                 ) : (
                   <div style={{ position: 'relative', display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 16,
+                        right: 16,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        onClick={toggleFullscreen}
+                      >
+                        {isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                      </button>
+                    </div>
                     <div>
                       <div className="eyebrow" style={{ marginBottom: 10 }}>
                         {videoUnavailable ? 'Transmisión temporalmente no disponible' : 'Próxima clase programada'}
