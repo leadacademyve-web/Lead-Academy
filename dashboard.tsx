@@ -708,19 +708,8 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
                       allowFullScreen
                       onError={() => setVideoUnavailable(true)}
-                      style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
+                      style={{ width: '100%', height: '100%', border: 0, display: 'block', pointerEvents: 'none' }}
                     />
-
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        zIndex: 2,
-                        background: 'transparent',
-                      }}
-                    />
-
                     <div
                       style={{
                         position: 'absolute',
