@@ -38,13 +38,13 @@ export default function EmailConfirmedPage() {
           await supabase.auth.signOut();
           if (!mounted) return;
           setStatus('success');
-          setMessage('Correo confirmado. Ya puede iniciar sesión.');
+          setMessage('Tu correo ha sido confirmado exitosamente. Puedes cerrar esta ventana y continuar en el portal.');
           return;
         }
 
         if (!mounted) return;
         setStatus('success');
-        setMessage('Tu correo ya fue confirmado. Ya puede iniciar sesión.');
+        setMessage('Tu correo ya fue confirmado. Puedes cerrar esta ventana y continuar en el portal.');
       } catch (error: any) {
         if (!mounted) return;
         setStatus('error');
@@ -77,9 +77,6 @@ export default function EmailConfirmedPage() {
           <div className="notice">Espere un momento...</div>
         ) : status === 'success' ? (
           <div style={{ display: 'grid', gap: 10 }}>
-            <Link href={nextLoginHref} className="btn btn-primary" style={{ textAlign: 'center' }}>
-              Ir a iniciar sesión
-            </Link>
             <Link href="/" className="btn btn-secondary" style={{ textAlign: 'center' }}>
               Volver al inicio
             </Link>
