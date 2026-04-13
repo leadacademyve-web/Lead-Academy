@@ -760,7 +760,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
                       allowFullScreen
                       onError={() => setVideoUnavailable(true)}
-                      style={{ width: '100%', height: '100%', border: 0, display: 'block', pointerEvents: 'auto' }}
+                      style={{ width: '100%', height: '100%', border: 0, display: 'block', pointerEvents: 'none' }}
                     />
 
                     <div
@@ -778,15 +778,15 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       type="button"
                       aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Entrar a pantalla completa'}
                       title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                      onClick={() => {}}
+                      onClick={toggleFullscreen}
                       style={{
                         position: 'absolute',
                         right: 14,
                         bottom: 14,
                         zIndex: 3,
-                        width: 68,
-                        height: 68,
-                        minWidth: 68,
+                        width: 34,
+                        height: 34,
+                        minWidth: 34,
                         borderRadius: 10,
                         border: '1px solid rgba(255,255,255,0.16)',
                         background: 'rgba(15,23,42,0.72)',
@@ -794,13 +794,11 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: 32,
+                        fontSize: 16,
                         lineHeight: 1,
                         boxShadow: '0 10px 24px rgba(0,0,0,0.28)',
                         backdropFilter: 'blur(8px)',
-                        cursor: 'default',
-opacity: 0,
-pointerEvents: 'none',
+                        cursor: 'pointer',
                       }}
                     >
                       {isFullscreen ? '⤡' : '⤢'}
