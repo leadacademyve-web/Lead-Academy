@@ -639,7 +639,10 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
   if (loading) {
     return (
-      <main className="container dashboard" style={{ maxWidth: '96vw', width: '96vw' }}>
+      <main
+        className="container dashboard"
+        style={{ maxWidth: 'min(1440px, 96vw)', width: '100%', margin: '0 auto' }}
+      >
         <div className="panel">Cargando portal...</div>
       </main>
     );
@@ -657,9 +660,10 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     <main
       className="container dashboard"
       style={{
-        maxWidth: '98vw',
-        width: '98vw',
-        paddingInline: '0.5vw',
+        maxWidth: 'min(1480px, 98vw)',
+        width: '100%',
+        margin: '0 auto',
+        paddingInline: 'clamp(10px, 1vw, 18px)',
         minHeight: '100vh',
         position: 'relative',
         overflow: 'hidden',
@@ -691,9 +695,9 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       <div
         className="dashboard-grid"
         style={{
-          gridTemplateColumns: accessActive ? '83.5% 16.5%' : undefined,
+          gridTemplateColumns: accessActive ? 'minmax(0, 1fr) minmax(280px, 19vw, 320px)' : undefined,
           alignItems: 'stretch',
-          gap: '20px',
+          gap: 'clamp(14px, 1.2vw, 20px)',
           position: 'relative',
           zIndex: 1,
         }}
@@ -701,11 +705,11 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
         <section
           className="panel"
           style={{
-            height: '88vh',
-            minHeight: '88vh',
+            height: 'min(88vh, 940px)',
+            minHeight: 'min(88vh, 940px)',
             display: 'flex',
             flexDirection: 'column',
-            padding: 14,
+            padding: 'clamp(12px, 1vw, 16px)',
             background: 'linear-gradient(180deg, rgba(11,29,58,0.28) 0%, rgba(5,18,40,0.28) 100%)',
             boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
             backdropFilter: 'blur(10px)',
@@ -718,6 +722,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                 className="video-shell"
                 style={{
                   width: '100%',
+                  maxWidth: '100%',
                   aspectRatio: '16 / 9',
                   alignSelf: 'center',
                   borderRadius: 24,
@@ -765,14 +770,14 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       <div className="eyebrow" style={{ marginBottom: 10 }}>
                         {videoUnavailable ? 'Transmisión temporalmente no disponible' : 'Próxima clase programada'}
                       </div>
-                      <h2 style={{ marginTop: 0, fontSize: 54, lineHeight: 1.05, marginBottom: 16 }}>
+                      <h2 style={{ marginTop: 0, fontSize: 'clamp(34px, 3vw, 54px)', lineHeight: 1.05, marginBottom: 16 }}>
                         {videoUnavailable
                           ? 'Transmisión en VIVO'
                           : nextScheduledClass
                             ? 'La próxima clase se reproducirá en este portal'
                             : 'Transmisión en VIVO'}
                       </h2>
-                      <p className="helper" style={{ maxWidth: 760, fontSize: 20, lineHeight: 1.6, margin: '0 auto 14px' }}>
+                      <p className="helper" style={{ maxWidth: 760, fontSize: 'clamp(16px, 1.2vw, 20px)', lineHeight: 1.6, margin: '0 auto 14px' }}>
                         {videoUnavailable
                           ? 'Estamos preparando la próxima transmisión para tu acceso.'
                           : nextScheduledClass
@@ -836,12 +841,16 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
         <aside
           className="panel"
           style={{
-            height: '88vh',
-            minHeight: '88vh',
+            height: 'min(88vh, 940px)',
+            minHeight: 'min(88vh, 940px)',
             display: 'flex',
             flexDirection: 'column',
             overflowY: 'auto',
-            padding: 18,
+            padding: 'clamp(14px, 1vw, 18px)',
+            width: '100%',
+            minWidth: 0,
+            maxWidth: 'clamp(280px, 19vw, 320px)',
+            justifySelf: 'end',
             background: 'linear-gradient(180deg, rgba(9,25,54,0.22) 0%, rgba(4,15,35,0.22) 100%)',
             boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
             backdropFilter: 'blur(10px)',
@@ -861,9 +870,9 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                 }}
               />
               <div className="eyebrow">Biblioteca</div>
-              <h2 style={{ marginTop: 12, marginBottom: 18 }}>Clases disponibles</h2>
+              <h2 style={{ marginTop: 12, marginBottom: 18, fontSize: 'clamp(22px, 1.5vw, 28px)', lineHeight: 1.15 }}>Clases disponibles</h2>
 
-              <div style={{ display: 'grid', gap: 10, marginBottom: 12, flex: 1, alignContent: 'start' }}>
+              <div style={{ display: 'grid', gap: 'clamp(8px, 0.8vw, 10px)', marginBottom: 12, flex: 1, alignContent: 'start' }}>
                 {visibleLibraryVideos.length ? (
                   visibleLibraryVideos.map((video) => {
                     const selected = selectedVideoId === video.id;
@@ -873,7 +882,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                         onClick={() => setSelectedVideoId(video.id)}
                         style={{
                           textAlign: 'left',
-                          padding: '14px 16px',
+                          padding: 'clamp(12px, 0.95vw, 14px) clamp(13px, 1vw, 16px)',
                           borderRadius: 16,
                           border: selected ? '1px solid rgba(245, 158, 11, 0.72)' : '1px solid rgba(255,255,255,0.08)',
                           background: selected ? 'linear-gradient(180deg, rgba(245,158,11,0.14) 0%, rgba(30,41,59,0.72) 100%)' : 'rgba(255,255,255,0.03)',
@@ -881,10 +890,10 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                           cursor: 'pointer',
                         }}
                       >
-                        <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
+                        <div style={{ fontSize: 'clamp(11px, 0.75vw, 12px)', letterSpacing: 1, textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
                           {sublabelForVideo(video)}
                         </div>
-                        <div style={{ fontWeight: 700, fontSize: 18 }}>{labelForVideo(video)}</div>
+                        <div style={{ fontWeight: 700, fontSize: 'clamp(16px, 1.1vw, 18px)' }}>{labelForVideo(video)}</div>
                       </button>
                     );
                   })
@@ -902,7 +911,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
               {lastClassWarning ? (
                 <div
                   style={{
-                    padding: '12px 14px',
+                    padding: 'clamp(11px, 0.9vw, 12px) clamp(12px, 1vw, 14px)',
                     borderRadius: 16,
                     background: 'linear-gradient(180deg, rgba(245,158,11,0.16) 0%, rgba(120,53,15,0.18) 100%)',
                     border: '1px solid rgba(245,158,11,0.40)',
@@ -911,7 +920,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   }}
                 >
                   <div className="eyebrow" style={{ marginBottom: 8 }}>Aviso de suscripción</div>
-                  <div style={{ fontSize: 15, lineHeight: 1.5, color: 'rgba(255,255,255,0.92)' }}>
+                  <div style={{ fontSize: 'clamp(14px, 0.95vw, 15px)', lineHeight: 1.5, color: 'rgba(255,255,255,0.92)' }}>
                     Estás entrando en tu última clase disponible. Para seguir accediendo al portal deberás renovar tu suscripción.
                   </div>
                 </div>
@@ -919,7 +928,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
               <div
                 style={{
-                  padding: '14px 14px 12px',
+                  padding: 'clamp(12px, 1vw, 14px) clamp(12px, 1vw, 14px) 12px',
                   borderRadius: 16,
                   background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.025) 100%)',
                   border: '1px solid rgba(255,255,255,0.07)',
@@ -939,7 +948,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
+                    style={{ padding: '6px 10px', fontSize: 'clamp(11px, 0.8vw, 12px)', whiteSpace: 'nowrap' }}
                     onClick={() => {
                       setIsEditingProfile((prev) => !prev);
                       setProfileError(null);
@@ -1051,7 +1060,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   opacity: 0.88,
                 }}
               >
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>Soporte</div>
+                <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 'clamp(12px, 0.9vw, 13px)' }}>Soporte</div>
                 <div>Leadacademyve@gmail.com</div>
                 <div>+1 786 620 4377</div>
               </div>
@@ -1065,11 +1074,11 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   : 'Suscripción activa'}
               </div>
 
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
-                <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => router.push('/')}>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10, flexWrap: 'wrap' }}>
+                <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 'clamp(11px, 0.8vw, 12px)' }} onClick={() => router.push('/')}>
                   Inicio
                 </button>
-                <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} onClick={signOut}>
+                <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 'clamp(11px, 0.8vw, 12px)' }} onClick={signOut}>
                   Salir
                 </button>
               </div>
