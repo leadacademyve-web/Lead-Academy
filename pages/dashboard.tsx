@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 import { getLiveAccessByEmail } from '@/src/lib/liveAccess';
@@ -264,8 +264,6 @@ export default function DashboardPage() {
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const videoShellRef = useRef<HTMLDivElement | null>(null);
   const recoveryNavigationTriggeredRef = useRef(false);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
@@ -477,33 +475,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
   useEffect(() => {
     setVideoUnavailable(false);
-  }, [selectedVideoId]);
-
-  useEffect(() => {
-    function handleFullscreenChange() {
-      setIsFullscreen(document.fullscreenElement === videoShellRef.current);
-    }
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
-
-  async function toggleFullscreen() {
-    const element = videoShellRef.current;
-    if (!element) return;
-
-    try {
-      if (document.fullscreenElement === element) {
-        await document.exitFullscreen();
-      } else {
-        await element.requestFullscreen();
-      }
-    } catch {
-      // ignore fullscreen errors
-    }
-  }
-
-  useEffect(() => {
+  }, [selectedVideoId]);  useEffect(() => {
     const interval = window.setInterval(async () => {
       const { data } = await supabase.auth.getUser();
       const user = data.user;
@@ -740,7 +712,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
           {accessActive ? (
             <>
               <div
-                ref={videoShellRef}
                 className="video-shell"
                 style={{
                   flex: 1,
@@ -760,50 +731,8 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
                       allowFullScreen
                       onError={() => setVideoUnavailable(true)}
-                      style={{ width: '100%', height: '100%', border: 0, display: 'block', pointerEvents: 'none' }}
+                      style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
                     />
-
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        zIndex: 2,
-                        background: 'transparent',
-                        pointerEvents: 'none',
-                      }}
-                    />
-
-                    <button
-                      type="button"
-                      aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Entrar a pantalla completa'}
-                      title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                      onClick={toggleFullscreen}
-                      style={{
-                        position: 'absolute',
-                        right: 14,
-                        bottom: 14,
-                        zIndex: 3,
-                        width: 34,
-                        height: 34,
-                        minWidth: 34,
-                        borderRadius: 10,
-                        border: '1px solid rgba(255,255,255,0.16)',
-                        background: 'rgba(15,23,42,0.72)',
-                        color: '#fff',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 16,
-                        lineHeight: 1,
-                        boxShadow: '0 10px 24px rgba(0,0,0,0.28)',
-                        backdropFilter: 'blur(8px)',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {isFullscreen ? '⤡' : '⤢'}
-                    </button>
-
                   </div>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
