@@ -778,7 +778,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       type="button"
                       aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Entrar a pantalla completa'}
                       title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                      onClick={toggleFullscreen}
+                      onClick={() => {}}
                       style={{
                         position: 'absolute',
                         right: 14,
@@ -798,7 +798,9 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                         lineHeight: 1,
                         boxShadow: '0 10px 24px rgba(0,0,0,0.28)',
                         backdropFilter: 'blur(8px)',
-                        cursor: 'pointer',
+                        cursor: 'default',
+opacity: 0,
+pointerEvents: 'none',
                       }}
                     >
                       {isFullscreen ? '⤡' : '⤢'}
