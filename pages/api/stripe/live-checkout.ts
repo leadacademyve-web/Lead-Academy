@@ -2,15 +2,23 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { stripe } from '@/src/lib/stripe';
 
 const PRICE_KEYS: Record<string, string | undefined> = {
-  NEXT_PUBLIC_STRIPE_PRICE_WEEKLY: process.env.STRIPE_PRICE_WEEKLY || process.env.NEXT_PUBLIC_STRIPE_PRICE_WEEKLY,
-  NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS: process.env.STRIPE_PRICE_TWO_WEEKS || process.env.NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS,
-  NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS: process.env.STRIPE_PRICE_FOUR_WEEKS || process.env.NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS,
+  NEXT_PUBLIC_STRIPE_PRICE_WEEKLY:
+    process.env.STRIPE_PRICE_WEEKLY || process.env.NEXT_PUBLIC_STRIPE_PRICE_WEEKLY,
+
+  NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS:
+    process.env.STRIPE_PRICE_TWO_WEEKS || process.env.NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS,
+
+  NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS:
+    process.env.STRIPE_PRICE_FOUR_WEEKS || process.env.NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS,
+
   NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME:
-    process.env.STRIPE_PRICE_WEEKLY_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME || 'price_1TC6GCIlpt6ACkWDfrErjfIg',
+    process.env.STRIPE_PRICE_WEEKLY_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME,
+
   NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME:
-    process.env.STRIPE_PRICE_TWO_WEEKS_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME || 'price_1TC6HAIlpt6ACkWD4prDxzts',
+    process.env.STRIPE_PRICE_TWO_WEEKS_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME,
+
   NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME:
-    process.env.STRIPE_PRICE_FOUR_WEEKS_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME || 'price_1TC6IAIlpt6ACkWDdVK5ZasR',
+    process.env.STRIPE_PRICE_FOUR_WEEKS_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME,
 };
 
 const PLAN_META: Record<string, string> = {
@@ -30,12 +38,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const { priceKey, userEmail, purchaseType, acceptedTerms } = req.body || {};
+
     const normalizedPurchaseType =
-      String(purchaseType || '').toLowerCase() === 'subscription' ? 'subscription' : 'one_time';
+      String(purchaseType || '').toLowerCase() === 'subscription'
+        ? 'subscription'
+        : 'one_time';
 
     const priceId = PRICE_KEYS[String(priceKey || '')];
+
     if (!priceId) {
-      return res.status(400).json({ error: 'Price ID no configurado para ese plan.' });
+      return res.status(400).json({
+        error: `Price ID no configurado para: ${priceKey}. Verifica variables en Vercel.`,
+      });
     }
 
     const normalizedEmail = String(userEmail || '').trim().toLowerCase();
@@ -44,7 +58,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (!acceptedTerms) {
-      return res.status(400).json({ error: 'Debes aceptar los términos y condiciones antes de continuar.' });
+      return res.status(400).json({
+        error: 'Debes aceptar los términos y condiciones antes de continuar.',
+      });
     }
 
     const origin =
@@ -81,6 +97,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ url: session.url });
   } catch (error: any) {
     console.error('[live-checkout] error', error);
-    return res.status(500).json({ error: error?.message || 'No se pudo iniciar el checkout.' });
+    return res.status(500).json({
+      error: error?.message || 'No se pudo iniciar el checkout.',
+    });
   }
 }
