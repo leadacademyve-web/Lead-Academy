@@ -114,7 +114,7 @@ export default function TermsPage() {
           ) : (
             <Link href="/" className="btn btn-secondary">Volver al inicio</Link>
           )}
-          <Link href="/login" className="btn btn-secondary">Iniciar sesión</Link>
+          
         </div>
       </div>
     </main>
