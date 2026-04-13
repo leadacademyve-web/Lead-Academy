@@ -265,8 +265,6 @@ export default function DashboardPage() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [playerGateOpen, setPlayerGateOpen] = useState(true);
-  const [playerInstanceKey, setPlayerInstanceKey] = useState(0);
   const videoShellRef = useRef<HTMLDivElement | null>(null);
   const recoveryNavigationTriggeredRef = useRef(false);
 
@@ -283,34 +281,45 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
     try {
       const returningFromIndex = sessionStorage.getItem('lead_portal_recovery_returning') === '1';
-
       if (returningFromIndex) {
         sessionStorage.removeItem('lead_portal_recovery_returning');
+        sessionStorage.removeItem('lead_portal_refresh_pending');
         recoveryNavigationTriggeredRef.current = false;
-        setPlayerGateOpen(false);
-        setPlayerInstanceKey(Date.now());
-
-        const timer = window.setTimeout(() => {
-          setPlayerGateOpen(true);
-        }, 1200);
-
-        return () => window.clearTimeout(timer);
+        return;
       }
 
-      const navEntries = window.performance.getEntriesByType('navigation');
-      const navType =
-        navEntries && navEntries.length > 0
-          ? (navEntries[0] as PerformanceNavigationTiming).type
-          : '';
-
-      if (navType === 'reload') {
-        setPlayerGateOpen(false);
+      const refreshPending = sessionStorage.getItem('lead_portal_refresh_pending') === '1';
+      if (refreshPending) {
+        sessionStorage.removeItem('lead_portal_refresh_pending');
         goToInicioThenBackToPortal();
+        return;
       }
     } catch {
-      // ignore navigation/storage errors
+      // ignore storage errors
     }
-  }, [router.isReady]);
+
+    function markRefreshPending() {
+      try {
+        sessionStorage.setItem('lead_portal_refresh_pending', '1');
+      } catch {
+        // ignore storage errors
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        goToInicioThenBackToPortal();
+      }
+    }
+
+    window.addEventListener('beforeunload', markRefreshPending);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', markRefreshPending);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [router, router.isReady]);
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,
@@ -663,7 +672,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
   const hasPlayableVideo = !!selectedVideo?.video_url && !videoUnavailable;
   const showIframe = hasPlayableVideo && isEmbedUrl(selectedVideo.video_url);
-  const showLiveIframe = showIframe && playerGateOpen;
   const totalClassesForCurrentPlan = totalClassesForPlan(accessPlan);
   const classesUsed =
     totalClassesForCurrentPlan !== null && classesRemaining !== null
@@ -744,10 +752,9 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 0 1px rgba(96,165,250,0.06), 0 20px 40px rgba(0,0,0,0.28)',
                 }}
               >
-                {showLiveIframe ? (
+                {showIframe ? (
                   <div style={{ position: 'relative', width: '100%', height: '100%', background: '#000' }}>
                     <iframe
-                      key={playerInstanceKey}
                       src={`${selectedVideo!.video_url}${selectedVideo!.video_url.includes('?') ? '&' : '?'}quality=1080p&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
                       title={selectedVideo?.title || 'Clase'}
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
@@ -797,20 +804,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       {isFullscreen ? '⤡' : '⤢'}
                     </button>
 
-                  </div>
-                ) : showIframe && !playerGateOpen ? (
-                  <div style={{ position: 'relative', display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
-                    <div>
-                      <div className="eyebrow" style={{ marginBottom: 10 }}>
-                        Reconectando transmisión
-                      </div>
-                      <h2 style={{ marginTop: 0, fontSize: 42, lineHeight: 1.08, marginBottom: 14 }}>
-                        Preparando una entrada limpia al portal
-                      </h2>
-                      <p className="helper" style={{ maxWidth: 620, margin: '0 auto', fontSize: 16, opacity: 0.82 }}>
-                        Espera un momento mientras reiniciamos la reproducción en vivo.
-                      </p>
-                    </div>
                   </div>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
