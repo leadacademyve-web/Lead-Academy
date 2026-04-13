@@ -717,8 +717,9 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
               <div
                 className="video-shell"
                 style={{
-                  flex: 1,
-                  height: '100%',
+                  width: '100%',
+                  aspectRatio: '16 / 9',
+                  alignSelf: 'center',
                   borderRadius: 24,
                   overflow: 'hidden',
                   display: 'block',
