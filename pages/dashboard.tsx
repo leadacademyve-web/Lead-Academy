@@ -702,7 +702,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
           className="panel"
           style={{
             height: '88vh',
-            minHeight: '88vh',
+            minHeight: '90vh',
             display: 'flex',
             flexDirection: 'column',
             padding: 14,
@@ -718,8 +718,8 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                 className="video-shell"
                 style={{
                   width: '100%',
-                  aspectRatio: '16 / 9',
-                  alignSelf: 'center',
+                  height: '100%',
+                  alignSelf: 'stretch',
                   borderRadius: 24,
                   overflow: 'hidden',
                   display: 'block',
@@ -728,14 +728,29 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                 }}
               >
                 {showIframe ? (
-                  <div style={{ position: 'relative', width: '100%', height: '100%', background: '#000' }}>
+                  <div style={{
+  position: 'relative',
+  top: '50%',
+  left: '50%',
+  width: '100%',
+  height: '100%',
+  border: 0,
+  display: 'block',
+  transform: 'translate(-50%, -50%)',
+}}>
                     <iframe
-                      src={`${selectedVideo!.video_url}${selectedVideo!.video_url.includes('?') ? '&' : '?'}quality=1080p&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
+                      src={`${selectedVideo!.video_url}${selectedVideo!.video_url.includes('?') ? '&' : '?'}quality=1080&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
                       title={selectedVideo?.title || 'Clase'}
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
                       allowFullScreen
                       onError={() => setVideoUnavailable(true)}
-                      style={{ width: '100%', height: '100%', border: 0, display: 'block' }}
+                      style={{
+  width: '100%',
+  height: '100%',
+  border: 0,
+  display: 'block',
+  objectFit: 'cover'
+}}
                     />
 
                   </div>
