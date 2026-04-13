@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 
@@ -73,23 +72,8 @@ export default function EmailConfirmedPage() {
           {message}
         </p>
 
-        {status === 'loading' ? (
+        {status === 'loading' && (
           <div className="notice">Espere un momento...</div>
-        ) : status === 'success' ? (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <Link href="/" className="btn btn-secondary" style={{ textAlign: 'center' }}>
-              Volver al inicio
-            </Link>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <Link href="/signup" className="btn btn-primary" style={{ textAlign: 'center' }}>
-              Intentar de nuevo
-            </Link>
-            <Link href="/login" className="btn btn-secondary" style={{ textAlign: 'center' }}>
-              Ir a iniciar sesión
-            </Link>
-          </div>
         )}
       </div>
     </main>
