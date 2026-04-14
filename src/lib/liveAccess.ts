@@ -103,8 +103,11 @@ export async function getLiveAccessByEmail(email?: string | null): Promise<LiveA
       ? 20
       : null;
 
+  const level = String(row?.level ?? '').toUpperCase();
+  const isIntensive = level === 'INTENSIVE_TWO_DAY';
+
   return {
-    active: Boolean(row),
+    active: isIntensive ? false : Boolean(row),
     plan: row?.level ?? row?.plan ?? null,
     status: row?.status ?? null,
     classesRemaining: fallbackTotal,
