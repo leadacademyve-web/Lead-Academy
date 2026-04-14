@@ -159,7 +159,7 @@ export default function HomePage() {
         <Link
           href={
             user
-              ? `/checkout-confirm?oneTimePriceKey=${encodeURIComponent('NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME')}&title=${encodeURIComponent('Curso intensivo online en vivo - 2 clases')}&price=${encodeURIComponent('Pago único')}&forcePurchaseType=one_time&hidePurchaseType=1&classesOverride=2&levelOverride=${encodeURIComponent('INTENSIVE_TWO_DAY')}`
+              ? `/checkout-confirm?oneTimePriceKey=${encodeURIComponent('NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME')}&title=${encodeURIComponent('Curso intensivo online en vivo - 5 clases')}&price=${encodeURIComponent('Pago único')}&forcePurchaseType=one_time&hidePurchaseType=1&classesOverride=2&levelOverride=${encodeURIComponent('INTENSIVE_TWO_DAY')}`
               : '/signup'
           }
           className="btn btn-primary"
