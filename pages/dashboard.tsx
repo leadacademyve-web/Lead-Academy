@@ -1108,9 +1108,10 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
               <div className="eyebrow">Soporte</div>
               <h2 style={{ marginTop: 12 }}>Clases en Vivo</h2>
               <div className="support-list">
+                <div className="support-item"><strong>Acceso:</strong><br />Tener una suscripcion activa activara el acceso al portal.</div>
                 <div className="support-item"><strong>Email:</strong><br />Leadacademyve@gmail.com</div>
                 <div className="support-item"><strong>WhatsApp:</strong><br />+1 786 620 4377</div>
-                <div className="support-item"><strong>Acceso:</strong><br />Tu suscripción activa desbloquea la clase en vivo y repeticiones recientes.</div>
+              
               </div>
 
               <div style={{ marginTop: 18, textAlign: 'center' }}>
