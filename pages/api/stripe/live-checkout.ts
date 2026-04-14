@@ -21,7 +21,7 @@ const PRICE_KEYS: Record<string, string | undefined> = {
     process.env.STRIPE_PRICE_FOUR_WEEKS_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME,
 
   NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME:
-    process.env.STRIPE_PRICE_INTENSIVE_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME || 'price_1TM87nIlpt6ACkWDW7WBh6cv',
+    process.env.STRIPE_PRICE_INTENSIVE_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME,
 };
 
 const PLAN_META: Record<string, string> = {
