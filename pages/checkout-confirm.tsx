@@ -1,37 +1,51 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 
-function getPlanSummary(title?: string | string[], price?: string | string[]) {
+function getPlanSummary(title?: string | string[], price?: string | string[], classesOverride?: string | string[]) {
   const safeTitle = Array.isArray(title) ? title[0] : title || 'Plan seleccionado';
   const safePrice = Array.isArray(price) ? price[0] : price || '';
   const normalized = String(safeTitle).toUpperCase();
 
+  const overrideRaw = Array.isArray(classesOverride) ? classesOverride[0] : classesOverride;
+  const overrideValue = Number(overrideRaw);
+
   const totalClasses =
-    normalized.includes('20') ? 20 :
-    normalized.includes('10') ? 10 :
-    normalized.includes('5') ? 5 : null;
+    Number.isFinite(overrideValue) && overrideValue > 0
+      ? overrideValue
+      : normalized.includes('20') ? 20 :
+        normalized.includes('10') ? 10 :
+        normalized.includes('5') ? 5 : null;
 
   return { safeTitle, safePrice, totalClasses };
 }
 
 export default function CheckoutConfirmPage() {
   const router = useRouter();
-  const [purchaseType, setPurchaseType] = useState<'one_time' | 'subscription'>('one_time');
+  const forcePurchaseType = typeof router.query.forcePurchaseType === 'string' && router.query.forcePurchaseType === 'subscription' ? 'subscription' : 'one_time';
+  const hidePurchaseType = router.query.hidePurchaseType === '1';
+  const [purchaseType, setPurchaseType] = useState<'one_time' | 'subscription'>(forcePurchaseType);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const subscriptionPriceKey = typeof router.query.subscriptionPriceKey === 'string' ? router.query.subscriptionPriceKey : '';
   const oneTimePriceKey = typeof router.query.oneTimePriceKey === 'string' ? router.query.oneTimePriceKey : '';
+  const levelOverride = typeof router.query.levelOverride === 'string' ? router.query.levelOverride : '';
   const { safeTitle, safePrice, totalClasses } = useMemo(
-    () => getPlanSummary(router.query.title, router.query.price),
-    [router.query.title, router.query.price]
+    () => getPlanSummary(router.query.title, router.query.price, router.query.classesOverride),
+    [router.query.title, router.query.price, router.query.classesOverride]
   );
 
   const selectedPriceKey = purchaseType === 'subscription' ? subscriptionPriceKey : oneTimePriceKey;
   const termsHref = `/terms?returnTo=${encodeURIComponent(router.asPath)}`;
+
+  useEffect(() => {
+    if (hidePurchaseType && purchaseType !== forcePurchaseType) {
+      setPurchaseType(forcePurchaseType);
+    }
+  }, [hidePurchaseType, purchaseType, forcePurchaseType]);
 
   async function handleContinue() {
     try {
@@ -58,6 +72,8 @@ export default function CheckoutConfirmPage() {
           userEmail: user.email,
           purchaseType,
           acceptedTerms: true,
+          levelOverride: levelOverride || undefined,
+          classesOverride: totalClasses || undefined,
         }),
       });
 
@@ -105,6 +121,7 @@ export default function CheckoutConfirmPage() {
           ) : null}
         </div>
 
+        {!hidePurchaseType ? (
         <label className="label">
           Tipo de compra
           <div style={{ display: 'grid', gap: 10 }}>
@@ -160,6 +177,24 @@ export default function CheckoutConfirmPage() {
             </label>
           </div>
         </label>
+        ) : (
+          <div
+            style={{
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 16,
+              padding: 18,
+              marginTop: 18,
+              marginBottom: 18,
+              background: 'rgba(255,255,255,0.03)',
+            }}
+          >
+            <div className="eyebrow" style={{ marginBottom: 10 }}>Tipo de compra</div>
+            <div style={{ fontWeight: 700 }}>Pago único</div>
+            <div className="helper" style={{ lineHeight: 1.6 }}>
+              Harás un solo pago y se agregarán <strong>{totalClasses || 0} clases</strong> a tu saldo disponible.
+            </div>
+          </div>
+        )}
 
         <div
           style={{

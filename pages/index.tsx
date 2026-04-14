@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useAuthUser } from '@/src/context/AuthUserProvider'
+import { getLiveAccessByEmail } from '@/src/lib/liveAccess'
 
 const plans = [
   {
@@ -48,6 +49,10 @@ const plans = [
 export default function HomePage() {
   const router = useRouter()
   const { user } = useAuthUser()
+  const [accessActive, setAccessActive] = useState(false)
+  const [accessPlan, setAccessPlan] = useState<string | null>(null)
+  const [classesRemaining, setClassesRemaining] = useState<number | null>(null)
+  const [accessStartAt, setAccessStartAt] = useState<string | null>(null)
 
   useEffect(() => {
     if (!router.isReady) return
@@ -62,6 +67,67 @@ export default function HomePage() {
     router.push('/dashboard')
   }, [router])
 
+  useEffect(() => {
+    let mounted = true
+
+    async function loadAccess() {
+      if (!user?.email) {
+        if (!mounted) return
+        setAccessActive(false)
+        setAccessPlan(null)
+        setClassesRemaining(null)
+        setAccessStartAt(null)
+        return
+      }
+
+      try {
+        const access = await getLiveAccessByEmail(user.email)
+        if (!mounted) return
+        setAccessActive(access.active)
+        setAccessPlan(access.plan ?? null)
+        setClassesRemaining(access.classesRemaining ?? null)
+        setAccessStartAt(access.accessStartAt ?? null)
+      } catch {
+        if (!mounted) return
+        setAccessActive(false)
+        setAccessPlan(null)
+        setClassesRemaining(null)
+        setAccessStartAt(null)
+      }
+    }
+
+    loadAccess()
+
+    return () => {
+      mounted = false
+    }
+  }, [user?.email])
+
+  const accessMessage = useMemo(() => {
+    const startDate = accessStartAt ? new Date(accessStartAt) : null
+    const hasScheduledCourseAccess =
+      !accessActive &&
+      accessPlan === 'INTENSIVE_TWO_DAY' &&
+      classesRemaining !== null &&
+      classesRemaining > 0 &&
+      startDate !== null &&
+      startDate.getTime() > Date.now()
+
+    if (accessActive) {
+      return 'Tu acceso al portal está activo.'
+    }
+
+    if (hasScheduledCourseAccess) {
+      return 'Tu acceso al portal inicia el día del curso intensivo. Si deseas acceso inmediato a las clases en vivo, puedes activar un plan de clases diarias.'
+    }
+
+    if (classesRemaining === 0) {
+      return 'Tu saldo de clases se ha agotado. Renueva tu suscripción para continuar.'
+    }
+
+    return 'El acceso a clases en vivo se habilita únicamente para estudiantes con suscripción activa.'
+  }, [accessActive, accessPlan, classesRemaining, accessStartAt])
+
   return (
     <main style={{ background: 'url("/trading-bg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', minHeight: '100vh', color: 'white', position: 'relative' }}>
       <div
@@ -72,9 +138,8 @@ export default function HomePage() {
           transform: 'translateX(-80%)',
           width: 350,
           zIndex: 2,
-          pointerEvents: 'none',
           display: 'flex',
-          justifyContent: 'center',
+          flexDirection: 'column',
           alignItems: 'center',
         }}
       >
@@ -83,12 +148,34 @@ export default function HomePage() {
           alt="Curso intensivo online"
           style={{
             width: '204%',
-borderRadius: 20,
+            borderRadius: 20,
             height: 'auto',
             display: 'block',
             objectFit: 'contain',
+            pointerEvents: 'none',
           }}
         />
+
+        <Link
+          href={
+            user
+              ? `/checkout-confirm?oneTimePriceKey=${encodeURIComponent('NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME')}&title=${encodeURIComponent('Curso intensivo online en vivo - 2 clases')}&price=${encodeURIComponent('Pago único')}&forcePurchaseType=one_time&hidePurchaseType=1&classesOverride=2&levelOverride=${encodeURIComponent('INTENSIVE_TWO_DAY')}`
+              : '/signup'
+          }
+          className="btn btn-primary"
+          style={{
+            marginTop: 18,
+            minWidth: 220,
+            position: 'relative',
+            left: '-38%',
+            transform: 'translateX(-50%)',
+            zIndex: 3,
+            cursor: 'pointer',
+            textAlign: 'center',
+          }}
+        >
+          Inscribirme US$500
+        </Link>
       </div>
 
       <section style={{ padding: '25px', display: 'flex', justifyContent: 'left' }}>
@@ -124,8 +211,22 @@ Trading & Investing
               </Link>
             </div>
 
-            <p style={{ marginTop: 20, fontSize: 14, opacity: 0.6 }}>
-              El acceso a clases en vivo se habilita únicamente para estudiantes con suscripción activa.
+            <p
+              style={{
+                marginTop: 20,
+                fontSize: 14,
+                opacity: 0.92,
+                color:
+                  accessActive
+                    ? 'rgba(134,239,172,0.98)'
+                    : accessPlan === 'INTENSIVE_TWO_DAY' && classesRemaining !== null && classesRemaining > 0
+                      ? 'rgba(253,224,71,0.98)'
+                      : classesRemaining === 0
+                        ? 'rgba(252,165,165,0.98)'
+                        : 'rgba(255,255,255,0.72)',
+              }}
+            >
+              {accessMessage}
             </p>
           </div>
 

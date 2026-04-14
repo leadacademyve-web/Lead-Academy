@@ -19,20 +19,34 @@ const plans = [
   {
     key: 'week',
     title: '$99 x 5 clases',
+    description: 'Elige cómo quieres pagar este acceso al portal.',
+    buttonLabel: 'Comprar este plan',
     subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME',
   },
   {
     key: 'twoWeeks',
     title: '$189 x 10 clases',
+    description: 'Elige cómo quieres pagar este acceso al portal.',
+    buttonLabel: 'Comprar este plan',
     subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME',
   },
   {
     key: 'fourWeeks',
     title: '$369 x 20 clases',
+    description: 'Elige cómo quieres pagar este acceso al portal.',
+    buttonLabel: 'Comprar este plan',
     subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME',
+  },
+  {
+    key: 'intensiveApril2026',
+    title: '$500 x 2 clases',
+    description: 'Curso intensivo del 18 al 19 de abril 2026',
+    buttonLabel: 'Inscribirme',
+    subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME',
+    oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME',
   },
 ];
 
@@ -821,7 +835,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                     <div className="card" key={plan.key}>
                       <h3>{plan.title}</h3>
                       <p className="small" style={{ marginBottom: 12 }}>
-                        Elige cómo quieres pagar este acceso al portal.
+                        {plan.description}
                       </p>
 
                       <div style={{ display: 'grid', gap: 10 }}>
@@ -830,12 +844,12 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                           style={{ width: '100%' }}
                           onClick={() =>
                             router.push(
-                              `/checkout-confirm?subscriptionPriceKey=${encodeURIComponent(plan.subscriptionPriceKey)}&oneTimePriceKey=${encodeURIComponent(plan.oneTimePriceKey)}&title=${encodeURIComponent(plan.title)}`
+                              `/checkout-confirm?subscriptionPriceKey=${encodeURIComponent(plan.subscriptionPriceKey)}&oneTimePriceKey=${encodeURIComponent(plan.oneTimePriceKey)}&title=${encodeURIComponent(plan.title)}${plan.key === 'intensiveApril2026' ? `&classesOverride=2&hidePurchaseType=1&levelOverride=${encodeURIComponent('INTENSIVE_TWO_DAY')}` : ''}`
                             )
                           }
                           disabled={checkingOut !== null}
                         >
-                          Comprar este plan
+                          {plan.buttonLabel}
                         </button>
                       </div>
                     </div>
@@ -1097,6 +1111,22 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                 <div className="support-item"><strong>Email:</strong><br />Leadacademyve@gmail.com</div>
                 <div className="support-item"><strong>WhatsApp:</strong><br />+1 786 620 4377</div>
                 <div className="support-item"><strong>Acceso:</strong><br />Tu suscripción activa desbloquea la clase en vivo y repeticiones recientes.</div>
+              </div>
+
+              <div style={{ marginTop: 18, textAlign: 'center' }}>
+                <button
+                  className="btn btn-primary"
+                  style={{
+                    minWidth: 220,
+                    fontWeight: 600,
+                    letterSpacing: 0.3,
+                    boxShadow: '0 0 18px rgba(245,158,11,0.35)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onClick={() => router.push('/')}
+                >
+                  Volver al inicio
+                </button>
               </div>
             </>
           )}
