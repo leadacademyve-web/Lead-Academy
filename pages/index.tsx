@@ -6,7 +6,7 @@ import { useAuthUser } from '@/src/context/AuthUserProvider'
 const plans = [
   {
     id: 'week',
-    title: '5 clases',
+    title: '5 clases - Operaciones en NYSE en vivo',
     price: '$99',
     note: 'Renovación semanal si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY',
@@ -19,7 +19,7 @@ const plans = [
   },
   {
     id: 'two-weeks',
-    title: '10 clases',
+    title: '10 clases - Operaciones en NYSE en vivo',
     price: '$189',
     note: 'Renovación quincenal si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS',
@@ -32,7 +32,7 @@ const plans = [
   },
   {
     id: 'month',
-    title: '20 clases',
+    title: '20 clases - Operaciones en NYSE en vivo',
     price: '$369',
     note: 'Renovación mensual si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
@@ -63,8 +63,35 @@ export default function HomePage() {
   }, [router])
 
   return (
-    <main style={{ background: 'url("/trading-bg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', minHeight: '100vh', color: 'white' }}>
-      <section style={{ padding: '100px', display: 'flex', justifyContent: 'center' }}>
+    <main style={{ background: 'url("/trading-bg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', minHeight: '100vh', color: 'white', position: 'relative' }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 25,
+          left: '80%',
+          transform: 'translateX(-80%)',
+          width: 350,
+          zIndex: 2,
+          pointerEvents: 'none',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <img
+          src="/curso-intensivo-online.jpg"
+          alt="Curso intensivo online"
+          style={{
+            width: '204%',
+borderRadius: 20,
+            height: 'auto',
+            display: 'block',
+            objectFit: 'contain',
+          }}
+        />
+      </div>
+
+      <section style={{ padding: '25px', display: 'flex', justifyContent: 'left' }}>
         <div style={{
           maxWidth: 1500,
           width: '100%',
@@ -128,18 +155,19 @@ Trading & Investing
         </div>
       </section>
 
-      <section style={{ padding: '1px' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: 15 }}>
-          Elige tu acceso al portal privado
-        </h2>
+      <section style={{ padding: '2px' }}>
+<h2 style={{ textAlign: 'left', marginBottom: 10, paddingLeft: 40 }}>
+  Elige un plan de pago.
+</h2>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3,1fr)',
-          gap: 20,
-          maxWidth: 1500,
-          margin: '0 auto'
-        }}>
+<div style={{
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3,1fr)',
+  gap: 20,
+  maxWidth: 1500,
+  margin: '0',
+  marginLeft: 25
+}}>
           {plans.map((plan) => (
             <div key={plan.id} style={{
               background: 'rgba(2,6,23,0.80)', backdropFilter: 'blur(6px)',
@@ -151,7 +179,7 @@ Trading & Investing
               <div style={{ fontSize: 28, fontWeight: 600 }}>{plan.price}</div>
               <div style={{ opacity: 0.6 }}>{plan.note}</div>
 
-              <ul style={{ marginTop: 25, paddingLeft: 24, display: 'grid', gap: 14, lineHeight: 1.45 }}>
+              <ul style={{ marginTop: 25, paddingLeft: 14, display: 'grid', gap: 14, lineHeight: 1.45 }}>
                 {plan.bullets.map((bullet) => (
                   <li
                     key={bullet.text}
