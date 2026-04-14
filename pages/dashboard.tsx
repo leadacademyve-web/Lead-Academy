@@ -844,7 +844,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                           style={{ width: '100%' }}
                           onClick={() =>
                             router.push(
-                              `/checkout-confirm?subscriptionPriceKey=${encodeURIComponent(plan.subscriptionPriceKey)}&oneTimePriceKey=${encodeURIComponent(plan.oneTimePriceKey)}&title=${encodeURIComponent(plan.title)}${plan.key === 'intensiveApril2026' ? `&classesOverride=2&hidePurchaseType=1&levelOverride=${encodeURIComponent('INTENSIVE_TWO_DAY')}` : ''}`
+                              `/checkout-confirm?subscriptionPriceKey=${encodeURIComponent(plan.subscriptionPriceKey)}&oneTimePriceKey=${encodeURIComponent(plan.oneTimePriceKey)}&title=${encodeURIComponent(plan.title)}${plan.key === 'intensiveApril2026' ? `&classesOverride=5&hidePurchaseType=1&levelOverride=${encodeURIComponent('INTENSIVE_TWO_DAY')}` : ''}`
                             )
                           }
                           disabled={checkingOut !== null}
