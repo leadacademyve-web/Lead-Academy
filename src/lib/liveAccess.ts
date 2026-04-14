@@ -55,12 +55,16 @@ export async function getLiveAccessByEmail(email?: string | null): Promise<LiveA
       const firstRow = accessRows[0] || null;
       const accessStartAt = firstRow?.start_date || firstRow?.created_at || null;
 
+      const now = new Date();
+      const startDate = accessStartAt ? new Date(accessStartAt) : null;
+      const isStarted = startDate ? now >= startDate : true;
+
       return {
-        active: remainingClasses > 0,
+        active: remainingClasses > 0 && isStarted,
         plan: latestRow?.plan_name ?? 'LIVE_CLASS',
-        status: remainingClasses > 0 ? 'active' : 'inactive',
+        status: remainingClasses > 0 && isStarted ? 'active' : 'inactive',
         classesRemaining: remainingClasses,
-        lastClassWarning: remainingClasses === 1,
+        lastClassWarning: remainingClasses === 1 && isStarted,
         accessStartAt,
       };
     }
