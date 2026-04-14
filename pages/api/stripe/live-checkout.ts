@@ -19,6 +19,9 @@ const PRICE_KEYS: Record<string, string | undefined> = {
 
   NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME:
     process.env.STRIPE_PRICE_FOUR_WEEKS_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME,
+
+  NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME:
+    process.env.STRIPE_PRICE_INTENSIVE_ONE_TIME || process.env.NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME || 'price_1TM87nIlpt6ACkWDW7WBh6cv',
 };
 
 const PLAN_META: Record<string, string> = {
@@ -28,6 +31,7 @@ const PLAN_META: Record<string, string> = {
   NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME: 'WEEKLY',
   NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME: 'TWO_WEEKS',
   NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME: 'FOUR_WEEKS',
+  NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME: 'INTENSIVE_TWO_DAY',
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -37,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { priceKey, userEmail, purchaseType, acceptedTerms } = req.body || {};
+    const { priceKey, userEmail, purchaseType, acceptedTerms, levelOverride, classesOverride } = req.body || {};
 
     const normalizedPurchaseType =
       String(purchaseType || '').toLowerCase() === 'subscription'
@@ -72,9 +76,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sharedMetadata = {
       product: 'LIVE_CLASS',
       plan: 'LIVE_CLASS',
-      level: PLAN_META[String(priceKey)] || 'LIVE',
+      level: String(levelOverride || PLAN_META[String(priceKey)] || 'LIVE').toUpperCase(),
       user_email: normalizedEmail,
       purchase_type: normalizedPurchaseType,
+      classes_override: String(Number(classesOverride || 0) || ''),
     };
 
     const session = await stripe.checkout.sessions.create({

@@ -20,6 +20,8 @@ function classesForLevel(level?: string | null) {
       return 10;
     case 'FOUR_WEEKS':
       return 20;
+    case 'INTENSIVE_TWO_DAY':
+      return 5;
     default:
       return 0;
   }
@@ -58,13 +60,19 @@ async function wasEventAlreadyProcessed(email: string, level: string, eventId: s
 async function createUserClassAccess(args: { email: string; level: string; totalClasses: number }) {
   const supabase = createServerClient();
 
+  let startDate = new Date();
+
+  if (args.level === 'INTENSIVE_TWO_DAY') {
+    startDate = new Date('2026-04-18T00:00:00');
+  }
+
   const payload = {
     email: args.email.toLowerCase(),
     plan_name: args.level,
     total_classes: args.totalClasses,
     classes_used: 0,
     active: true,
-    start_date: new Date().toISOString(),
+    start_date: startDate.toISOString(),
   };
 
   const { error } = await supabase.from('user_class_access').insert(payload);
@@ -121,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const level = String(session.metadata?.level || 'LIVE').toUpperCase();
       const purchaseType = String(session.metadata?.purchase_type || 'one_time').toLowerCase();
-      const totalClasses = classesForLevel(level);
+      const totalClasses = Number(session.metadata?.classes_override || 0) || classesForLevel(level);
 
       if (email) {
         const alreadyProcessed = await wasEventAlreadyProcessed(email, level, event.id);
@@ -146,7 +154,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ).toLowerCase();
 
       const level = String(subscription?.metadata?.level || invoice.parent?.subscription_details?.metadata?.level || 'LIVE').toUpperCase();
-      const totalClasses = classesForLevel(level);
+      const totalClasses = Number(subscription?.metadata?.classes_override || invoice.parent?.subscription_details?.metadata?.classes_override || 0) || classesForLevel(level);
 
       if (email && totalClasses > 0) {
         const alreadyProcessed = await wasEventAlreadyProcessed(email, level, event.id);
