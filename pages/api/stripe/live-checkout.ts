@@ -73,20 +73,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       process.env.NEXT_PUBLIC_APP_URL ||
       'http://localhost:3000';
 
+    const level = String(levelOverride || PLAN_META[String(priceKey)] || 'LIVE').toUpperCase();
+
     const sharedMetadata = {
       product: 'LIVE_CLASS',
       plan: 'LIVE_CLASS',
-      level: String(levelOverride || PLAN_META[String(priceKey)] || 'LIVE').toUpperCase(),
+      level,
       user_email: normalizedEmail,
       purchase_type: normalizedPurchaseType,
       classes_override: String(Number(classesOverride || 0) || ''),
     };
 
+    const isIntensive = level === 'INTENSIVE_TWO_DAY';
+
     const session = await stripe.checkout.sessions.create({
       mode: normalizedPurchaseType === 'subscription' ? 'subscription' : 'payment',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/dashboard?paid=1`,
-      cancel_url: `${origin}/dashboard?canceled=1`,
+      success_url: isIntensive
+        ? `${origin}/?paid=1`
+        : `${origin}/dashboard?paid=1`,
+      cancel_url: isIntensive
+        ? `${origin}/?canceled=1`
+        : `${origin}/dashboard?canceled=1`,
       allow_promotion_codes: true,
       customer_email: normalizedEmail,
       metadata: sharedMetadata,
