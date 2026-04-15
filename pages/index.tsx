@@ -7,7 +7,7 @@ import { getLiveAccessByEmail } from '@/src/lib/liveAccess'
 const plans = [
   {
     id: 'week',
-    title: '5 clases - Operaciones en NYSE en vivo',
+    title: '5 clases - Operaciones en vivo',
     price: '$99',
     note: 'Renovación semanal si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY',
@@ -20,7 +20,7 @@ const plans = [
   },
   {
     id: 'two-weeks',
-    title: '10 clases - Operaciones en NYSE en vivo',
+    title: '10 clases - Operaciones en vivo',
     price: '$189',
     note: 'Renovación quincenal si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS',
@@ -33,7 +33,7 @@ const plans = [
   },
   {
     id: 'month',
-    title: '20 clases - Operaciones en NYSE en vivo',
+    title: '20 clases - Operaciones en vivo',
     price: '$369',
     note: 'Renovación mensual si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
@@ -183,7 +183,7 @@ export default function HomePage() {
 
       <section style={{ padding: '25px', display: 'flex', justifyContent: 'left' }}>
         <div style={{
-          maxWidth: 1500,
+          maxWidth: 1000,
           width: '100%',
           display: 'grid',
           gridTemplateColumns: '2fr 1fr',
@@ -282,7 +282,7 @@ Trading & Investing
 
             <button
               className="btn btn-secondary"
-              style={{ marginTop: 20, width: '100%' }}
+              style={{ marginTop: 0, width: '100%' }}
               onClick={() => router.push('/dashboard')}
             >
               Ir al portal
@@ -291,8 +291,8 @@ Trading & Investing
         </div>
       </section>
 
-      <section style={{ padding: '2px' }}>
-<h2 style={{ textAlign: 'left', marginBottom: 10, paddingLeft: 40 }}>
+      <section style={{ padding: '1px' }}>
+<h2 style={{ textAlign: 'left', marginBottom: 20, paddingLeft: 60 }}>
   Elige un plan de pago.
 </h2>
 
@@ -300,7 +300,7 @@ Trading & Investing
   display: 'grid',
   gridTemplateColumns: 'repeat(3,1fr)',
   gap: 20,
-  maxWidth: 1500,
+  maxWidth: 1000,
   margin: '0',
   marginLeft: 25
 }}>
