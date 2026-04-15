@@ -8,7 +8,7 @@ const plans = [
   {
     id: 'week',
     title: '5 clases - Operaciones en vivo',
-    price: '$99',
+    price: 'US$99',
     note: 'Renovación semanal si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME',
@@ -21,7 +21,7 @@ const plans = [
   {
     id: 'two-weeks',
     title: '10 clases - Operaciones en vivo',
-    price: '$189',
+    price: 'US$189',
     note: 'Renovación quincenal si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME',
@@ -34,7 +34,7 @@ const plans = [
   {
     id: 'month',
     title: '20 clases - Operaciones en vivo',
-    price: '$369',
+    price: 'US$369',
     note: 'Renovación mensual si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME',
@@ -137,7 +137,7 @@ export default function HomePage() {
         style={{
           position: 'absolute',
           top: 25,
-          left: '80%',
+          left: '60%',
           transform: 'translateX(-80%)',
           width: 350,
           zIndex: 2,
@@ -292,7 +292,7 @@ Trading & Investing
       </section>
 
       <section style={{ padding: '1px' }}>
-<h2 style={{ textAlign: 'left', marginBottom: 20, paddingLeft: 60 }}>
+<h2 style={{ textAlign: 'left', marginTop: -10, marginBottom: 15, paddingLeft: 25 }}>
   Elige un plan de pago.
 </h2>
 
@@ -312,10 +312,10 @@ Trading & Investing
               border: '1px solid rgba(255,255,255,0.05)'
             }}>
               <h3>{plan.title}</h3>
-              <div style={{ fontSize: 28, fontWeight: 600 }}>{plan.price}</div>
+              <div style={{ fontSize: 25, fontWeight: 600 }}>{plan.price}</div>
               <div style={{ opacity: 0.6 }}>{plan.note}</div>
 
-              <ul style={{ marginTop: 25, paddingLeft: 14, display: 'grid', gap: 14, lineHeight: 1.45 }}>
+              <ul style={{ marginTop: 25, paddingLeft: 14, display: 'grid', gap: 15, lineHeight: 1.0 }}>
                 {plan.bullets.map((bullet) => (
                   <li
                     key={bullet.text}
@@ -337,7 +337,7 @@ Trading & Investing
                     : '/signup'
                 }
                 className="btn btn-primary"
-                style={{ width: '100%', marginTop: 24 }}
+                style={{ width: '100%', marginTop: 50 }}
               >
                 Comprar este plan
               </Link>
