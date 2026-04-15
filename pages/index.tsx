@@ -138,7 +138,7 @@ export default function HomePage() {
           position: 'absolute',
           top: 25,
           left: '60%',
-          transform: 'translateX(-80%)',
+          transform: 'translateX(-10%)',
           width: 350,
           zIndex: 2,
           display: 'flex',
