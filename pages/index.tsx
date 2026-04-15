@@ -128,6 +128,9 @@ export default function HomePage() {
     return 'El acceso a clases en vivo se habilita únicamente para estudiantes con suscripción activa.'
   }, [accessActive, accessPlan, classesRemaining, accessStartAt])
 
+  const paid = router.query.paid === '1'
+  const canceled = router.query.canceled === '1'
+
   return (
     <main style={{ background: 'url("/trading-bg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', minHeight: '100vh', color: 'white', position: 'relative' }}>
       <div
@@ -195,6 +198,38 @@ export default function HomePage() {
              Lead Academy <br />
 Trading & Investing
             </h1>
+
+            {paid && (
+              <div
+                style={{
+                  background: 'rgba(34,197,94,0.15)',
+                  border: '1px solid rgba(34,197,94,0.30)',
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  marginTop: 18,
+                  color: 'rgba(134,239,172,0.98)',
+                  fontWeight: 600,
+                }}
+              >
+                ✅ Pago procesado correctamente. Tu acceso al portal se activará el día del curso intensivo.
+              </div>
+            )}
+
+            {canceled && (
+              <div
+                style={{
+                  background: 'rgba(239,68,68,0.15)',
+                  border: '1px solid rgba(239,68,68,0.30)',
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  marginTop: 18,
+                  color: 'rgba(252,165,165,0.98)',
+                  fontWeight: 600,
+                }}
+              >
+                ❌ El pago fue cancelado. Puedes intentarlo nuevamente cuando lo desees.
+              </div>
+            )}
 
             <p style={{ marginTop: 20, opacity: 0.7 }}>
               Portal privado de trading e inversiones en la bolsa de New York. Crea tu usuario, inicia sesión y activa tu suscripción para acceder a la clase en vivo y a las repeticiones disponibles.
