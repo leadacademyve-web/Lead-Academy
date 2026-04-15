@@ -146,6 +146,39 @@ export default function HomePage() {
           alignItems: 'center',
         }}
       >
+
+{/* Earnings Report Banner independiente */}
+<div
+  style={{
+    position: 'absolute',
+
+    // 📍 posición inicial (ajústala luego)
+    bottom: -500,
+    right: 160,
+
+    width: 380,
+    zIndex: 2,
+
+    // 🎛️ márgenes ajustables
+    marginTop: 0,
+    marginBottom: 0,
+    marginLeft: 0,
+    marginRight: 0,
+  }}
+>
+  <img
+    src="/Earning Reports BOA-NFLX.jpg"
+    alt="Earning Reports BOA NFLX"
+    style={{
+      width: '191%',
+      borderRadius: 20,
+      height: 'auto',
+      display: 'block',
+      objectFit: 'contain',
+      pointerEvents: 'none',
+    }}
+  />
+</div>
         <img
           src="/curso-intensivo-online.jpg"
           alt="Curso intensivo online"
@@ -349,47 +382,6 @@ Trading & Investing
           Soporte: Escríbenos a Leadacademyve@gmail.com · WhatsApp: +1 786 620 4377
         </div>
       </section>
-
-{/* Earnings Report Banner - Abajo derecha */}
-<div
-  style={{
-    position: 'absolute',
-    bottom: 200,
-    right: 500,
-    width: 610, // puedes ajustar
-    zIndex: 2,
-
-    // 🔧 márgenes ajustables
-    marginTop: 0,
-    marginBottom: 50,
-    marginLeft: 0,
-    marginRight: -50,
-  }}
->
-  <div
-    style={{
-      background: 'rgba(2,6,23,0.85)',
-      borderRadius: 20,
-      padding: 10,
-      border: '1px solid rgba(255,255,255,0.08)',
-      backdropFilter: 'blur(6px)',
-      boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
-    }}
-  >
-    <img
-      src="/Earning Reports BOA-NFLX.jpg"
-      alt="Earnings Reports BOA NFLX"
-      style={{
-        width: '100%',
-        height: 'auto',
-        borderRadius: 12,
-        display: 'block',
-      }}
-    />
-  </div>
-</div>
-
-
     </main>
   )
 }
