@@ -380,7 +380,7 @@ Trading & Investing
       src="/Earning Reports BOA-NFLX.jpg"
       alt="Earnings Reports BOA NFLX"
       style={{
-        width: '120%',
+        width: '100%',
         height: 'auto',
         borderRadius: 12,
         display: 'block',
