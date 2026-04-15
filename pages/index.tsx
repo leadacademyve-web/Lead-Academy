@@ -139,7 +139,7 @@ export default function HomePage() {
           top: 25,
           left: '60%',
           transform: 'translateX(40%)',
-          width: 350,
+          width: 355,
           zIndex: 2,
           display: 'flex',
           flexDirection: 'column',
