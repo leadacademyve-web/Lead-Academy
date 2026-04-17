@@ -298,6 +298,23 @@ function totalClassesForPlan(plan?: string | null) {
   }
 }
 
+
+function normalizeEmailList(raw: string) {
+  return raw
+    .split(',')
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function isChatAdminEmail(email?: string | null) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return false;
+
+  const envEmails = normalizeEmailList(process.env.NEXT_PUBLIC_CHAT_ADMIN_EMAILS || '');
+  const fallbackEmails = ['leadacademyve@gmail.com'];
+  return [...envEmails, ...fallbackEmails].includes(normalized);
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -326,6 +343,8 @@ export default function DashboardPage() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [sendingChat, setSendingChat] = useState(false);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+  const [clearingChat, setClearingChat] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
   const recoveryNavigationTriggeredRef = useRef(false);
@@ -333,6 +352,8 @@ export default function DashboardPage() {
   const emojiPanelRef = useRef<HTMLDivElement | null>(null);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
+
+  const isChatAdmin = useMemo(() => isChatAdminEmail(userEmail), [userEmail]);
 
   function goToInicioThenBackToPortal() {
     if (recoveryNavigationTriggeredRef.current) return;
@@ -610,6 +631,55 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
     setChatInput('');
     setSendingChat(false);
+  }
+
+  async function deleteChatMessage(messageId: string, ownerEmail?: string | null) {
+    const owner = String(ownerEmail || '').trim().toLowerCase();
+    const current = String(userEmail || '').trim().toLowerCase();
+    const canDelete = Boolean(messageId) && (isChatAdmin || (owner && current && owner === current));
+
+    if (!canDelete || deletingMessageId || clearingChat) return;
+
+    setDeletingMessageId(messageId);
+    setChatError(null);
+
+    const { error } = await supabase
+      .from('live_chat_messages')
+      .delete()
+      .eq('id', messageId);
+
+    if (error) {
+      setChatError('No se pudo eliminar el mensaje.');
+      setDeletingMessageId(null);
+      return;
+    }
+
+    setChatMessages((prev) => prev.filter((item) => item.id !== messageId));
+    setDeletingMessageId(null);
+  }
+
+  async function clearAllChatMessages() {
+    if (!isChatAdmin || clearingChat || deletingMessageId || !chatMessages.length) return;
+
+    const confirmed = window.confirm('¿Seguro que deseas borrar todos los mensajes del chat en vivo?');
+    if (!confirmed) return;
+
+    setClearingChat(true);
+    setChatError(null);
+
+    const { error } = await supabase
+      .from('live_chat_messages')
+      .delete()
+      .not('id', 'is', null);
+
+    if (error) {
+      setChatError(`No se pudo borrar todo el chat. ${error.message || ''}`.trim());
+      setClearingChat(false);
+      return;
+    }
+
+    setChatMessages([]);
+    setClearingChat(false);
   }
 
 
@@ -1309,10 +1379,32 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   }}
                 >
                   <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                    <h2 style={{ margin: 0, fontSize: 22 }}>Chat Live</h2>
-                    <p className="helper" style={{ margin: '8px 0 0', fontSize: 12, lineHeight: 1.45 }}>
-                      Escribe aquí durante la clase. Los mensajes aparecerán en tiempo real para todos los estudiantes conectados.
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                      <div>
+                        <h2 style={{ margin: 0, fontSize: 22 }}>Chat Live</h2>
+                        <p className="helper" style={{ margin: '8px 0 0', fontSize: 12, lineHeight: 1.45 }}>
+                          Escribe aquí durante la clase. Los mensajes aparecerán en tiempo real para todos los estudiantes conectados.
+                        </p>
+                      </div>
+                      {isChatAdmin ? (
+                        <button
+                          type="button"
+                          onClick={clearAllChatMessages}
+                          disabled={clearingChat || deletingMessageId !== null || !chatMessages.length}
+                          className="btn btn-ghost"
+                          style={{
+                            padding: '8px 12px',
+                            fontSize: 12,
+                            whiteSpace: 'nowrap',
+                            border: '1px solid rgba(239,68,68,0.34)',
+                            color: 'rgba(255,255,255,0.92)',
+                            background: clearingChat ? 'rgba(239,68,68,0.14)' : 'rgba(255,255,255,0.03)',
+                          }}
+                        >
+                          {clearingChat ? 'Borrando chat...' : 'Borrar todo'}
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
 
                   <div
@@ -1359,7 +1451,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                                 justifyContent: 'space-between',
                                 gap: 10,
                                 marginBottom: 6,
-                                alignItems: 'center',
+                                alignItems: 'flex-start',
                               }}
                             >
                               <div
@@ -1372,8 +1464,35 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                               >
                                 {message.user_name || 'Estudiante'}
                               </div>
-                              <div style={{ fontSize: 11, opacity: 0.58, whiteSpace: 'nowrap' }}>
-                                {formatChatMessageTime(message.created_at)}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                                <div style={{ fontSize: 11, opacity: 0.58, whiteSpace: 'nowrap' }}>
+                                  {formatChatMessageTime(message.created_at)}
+                                </div>
+                                {isChatAdmin || isOwnMessage ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteChatMessage(message.id, message.user_email)}
+                                    disabled={clearingChat || deletingMessageId === message.id}
+                                    title={isChatAdmin && !isOwnMessage ? 'Eliminar mensaje de este estudiante' : 'Eliminar mi mensaje'}
+                                    aria-label={isChatAdmin && !isOwnMessage ? 'Eliminar mensaje de este estudiante' : 'Eliminar mi mensaje'}
+                                    style={{
+                                      minWidth: 30,
+                                      height: 30,
+                                      padding: 0,
+                                      display: 'grid',
+                                      placeItems: 'center',
+                                      borderRadius: 10,
+                                      border: '1px solid rgba(255,255,255,0.08)',
+                                      background: deletingMessageId === message.id ? 'rgba(239,68,68,0.18)' : 'rgba(255,255,255,0.04)',
+                                      color: 'white',
+                                      cursor: 'pointer',
+                                      fontSize: 14,
+                                      lineHeight: 1,
+                                    }}
+                                  >
+                                    {deletingMessageId === message.id ? '…' : '🗑️'}
+                                  </button>
+                                ) : null}
                               </div>
                             </div>
 
