@@ -1383,7 +1383,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       <div>
                         <h2 style={{ margin: 0, fontSize: 22 }}>Chat Live</h2>
                         <p className="helper" style={{ margin: '8px 0 0', fontSize: 12, lineHeight: 1.45 }}>
-                          Escribe aquí durante la clase. Los mensajes aparecerán en tiempo real para todos los estudiantes conectados.
+                          Escribe aquí durante la clase. Los mensajes aparecerán en tiempo real y el instructor podra verlos y/o compartirlos.
                         </p>
                       </div>
                       {isChatAdmin ? (
