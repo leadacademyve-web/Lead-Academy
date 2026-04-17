@@ -15,6 +15,14 @@ type ClassVideo = {
   is_published: boolean;
 };
 
+type ChatMessage = {
+  id: string;
+  user_email: string | null;
+  user_name: string | null;
+  body: string;
+  created_at: string | null;
+};
+
 const plans = [
   {
     key: 'week',
@@ -241,6 +249,41 @@ function formatNYTime() {
   }
 }
 
+function formatChatMessageTime(value?: string | null) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+
+  try {
+    return new Intl.DateTimeFormat('es-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      month: 'numeric',
+      day: 'numeric',
+    }).format(d);
+  } catch {
+    return '';
+  }
+}
+
+
+
+const EMOJI_CATEGORIES = [
+  {
+    label: 'Trading',
+    emojis: ['📈', '📉', '💰', '💵', '💸', '🚀', '🔥', '📊', '🐂', '🐻', '🏦', '💹', '🪙', '📌', '✅', '⚠️'],
+  },
+  {
+    label: 'Reacciones',
+    emojis: ['😀', '😄', '😁', '😎', '🤩', '👏', '🙌', '👍', '👊', '🙏', '🔥', '💯', '✨', '🎯', '💪', '❤️'],
+  },
+  {
+    label: 'Ideas',
+    emojis: ['🧠', '🤔', '😮', '😯', '😅', '😂', '😬', '😴', '😤', '🤯', '📝', '📚', '⏰', '👀', '🎉', '📣'],
+  },
+];
 
 function totalClassesForPlan(plan?: string | null) {
   switch (String(plan || '').toUpperCase()) {
@@ -278,7 +321,16 @@ export default function DashboardPage() {
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
+  const [activeTab, setActiveTab] = useState<'videos' | 'chatLive' | 'biblioteca'>('videos');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [sendingChat, setSendingChat] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [showEmojiPanel, setShowEmojiPanel] = useState(false);
   const recoveryNavigationTriggeredRef = useRef(false);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const emojiPanelRef = useRef<HTMLDivElement | null>(null);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
@@ -510,6 +562,112 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
     return () => window.clearInterval(interval);
   }, [router]);
+
+
+  async function loadChatMessages() {
+    setChatLoading(true);
+    setChatError(null);
+
+    const { data, error } = await supabase
+      .from('live_chat_messages')
+      .select('id,user_email,user_name,body,created_at')
+      .order('created_at', { ascending: true })
+      .limit(100);
+
+    if (error) {
+      setChatMessages([]);
+      setChatError('No se pudo cargar el chat en vivo.');
+      setChatLoading(false);
+      return;
+    }
+
+    setChatMessages((data || []) as ChatMessage[]);
+    setChatLoading(false);
+  }
+
+  async function sendChatMessage(e: FormEvent) {
+    e.preventDefault();
+
+    const body = chatInput.trim();
+    if (!body || sendingChat) return;
+
+    setSendingChat(true);
+    setChatError(null);
+
+    const payload = {
+      user_email: userEmail || null,
+      user_name: userName || 'Estudiante',
+      body,
+    };
+
+    const { error } = await supabase.from('live_chat_messages').insert(payload);
+
+    if (error) {
+      setChatError('No se pudo enviar el mensaje.');
+      setSendingChat(false);
+      return;
+    }
+
+    setChatInput('');
+    setSendingChat(false);
+  }
+
+
+  useEffect(() => {
+    if (!accessActive) return;
+
+    loadChatMessages();
+  }, [accessActive]);
+
+  useEffect(() => {
+    if (!accessActive) return;
+
+    const channel = supabase
+      .channel('leadacademy-live-chat')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'live_chat_messages' },
+        () => {
+          loadChatMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [accessActive]);
+
+  useEffect(() => {
+    if (activeTab !== 'chatLive') return;
+
+    const container = chatScrollRef.current;
+    if (!container) return;
+
+    container.scrollTop = container.scrollHeight;
+  }, [activeTab, chatMessages]);
+
+  useEffect(() => {
+    if (!showEmojiPanel) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!emojiPanelRef.current) return;
+      if (emojiPanelRef.current.contains(event.target as Node)) return;
+      setShowEmojiPanel(false);
+    }
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, [showEmojiPanel]);
+
+  function appendEmoji(emoji: string) {
+    setChatInput((prev) => {
+      const nextValue = `${prev}${emoji}`;
+      return nextValue.slice(0, 500);
+    });
+  }
 
   async function updateProfile(e: FormEvent) {
     e.preventDefault();
@@ -881,209 +1039,495 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
             <>
               <div
                 style={{
-                  height: 4,
-                  width: 74,
-                  borderRadius: 999,
-                  marginBottom: 14,
-                  background: 'linear-gradient(90deg, #22c55e 0%, #f59e0b 50%, #3b82f6 100%)',
-                  boxShadow: '0 0 18px rgba(59,130,246,0.22)',
-                }}
-              />
-              <div className="eyebrow">Biblioteca</div>
-              <h2 style={{ marginTop: 12, marginBottom: 18 }}>Clases disponibles</h2>
-
-              <div style={{ display: 'grid', gap: 10, marginBottom: 12, flex: 1, alignContent: 'start' }}>
-                {visibleLibraryVideos.length ? (
-                  visibleLibraryVideos.map((video) => {
-                    const selected = selectedVideoId === video.id;
-                    return (
-                      <button
-                        key={video.id}
-                        onClick={() => setSelectedVideoId(video.id)}
-                        style={{
-                          textAlign: 'left',
-                          padding: '14px 16px',
-                          borderRadius: 16,
-                          border: selected ? '1px solid rgba(245, 158, 11, 0.72)' : '1px solid rgba(255,255,255,0.08)',
-                          background: selected ? 'linear-gradient(180deg, rgba(245,158,11,0.14) 0%, rgba(30,41,59,0.72) 100%)' : 'rgba(255,255,255,0.03)',
-                          color: 'white',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
-                          {sublabelForVideo(video)}
-                        </div>
-                        <div style={{ fontWeight: 700, fontSize: 18 }}>{labelForVideo(video)}</div>
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="support-item">Aún no hay clases cargadas.</div>
-                )}
-              </div>
-
-              {isEditingProfile ? (
-                <p className="helper" style={{ marginTop: 0, marginBottom: 12, fontSize: 12, lineHeight: 1.45 }}>
-                  Edita tu perfil y presiona "Guardar datos".
-                </p>
-              ) : null}
-
-              {lastClassWarning ? (
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: 16,
-                    background: 'linear-gradient(180deg, rgba(245,158,11,0.16) 0%, rgba(120,53,15,0.18) 100%)',
-                    border: '1px solid rgba(245,158,11,0.40)',
-                    marginBottom: 12,
-                    boxShadow: '0 12px 28px rgba(0,0,0,0.16)',
-                  }}
-                >
-                  <div className="eyebrow" style={{ marginBottom: 8 }}>Aviso de suscripción</div>
-                  <div style={{ fontSize: 15, lineHeight: 1.5, color: 'rgba(255,255,255,0.92)' }}>
-                    Estás entrando en tu última clase disponible. Para seguir accediendo al portal deberás renovar tu suscripción.
-                  </div>
-                </div>
-              ) : null}
-
-              <div
-                style={{
-                  padding: '14px 14px 12px',
-                  borderRadius: 16,
-                  background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.025) 100%)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                  marginBottom: 12,
+                  display: 'flex',
+                  gap: 16,
+                  marginBottom: 18,
+                  alignItems: 'flex-start',
+                  flexWrap: 'nowrap',
                 }}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                    marginBottom: isEditingProfile ? 8 : 0,
-                  }}
-                >
-                  <div className="eyebrow" style={{ marginBottom: 0 }}>Mi perfil</div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
-                    onClick={() => {
-                      setIsEditingProfile((prev) => !prev);
-                      setProfileError(null);
-                      setProfileSuccess(null);
+                {[
+                  { key: 'videos' as const, label: 'Videos' },
+                  { key: 'chatLive' as const, label: 'Chat Live' },
+                  { key: 'biblioteca' as const, label: 'Biblioteca' },
+                ].map((tab) => {
+                  const isActive = activeTab === tab.key;
+
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setActiveTab(tab.key)}
+                      style={{
+                        background: 'transparent',
+                        border: 0,
+                        padding: 0,
+                        margin: 0,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        color: 'inherit',
+                        minWidth: 0,
+                        flex: 1,
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: 4,
+                          width: '100%',
+                          borderRadius: 999,
+                          marginBottom: 10,
+                          background: 'linear-gradient(90deg, #22c55e 0%, #f59e0b 50%, #3b82f6 100%)',
+                          boxShadow: isActive ? '0 0 18px rgba(59,130,246,0.22)' : 'none',
+                          opacity: isActive ? 1 : 0.4,
+                        }}
+                      />
+                      <div
+                        className="eyebrow"
+                        style={{
+                          marginBottom: 0,
+                          color: isActive ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.58)',
+                          transition: 'color 0.2s ease, opacity 0.2s ease',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {tab.label}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {activeTab === 'videos' ? (
+                <>
+                  <h2 style={{ marginTop: 0, marginBottom: 18 }}>Clases disponibles</h2>
+
+                  <div style={{ display: 'grid', gap: 10, marginBottom: 12, flex: 1, alignContent: 'start' }}>
+                    {visibleLibraryVideos.length ? (
+                      visibleLibraryVideos.map((video) => {
+                        const selected = selectedVideoId === video.id;
+                        return (
+                          <button
+                            key={video.id}
+                            onClick={() => setSelectedVideoId(video.id)}
+                            style={{
+                              textAlign: 'left',
+                              padding: '14px 16px',
+                              borderRadius: 16,
+                              border: selected ? '1px solid rgba(245, 158, 11, 0.72)' : '1px solid rgba(255,255,255,0.08)',
+                              background: selected ? 'linear-gradient(180deg, rgba(245,158,11,0.14) 0%, rgba(30,41,59,0.72) 100%)' : 'rgba(255,255,255,0.03)',
+                              color: 'white',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
+                              {sublabelForVideo(video)}
+                            </div>
+                            <div style={{ fontWeight: 700, fontSize: 18 }}>{labelForVideo(video)}</div>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="support-item">Aún no hay clases cargadas.</div>
+                    )}
+                  </div>
+
+                  {isEditingProfile ? (
+                    <p className="helper" style={{ marginTop: 0, marginBottom: 12, fontSize: 12, lineHeight: 1.45 }}>
+                      Edita tu perfil y presiona "Guardar datos".
+                    </p>
+                  ) : null}
+
+                  {lastClassWarning ? (
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 16,
+                        background: 'linear-gradient(180deg, rgba(245,158,11,0.16) 0%, rgba(120,53,15,0.18) 100%)',
+                        border: '1px solid rgba(245,158,11,0.40)',
+                        marginBottom: 12,
+                        boxShadow: '0 12px 28px rgba(0,0,0,0.16)',
+                      }}
+                    >
+                      <div className="eyebrow" style={{ marginBottom: 8 }}>Aviso de suscripción</div>
+                      <div style={{ fontSize: 15, lineHeight: 1.5, color: 'rgba(255,255,255,0.92)' }}>
+                        Estás entrando en tu última clase disponible. Para seguir accediendo al portal deberás renovar tu suscripción.
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div
+                    style={{
+                      padding: '14px 14px 12px',
+                      borderRadius: 16,
+                      background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.025) 100%)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      marginBottom: 12,
                     }}
                   >
-                    {isEditingProfile ? 'Ocultar perfil' : 'Modificar perfil'}
-                  </button>
-                </div>
-
-                {isEditingProfile ? (
-                  <form onSubmit={updateProfile}>
-                    <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
-                      Nombre completo
-                      <input
-                        className="input"
-                        value={profileForm.fullName}
-                        onChange={(e) => setProfileForm((prev) => ({ ...prev, fullName: e.target.value }))}
-                        autoComplete="name"
-                        required
-                      />
-                    </label>
-
-                    <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
-                      Número telefónico
-                      <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', gap: 10 }}>
-                        <select
-                          className="input"
-                          value={selectedCountryCode}
-                          onChange={(e) => setSelectedCountryCode(e.target.value)}
-                          aria-label="Código de país"
-                        >
-                          {COUNTRY_OPTIONS.map((option) => (
-                            <option key={`${option.code}-${option.label}`} value={option.code}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-
-                        <input
-                          className="input"
-                          type="tel"
-                          value={phoneLocal}
-                          onChange={(e) => setPhoneLocal(e.target.value.replace(/[^\d]/g, ''))}
-                          autoComplete="tel-national"
-                          inputMode="numeric"
-                          placeholder={findCountryByCode(selectedCountryCode).placeholder}
-                        />
-                      </div>
-                      <p className="helper" style={{ marginTop: 8, marginBottom: 0 }}>
-                        Se guardará en formato internacional, por ejemplo: {selectedCountryCode}{findCountryByCode(selectedCountryCode).placeholder}
-                      </p>
-                    </label>
-
-                    <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
-                      Correo electrónico
-                      <input
-                        className="input"
-                        type="email"
-                        value={profileForm.email}
-                        onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
-                        autoComplete="email"
-                        required
-                      />
-                    </label>
-
-                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                      <button className="btn btn-primary" type="submit" disabled={savingProfile} style={{ width: '100%' }}>
-                        {savingProfile ? 'Guardando...' : 'Guardar datos'}
-                      </button>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        marginBottom: isEditingProfile ? 8 : 0,
+                      }}
+                    >
+                      <div className="eyebrow" style={{ marginBottom: 0 }}>Mi perfil</div>
                       <button
-                        className="btn btn-ghost"
                         type="button"
-                        disabled={savingProfile}
-                        style={{ width: '100%' }}
+                        className="btn btn-secondary"
+                        style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
                         onClick={() => {
-                          setIsEditingProfile(false);
+                          setIsEditingProfile((prev) => !prev);
                           setProfileError(null);
                           setProfileSuccess(null);
                         }}
                       >
-                        Cancelar
+                        {isEditingProfile ? 'Ocultar perfil' : 'Modificar perfil'}
                       </button>
                     </div>
 
-                    <p className="helper" style={{ marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.45 }}>
-                      Si cambias tu correo, el sistema te pedirá confirmarlo por email antes de usarlo como acceso principal. No cambies mas de dos veces el mismo día y evita bloquear tu cuenta por seguridad.
+                    {isEditingProfile ? (
+                      <form onSubmit={updateProfile}>
+                        <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
+                          Nombre completo
+                          <input
+                            className="input"
+                            value={profileForm.fullName}
+                            onChange={(e) => setProfileForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                            autoComplete="name"
+                            required
+                          />
+                        </label>
+
+                        <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
+                          Número telefónico
+                          <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', gap: 10 }}>
+                            <select
+                              className="input"
+                              value={selectedCountryCode}
+                              onChange={(e) => setSelectedCountryCode(e.target.value)}
+                              aria-label="Código de país"
+                            >
+                              {COUNTRY_OPTIONS.map((option) => (
+                                <option key={`${option.code}-${option.label}`} value={option.code}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+
+                            <input
+                              className="input"
+                              type="tel"
+                              value={phoneLocal}
+                              onChange={(e) => setPhoneLocal(e.target.value.replace(/[^\d]/g, ''))}
+                              autoComplete="tel-national"
+                              inputMode="numeric"
+                              placeholder={findCountryByCode(selectedCountryCode).placeholder}
+                            />
+                          </div>
+                          <p className="helper" style={{ marginTop: 8, marginBottom: 0 }}>
+                            Se guardará en formato internacional, por ejemplo: {selectedCountryCode}{findCountryByCode(selectedCountryCode).placeholder}
+                          </p>
+                        </label>
+
+                        <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
+                          Correo electrónico
+                          <input
+                            className="input"
+                            type="email"
+                            value={profileForm.email}
+                            onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
+                            autoComplete="email"
+                            required
+                          />
+                        </label>
+
+                        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                          <button className="btn btn-primary" type="submit" disabled={savingProfile} style={{ width: '100%' }}>
+                            {savingProfile ? 'Guardando...' : 'Guardar datos'}
+                          </button>
+                          <button
+                            className="btn btn-ghost"
+                            type="button"
+                            disabled={savingProfile}
+                            style={{ width: '100%' }}
+                            onClick={() => {
+                              setIsEditingProfile(false);
+                              setProfileError(null);
+                              setProfileSuccess(null);
+                            }}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+
+                        <p className="helper" style={{ marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.45 }}>
+                          Si cambias tu correo, el sistema te pedirá confirmarlo por email antes de usarlo como acceso principal. No cambies mas de dos veces el mismo día y evita bloquear tu cuenta por seguridad.
+                        </p>
+
+                        {profileError && <p className="error" style={{ marginTop: 10, marginBottom: 0 }}>{profileError}</p>}
+                        {profileSuccess && <p className="success" style={{ marginTop: 10, marginBottom: 0 }}>{profileSuccess}</p>}
+                      </form>
+                    ) : (
+                      <p className="helper" style={{ marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.45 }}>
+                        Aquí puedes corregir tu nombre, teléfono o correo electrónico cuando lo necesites.
+                      </p>
+                    )}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 'auto',
+                      padding: '12px 14px',
+                      borderRadius: 14,
+                      background: 'linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.025) 100%)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      fontSize: 12,
+                      lineHeight: 1.45,
+                      opacity: 0.88,
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, marginBottom: 6 }}>Soporte</div>
+                    <div>Leadacademyve@gmail.com</div>
+                    <div>+1 786 620 4377</div>
+                  </div>
+                </>
+              ) : activeTab === 'chatLive' ? (
+                <div
+                  style={{
+                    flex: 1,
+                    minHeight: 0,
+                    borderRadius: 18,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.018) 100%)',
+                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.02)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <h2 style={{ margin: 0, fontSize: 22 }}>Chat Live</h2>
+                    <p className="helper" style={{ margin: '8px 0 0', fontSize: 12, lineHeight: 1.45 }}>
+                      Escribe aquí durante la clase. Los mensajes aparecerán en tiempo real para todos los estudiantes conectados.
                     </p>
+                  </div>
 
-                    {profileError && <p className="error" style={{ marginTop: 10, marginBottom: 0 }}>{profileError}</p>}
-                    {profileSuccess && <p className="success" style={{ marginTop: 10, marginBottom: 0 }}>{profileSuccess}</p>}
+                  <div
+                    ref={chatScrollRef}
+                    style={{
+                      flex: 1,
+                      minHeight: 0,
+                      overflowY: 'auto',
+                      padding: '14px 12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10,
+                    }}
+                  >
+                    {chatLoading ? (
+                      <div className="support-item">Cargando chat...</div>
+                    ) : chatMessages.length ? (
+                      chatMessages.map((message) => {
+                        const isOwnMessage =
+                          !!userEmail &&
+                          !!message.user_email &&
+                          message.user_email.toLowerCase() === userEmail.toLowerCase();
+
+                        return (
+                          <div
+                            key={message.id}
+                            style={{
+                              alignSelf: isOwnMessage ? 'flex-end' : 'flex-start',
+                              maxWidth: '92%',
+                              padding: '12px 14px',
+                              borderRadius: 16,
+                              background: isOwnMessage
+                                ? 'linear-gradient(180deg, rgba(245,158,11,0.22) 0%, rgba(180,83,9,0.18) 100%)'
+                                : 'rgba(255,255,255,0.06)',
+                              border: isOwnMessage
+                                ? '1px solid rgba(245,158,11,0.42)'
+                                : '1px solid rgba(255,255,255,0.07)',
+                              boxShadow: '0 10px 24px rgba(0,0,0,0.14)',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                gap: 10,
+                                marginBottom: 6,
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  letterSpacing: 0.3,
+                                  color: 'rgba(255,255,255,0.92)',
+                                }}
+                              >
+                                {message.user_name || 'Estudiante'}
+                              </div>
+                              <div style={{ fontSize: 11, opacity: 0.58, whiteSpace: 'nowrap' }}>
+                                {formatChatMessageTime(message.created_at)}
+                              </div>
+                            </div>
+
+                            <div style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.96)', whiteSpace: 'pre-wrap' }}>
+                              {message.body}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="support-item">Aún no hay mensajes en el chat.</div>
+                    )}
+                  </div>
+
+                  <form
+                    onSubmit={sendChatMessage}
+                    style={{
+                      padding: 12,
+                      borderTop: '1px solid rgba(255,255,255,0.06)',
+                      display: 'grid',
+                      gap: 10,
+                    }}
+                  >
+
+                    {showEmojiPanel ? (
+                      <div
+                        ref={emojiPanelRef}
+                        style={{
+                          width: '100%',
+                          maxHeight: 280,
+                          overflowY: 'auto',
+                          borderRadius: 18,
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          background: 'linear-gradient(180deg, rgba(10,18,36,0.98) 0%, rgba(5,12,28,0.98) 100%)',
+                          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03)',
+                          padding: 12,
+                          marginBottom: 8,
+                        }}
+                      >
+                        <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.9, marginBottom: 10 }}>
+                          Elige emojis para tu mensaje
+                        </div>
+                        {EMOJI_CATEGORIES.map((category) => (
+                          <div key={category.label} style={{ marginBottom: 12 }}>
+                            <div style={{ fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', opacity: 0.58, marginBottom: 8 }}>
+                              {category.label}
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(0, 1fr))', gap: 6 }}>
+                              {category.emojis.map((emoji) => (
+                                <button
+                                  key={`${category.label}-${emoji}`}
+                                  type="button"
+                                  onClick={() => appendEmoji(emoji)}
+                                  style={{
+                                    height: 36,
+                                    borderRadius: 10,
+                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    background: 'rgba(255,255,255,0.04)',
+                                    color: 'white',
+                                    fontSize: 20,
+                                    lineHeight: 1,
+                                    cursor: 'pointer',
+                                  }}
+                                  aria-label={`Agregar ${emoji}`}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <textarea
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Escribe tu mensaje aquí..."
+                      rows={3}
+                      style={{
+                        width: '100%',
+                        resize: 'none',
+                        borderRadius: 14,
+                        border: '1px solid rgba(255,255,255,0.10)',
+                        background: 'rgba(2,6,23,0.42)',
+                        color: 'white',
+                        padding: '12px 14px',
+                        outline: 'none',
+                        font: 'inherit',
+                        lineHeight: 1.45,
+                      }}
+                      maxLength={500}
+                    />
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowEmojiPanel((prev) => !prev)}
+                          style={{
+                            minWidth: 48,
+                            height: 40,
+                            borderRadius: 12,
+                            border: '1px solid rgba(255,255,255,0.10)',
+                            background: showEmojiPanel ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.04)',
+                            color: 'white',
+                            fontSize: 20,
+                            cursor: 'pointer',
+                          }}
+                          aria-label="Abrir panel de emojis"
+                          title="Emojis"
+                        >
+                          😊
+                        </button>
+                        <div style={{ fontSize: 11, opacity: 0.58 }}>
+                          {chatInput.trim().length}/500
+                        </div>
+                      </div>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={!chatInput.trim() || sendingChat}
+                        style={{ minWidth: 140 }}
+                      >
+                        {sendingChat ? 'Enviando...' : 'Enviar mensaje'}
+                      </button>
+                    </div>
+
+                    {chatError ? <p className="error" style={{ margin: 0 }}>{chatError}</p> : null}
                   </form>
-                ) : (
-                  <p className="helper" style={{ marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.45 }}>
-                    Aquí puedes corregir tu nombre, teléfono o correo electrónico cuando lo necesites.
-                  </p>
-                )}
-              </div>
-
-              <div
-                style={{
-                  marginTop: 'auto',
-                  padding: '12px 14px',
-                  borderRadius: 14,
-                  background: 'linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.025) 100%)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  fontSize: 12,
-                  lineHeight: 1.45,
-                  opacity: 0.88,
-                }}
-              >
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>Soporte</div>
-                <div>Leadacademyve@gmail.com</div>
-                <div>+1 786 620 4377</div>
-              </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    flex: 1,
+                    minHeight: 0,
+                    borderRadius: 18,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.018) 100%)',
+                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.02)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    padding: 18,
+                    textAlign: 'center',
+                  }}
+                >
+                  <div>
+                    <h2 style={{ marginTop: 0, marginBottom: 10 }}>Biblioteca</h2>
+                    <p className="helper" style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+                      Esta pestaña quedó separada y lista para lo que quieras montar después.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div
                 className="state-pill state-active"
