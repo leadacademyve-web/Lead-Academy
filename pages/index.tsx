@@ -167,8 +167,8 @@ export default function HomePage() {
   }}
 >
   <img
-    src="/Earning Reports BOA-NFLX.jpg"
-    alt="Earning Reports BOA NFLX"
+    src="/Earning Reports.jpg"
+    alt="Earning Reports"
     style={{
       width: '191%',
       borderRadius: 20,
