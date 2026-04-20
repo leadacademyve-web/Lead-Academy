@@ -347,64 +347,12 @@ export default function DashboardPage() {
   const [clearingChat, setClearingChat] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
-  const recoveryNavigationTriggeredRef = useRef(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const emojiPanelRef = useRef<HTMLDivElement | null>(null);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
   const isChatAdmin = useMemo(() => isChatAdminEmail(userEmail), [userEmail]);
-
-  function goToInicioThenBackToPortal() {
-    if (recoveryNavigationTriggeredRef.current) return;
-    recoveryNavigationTriggeredRef.current = true;
-    router.push('/?recoverPortal=1');
-  }
-
-  useEffect(() => {
-    if (!router.isReady) return;
-
-    try {
-      const returningFromIndex = sessionStorage.getItem('lead_portal_recovery_returning') === '1';
-      if (returningFromIndex) {
-        sessionStorage.removeItem('lead_portal_recovery_returning');
-        sessionStorage.removeItem('lead_portal_refresh_pending');
-        recoveryNavigationTriggeredRef.current = false;
-        return;
-      }
-
-      const refreshPending = sessionStorage.getItem('lead_portal_refresh_pending') === '1';
-      if (refreshPending) {
-        sessionStorage.removeItem('lead_portal_refresh_pending');
-        goToInicioThenBackToPortal();
-        return;
-      }
-    } catch {
-      // ignore storage errors
-    }
-
-    function markRefreshPending() {
-      try {
-        sessionStorage.setItem('lead_portal_refresh_pending', '1');
-      } catch {
-        // ignore storage errors
-      }
-    }
-
-    function handleVisibilityChange() {
-      if (document.visibilityState === 'visible') {
-        goToInicioThenBackToPortal();
-      }
-    }
-
-    window.addEventListener('beforeunload', markRefreshPending);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('beforeunload', markRefreshPending);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [router, router.isReady]);
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,
@@ -1383,7 +1331,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       <div>
                         <h2 style={{ margin: 0, fontSize: 22 }}>Chat Live</h2>
                         <p className="helper" style={{ margin: '8px 0 0', fontSize: 12, lineHeight: 1.45 }}>
-                          Escribe aquí durante la clase. Los mensajes aparecerán en tiempo real y el instructor podra verlos y/o compartirlos.
+                          Escribe aquí durante la clase. Los mensajes aparecerán en tiempo real y el instructor podrá verlos y/o compartirlos.
                         </p>
                       </div>
                       {isChatAdmin ? (
