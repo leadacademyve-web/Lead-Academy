@@ -23,6 +23,14 @@ type ChatMessage = {
   created_at: string | null;
 };
 
+type LibraryItem = {
+  id: string;
+  title: string;
+  kind: 'download' | 'image';
+  url: string;
+  description: string;
+};
+
 const plans = [
   {
     key: 'week',
@@ -284,6 +292,45 @@ const EMOJI_CATEGORIES = [
     emojis: ['🧠', '🤔', '😮', '😯', '😅', '😂', '😬', '😴', '😤', '🤯', '📝', '📚', '⏰', '👀', '🎉', '📣'],
   },
 ];
+const LIBRARY_ITEMS: LibraryItem[] = [
+  {
+    id: 'plan-inversiones-excel',
+    title: 'Plan de inversiones en Excel',
+    kind: 'download',
+    url: '/Plan de inversiones en Excel.xlsx',
+    description: 'Descargar archivo',
+  },
+  {
+    id: 'est-apertura-bajista',
+    title: 'Est. Apertura bajista',
+    kind: 'image',
+    url: '/Est. Apertura bajista.jpg',
+    description: 'Imagen de estrategia',
+  },
+  {
+    id: 'est-apertura-alcista',
+    title: 'Est. Apertura alcista',
+    kind: 'image',
+    url: '/Est. Apertura alcista.jpg',
+    description: 'Imagen de estrategia',
+  },
+  {
+    id: 'est-ruptura-bajista',
+    title: 'Est. Ruptura bajista',
+    kind: 'image',
+    url: '/Est. Ruptura bajista.jpg',
+    description: 'Imagen de estrategia',
+  },
+  {
+    id: 'est-ruptura-alcista',
+    title: 'Est. Ruptura alcista',
+    kind: 'image',
+    url: '/Est. Ruptura alcista.jpg',
+    description: 'Imagen de estrategia',
+  },
+];
+
+
 
 function totalClassesForPlan(plan?: string | null) {
   switch (String(plan || '').toUpperCase()) {
@@ -329,6 +376,9 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [videos, setVideos] = useState<ClassVideo[]>([]);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [selectedLibraryItemId, setSelectedLibraryItemId] = useState<string | null>(null);
+  const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
+  const [activeImageTitle, setActiveImageTitle] = useState<string | null>(null);
   const [nowText, setNowText] = useState('');
   const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', email: '' });
   const [selectedCountryCode, setSelectedCountryCode] = useState(DEFAULT_COUNTRY_CODE);
@@ -358,6 +408,31 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     () => videos.find((video) => video.id === selectedVideoId) || null,
     [videos, selectedVideoId]
   );
+
+
+  const selectedLibraryItem = useMemo(
+    () => LIBRARY_ITEMS.find((item) => item.id === selectedLibraryItemId) || null,
+    [selectedLibraryItemId]
+  );
+
+  function openLibraryItem(item: LibraryItem) {
+    setSelectedLibraryItemId(item.id);
+
+    if (item.kind === 'download') {
+      if (typeof window !== 'undefined') {
+        const link = document.createElement('a');
+        link.href = item.url;
+        link.download = item.title;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      return;
+    }
+
+    setActiveImageUrl(item.url);
+    setActiveImageTitle(item.title);
+  }
 
   const visibleLibraryVideos = useMemo(() => {
     if (!isEditingProfile) return videos;
@@ -512,6 +587,12 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     setVideoUnavailable(false);
   }, [selectedVideoId]);
 
+  useEffect(() => {
+    if (activeTab !== 'biblioteca') return;
+    if (!selectedLibraryItemId && LIBRARY_ITEMS.length) {
+      setSelectedLibraryItemId(LIBRARY_ITEMS[0].id);
+    }
+  }, [activeTab, selectedLibraryItemId]);
 
   useEffect(() => {
     const interval = window.setInterval(async () => {
@@ -917,7 +998,32 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 0 1px rgba(96,165,250,0.06), 0 20px 40px rgba(0,0,0,0.28)',
                 }}
               >
-                {showIframe ? (
+                {activeTab === 'biblioteca' && activeImageUrl ? (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'grid',
+                      placeItems: 'center',
+                      background: '#000',
+                      padding: 18,
+                    }}
+                  >
+                    <img
+                      src={activeImageUrl}
+                      alt={activeImageTitle || 'Imagen de biblioteca'}
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        width: 'auto',
+                        height: 'auto',
+                        objectFit: 'contain',
+                        display: 'block',
+                        borderRadius: 18,
+                      }}
+                    />
+                  </div>
+                ) : showIframe ? (
                   <div style={{
   position: 'relative',
   top: '50%',
@@ -1573,27 +1679,57 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   </form>
                 </div>
               ) : (
-                <div
-                  style={{
-                    flex: 1,
-                    minHeight: 0,
-                    borderRadius: 18,
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    background: 'linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.018) 100%)',
-                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.02)',
-                    display: 'grid',
-                    placeItems: 'center',
-                    padding: 18,
-                    textAlign: 'center',
-                  }}
-                >
-                  <div>
-                    <h2 style={{ marginTop: 0, marginBottom: 10 }}>Biblioteca</h2>
-                    <p className="helper" style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
-                      Esta pestaña quedó separada y lista para lo que quieras montar después.
-                    </p>
+                <>
+                  <h2 style={{ marginTop: 0, marginBottom: 18 }}>Biblioteca</h2>
+
+                  <div style={{ display: 'grid', gap: 10, marginBottom: 12, flex: 1, alignContent: 'start' }}>
+                    {LIBRARY_ITEMS.map((item) => {
+                      const selected = selectedLibraryItemId === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => openLibraryItem(item)}
+                          style={{
+                            textAlign: 'left',
+                            padding: '14px 16px',
+                            borderRadius: 16,
+                            border: selected ? '1px solid rgba(245, 158, 11, 0.72)' : '1px solid rgba(255,255,255,0.08)',
+                            background: selected ? 'linear-gradient(180deg, rgba(245,158,11,0.14) 0%, rgba(30,41,59,0.72) 100%)' : 'rgba(255,255,255,0.03)',
+                            color: 'white',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
+                            {item.kind === 'download' ? 'Descarga' : 'Biblioteca'}
+                          </div>
+                          <div style={{ fontWeight: 700, fontSize: 18 }}>{item.title}</div>
+                        </button>
+                      );
+                    })}
                   </div>
-                </div>
+
+                  <div
+                    style={{
+                      marginTop: 'auto',
+                      padding: '12px 14px',
+                      borderRadius: 14,
+                      background: 'linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.025) 100%)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      fontSize: 12,
+                      lineHeight: 1.45,
+                      opacity: 0.88,
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, marginBottom: 6 }}>Contenido</div>
+                    <div>
+                      {selectedLibraryItem?.kind === 'download'
+                        ? 'Este botón descargará el archivo colocado en /public.'
+                        : selectedLibraryItem?.title
+                          ? `Mostrando: ${selectedLibraryItem.title}`
+                          : 'Selecciona un elemento de la biblioteca.'}
+                    </div>
+                  </div>
+                </>
               )}
 
               <div
