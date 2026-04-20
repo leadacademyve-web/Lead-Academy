@@ -416,9 +416,8 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   );
 
   function openLibraryItem(item: LibraryItem) {
-    setSelectedLibraryItemId(item.id);
-
     if (item.kind === 'download') {
+      setSelectedLibraryItemId(item.id);
       if (typeof window !== 'undefined') {
         const link = document.createElement('a');
         link.href = item.url;
@@ -430,6 +429,16 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       return;
     }
 
+    const isSameImageOpen = activeImageUrl === item.url && activeTab === 'biblioteca';
+
+    if (isSameImageOpen) {
+      setSelectedLibraryItemId(null);
+      setActiveImageUrl(null);
+      setActiveImageTitle(null);
+      return;
+    }
+
+    setSelectedLibraryItemId(item.id);
     setActiveImageUrl(item.url);
     setActiveImageTitle(item.title);
   }
@@ -588,11 +597,11 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   }, [selectedVideoId]);
 
   useEffect(() => {
-    if (activeTab !== 'biblioteca') return;
-    if (!selectedLibraryItemId && LIBRARY_ITEMS.length) {
-      setSelectedLibraryItemId(LIBRARY_ITEMS[0].id);
-    }
-  }, [activeTab, selectedLibraryItemId]);
+    if (activeTab === 'biblioteca') return;
+    setSelectedLibraryItemId(null);
+    setActiveImageUrl(null);
+    setActiveImageTitle(null);
+  }, [activeTab]);
 
   useEffect(() => {
     const interval = window.setInterval(async () => {
@@ -994,36 +1003,13 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   borderRadius: 24,
                   overflow: 'hidden',
                   display: 'block',
+                  position: 'relative',
                   background: '#000',
                   boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 0 1px rgba(96,165,250,0.06), 0 20px 40px rgba(0,0,0,0.28)',
                 }}
               >
-                {activeTab === 'biblioteca' && activeImageUrl ? (
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      display: 'grid',
-                      placeItems: 'center',
-                      background: '#000',
-                      padding: 18,
-                    }}
-                  >
-                    <img
-                      src={activeImageUrl}
-                      alt={activeImageTitle || 'Imagen de biblioteca'}
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '100%',
-                        width: 'auto',
-                        height: 'auto',
-                        objectFit: 'contain',
-                        display: 'block',
-                        borderRadius: 18,
-                      }}
-                    />
-                  </div>
-                ) : showIframe ? (
+                {showIframe ? (
+                  <>
                   <div style={{
   position: 'relative',
   top: '50%',
@@ -1050,6 +1036,34 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                     />
 
                   </div>
+                  {activeTab === 'biblioteca' && activeImageUrl ? (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'grid',
+                        placeItems: 'center',
+                        background: 'rgba(0,0,0,0.58)',
+                        padding: 18,
+                        zIndex: 2,
+                      }}
+                    >
+                      <img
+                        src={activeImageUrl}
+                        alt={activeImageTitle || 'Imagen de biblioteca'}
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          width: 'auto',
+                          height: 'auto',
+                          objectFit: 'contain',
+                          display: 'block',
+                          borderRadius: 18,
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                  </>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
                     <div>
