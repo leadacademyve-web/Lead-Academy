@@ -27,7 +27,7 @@ type ChatMessage = {
 type LibraryItem = {
   id: string;
   title: string;
-  kind: 'download' | 'image';
+  kind: 'download' | 'image' | 'video';
   url: string;
   description: string;
 };
@@ -137,7 +137,9 @@ function labelForVideo(video: ClassVideo) {
 }
 
 function sublabelForVideo(video: ClassVideo) {
-  return video.is_live ? 'Clase en vivo' : 'Clase grabada';
+  if (video.is_live) return 'Clase en vivo';
+  if (String(video.id).startsWith('library-video-')) return 'Video';
+  return 'Clase grabada';
 }
 
 function buildLiveVideo(streamUrl: string): ClassVideo | null {
@@ -357,6 +359,13 @@ const LIBRARY_ITEMS: LibraryItem[] = [
   description: 'Abrir en TC2000',
 },
   {
+    id: 'video-configuracion-tc2000',
+    title: 'Configuración TC2000',
+    kind: 'video',
+    url: 'https://player.vimeo.com/video/1185325573',
+    description: 'Reproducir video',
+  },
+  {
     id: 'est-apertura-bajista',
     title: 'Est. Apertura bajista',
     kind: 'image',
@@ -479,14 +488,11 @@ function openLibraryItem(item: LibraryItem) {
   setSelectedLibraryItemId(item.id);
 
   if (item.kind === 'download') {
-
-    // 🔥 AQUÍ VA EL CAMBIO
     if (item.url.startsWith('http')) {
-      window.open(item.url, '_blank');
+      window.open(item.url, '_blank', 'noopener,noreferrer');
       return;
     }
 
-    // 👇 esto queda para archivos locales
     if (typeof window !== 'undefined') {
       const link = document.createElement('a');
       link.href = item.url;
@@ -496,6 +502,34 @@ function openLibraryItem(item: LibraryItem) {
       document.body.removeChild(link);
     }
 
+    return;
+  }
+
+  if (item.kind === 'video') {
+    setActiveImageUrl(null);
+    setActiveImageTitle(null);
+    setActiveTab('videos');
+
+    const libraryVideoId = `library-video-${item.id}`;
+
+    setVideos((prev) => {
+      const withoutOldLibraryVideos = prev.filter((video) => !String(video.id).startsWith('library-video-'));
+
+      return [
+        ...withoutOldLibraryVideos,
+        {
+          id: libraryVideoId,
+          title: item.title,
+          description: item.description || 'Video de biblioteca',
+          video_url: item.url,
+          published_at: null,
+          is_live: false,
+          is_published: true,
+        },
+      ];
+    });
+
+    setSelectedVideoId(libraryVideoId);
     return;
   }
 
@@ -541,21 +575,7 @@ const { data, error } = await query;
 if (error) throw error;
 
 const normalized = normalizeLibraryVideos((data || []) as Partial<ClassVideo>[], streamUrl);
-
-// 🔥 AQUÍ AGREGAS TUS VIDEOS DE VIMEO
-const extraPortalVideos: ClassVideo[] = [
-  {
-    id: 'video-vimeo-1',
-    title: 'Configuración TC2000',
-    description: 'Video desde Vimeo',
-    video_url: 'https://player.vimeo.com/video/1185325573', // 👈 pega aquí tu link real
-    published_at: null,
-    is_live: false,
-    is_published: true,
-  },
-];
-
-return [...normalized, ...extraPortalVideos];
+return normalized;
   }
 
   async function syncAccessForEmail(email: string) {
@@ -1993,7 +2013,9 @@ return [...normalized, ...extraPortalVideos];
                           <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
                             {item.kind === 'download'
   ? (item.url.startsWith('http') ? 'Link' : 'Descarga')
-  : 'Biblioteca'}
+  : item.kind === 'video'
+    ? 'Video'
+    : 'Biblioteca'}
                           </div>
                           <div style={{ fontWeight: 700, fontSize: 18 }}>{item.title}</div>
                         </button>
@@ -2016,10 +2038,14 @@ return [...normalized, ...extraPortalVideos];
                     <div style={{ fontWeight: 700, marginBottom: 6 }}>Contenido</div>
                     <div>
                       {selectedLibraryItem?.kind === 'download'
-                        ? 'Este botón descargará el archivo colocado en /public.'
-                        : selectedLibraryItem?.title
-                          ? `Mostrando: ${selectedLibraryItem.title}`
-                          : 'Selecciona un elemento de la biblioteca.'}
+                        ? selectedLibraryItem?.url?.startsWith('http')
+                          ? 'Este botón abrirá un link externo.'
+                          : 'Este botón descargará el archivo.'
+                        : selectedLibraryItem?.kind === 'video'
+                          ? 'Este botón reproducirá un video en la pantalla principal.'
+                          : selectedLibraryItem?.title
+                            ? `Mostrando: ${selectedLibraryItem.title}`
+                            : 'Selecciona un elemento de la biblioteca.'}
                     </div>
                   </div>
                 </>
