@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, ClipboardEvent, DragEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 import { getLiveAccessByEmail } from '@/src/lib/liveAccess';
@@ -20,6 +20,7 @@ type ChatMessage = {
   user_email: string | null;
   user_name: string | null;
   body: string;
+  image_url: string | null;
   created_at: string | null;
 };
 
@@ -278,6 +279,47 @@ function formatChatMessageTime(value?: string | null) {
 
 
 
+function isImageFile(file: File) {
+  return file.type.startsWith('image/');
+}
+
+function sanitizeChatImage(file: File) {
+  if (!isImageFile(file)) {
+    throw new Error('Solo se permiten imágenes.');
+  }
+
+  const maxBytes = 8 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    throw new Error('La imagen supera el límite de 8 MB.');
+  }
+
+  return file;
+}
+
+async function uploadChatImage(file: File) {
+  const safeFile = sanitizeChatImage(file);
+  const extensionFromName = safeFile.name.split('.').pop()?.trim().toLowerCase();
+  const extensionFromType = safeFile.type.split('/')[1]?.trim().toLowerCase();
+  const extension = extensionFromName || extensionFromType || 'png';
+  const fileName = `chat-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('Chat-Images')
+    .upload(fileName, safeFile, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: safeFile.type || 'image/png',
+    });
+
+  if (uploadError) {
+    throw uploadError;
+  }
+
+  const { data } = supabase.storage.from('Chat-Images').getPublicUrl(fileName);
+  return data.publicUrl;
+}
+
+
 const EMOJI_CATEGORIES = [
   {
     label: 'Trading',
@@ -397,8 +439,12 @@ export default function DashboardPage() {
   const [clearingChat, setClearingChat] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
+  const [chatImageFile, setChatImageFile] = useState<File | null>(null);
+  const [chatImagePreviewUrl, setChatImagePreviewUrl] = useState<string | null>(null);
+  const [isDragOverChat, setIsDragOverChat] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const emojiPanelRef = useRef<HTMLDivElement | null>(null);
+  const chatFileInputRef = useRef<HTMLInputElement | null>(null);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
@@ -416,8 +462,9 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   );
 
   function openLibraryItem(item: LibraryItem) {
+    setSelectedLibraryItemId(item.id);
+
     if (item.kind === 'download') {
-      setSelectedLibraryItemId(item.id);
       if (typeof window !== 'undefined') {
         const link = document.createElement('a');
         link.href = item.url;
@@ -429,16 +476,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       return;
     }
 
-    const isSameImageOpen = activeImageUrl === item.url && activeTab === 'biblioteca';
-
-    if (isSameImageOpen) {
-      setSelectedLibraryItemId(null);
-      setActiveImageUrl(null);
-      setActiveImageTitle(null);
-      return;
-    }
-
-    setSelectedLibraryItemId(item.id);
     setActiveImageUrl(item.url);
     setActiveImageTitle(item.title);
   }
@@ -597,11 +634,11 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   }, [selectedVideoId]);
 
   useEffect(() => {
-    if (activeTab === 'biblioteca') return;
-    setSelectedLibraryItemId(null);
-    setActiveImageUrl(null);
-    setActiveImageTitle(null);
-  }, [activeTab]);
+    if (activeTab !== 'biblioteca') return;
+    if (!selectedLibraryItemId && LIBRARY_ITEMS.length) {
+      setSelectedLibraryItemId(LIBRARY_ITEMS[0].id);
+    }
+  }, [activeTab, selectedLibraryItemId]);
 
   useEffect(() => {
     const interval = window.setInterval(async () => {
@@ -623,13 +660,72 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   }, [router]);
 
 
+
+  function clearSelectedChatImage() {
+    setChatImageFile(null);
+    if (chatFileInputRef.current) {
+      chatFileInputRef.current.value = '';
+    }
+  }
+
+  function attachChatImage(file: File) {
+    try {
+      const safeFile = sanitizeChatImage(file);
+      setChatError(null);
+      setChatImageFile(safeFile);
+    } catch (e: any) {
+      setChatError(e?.message || 'No se pudo adjuntar la imagen.');
+    }
+  }
+
+  function handleChatFileSelection(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    attachChatImage(file);
+  }
+
+  function handleChatPaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    const imageItem = Array.from(e.clipboardData.items).find((item) => item.type.startsWith('image/'));
+    if (!imageItem) return;
+
+    const file = imageItem.getAsFile();
+    if (!file) return;
+
+    e.preventDefault();
+    attachChatImage(file);
+  }
+
+  function handleChatDragOver(e: DragEvent<HTMLFormElement>) {
+    const hasImageFile = Array.from(e.dataTransfer.items || []).some((item) => item.type.startsWith('image/'));
+    if (!hasImageFile) return;
+
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDragOverChat(true);
+  }
+
+  function handleChatDragLeave(e: DragEvent<HTMLFormElement>) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+      setIsDragOverChat(false);
+    }
+  }
+
+  function handleChatDrop(e: DragEvent<HTMLFormElement>) {
+    const imageFile = Array.from(e.dataTransfer.files || []).find((file) => file.type.startsWith('image/'));
+    if (!imageFile) return;
+
+    e.preventDefault();
+    setIsDragOverChat(false);
+    attachChatImage(imageFile);
+  }
+
   async function loadChatMessages() {
     setChatLoading(true);
     setChatError(null);
 
     const { data, error } = await supabase
       .from('live_chat_messages')
-      .select('id,user_email,user_name,body,created_at')
+      .select('id,user_email,user_name,body,image_url,created_at')
       .order('created_at', { ascending: true })
       .limit(100);
 
@@ -648,27 +744,38 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     e.preventDefault();
 
     const body = chatInput.trim();
-    if (!body || sendingChat) return;
+    if ((!body && !chatImageFile) || sendingChat) return;
 
     setSendingChat(true);
     setChatError(null);
 
-    const payload = {
-      user_email: userEmail || null,
-      user_name: userName || 'Estudiante',
-      body,
-    };
+    try {
+      let imageUrl: string | null = null;
 
-    const { error } = await supabase.from('live_chat_messages').insert(payload);
+      if (chatImageFile) {
+        imageUrl = await uploadChatImage(chatImageFile);
+      }
 
-    if (error) {
-      setChatError('No se pudo enviar el mensaje.');
+      const payload = {
+        user_email: userEmail || null,
+        user_name: userName || 'Estudiante',
+        body,
+        image_url: imageUrl,
+      };
+
+      const { error } = await supabase.from('live_chat_messages').insert(payload);
+
+      if (error) {
+        throw error;
+      }
+
+      setChatInput('');
+      clearSelectedChatImage();
+    } catch (e: any) {
+      setChatError(e?.message || 'No se pudo enviar el mensaje.');
+    } finally {
       setSendingChat(false);
-      return;
     }
-
-    setChatInput('');
-    setSendingChat(false);
   }
 
   async function deleteChatMessage(messageId: string, ownerEmail?: string | null) {
@@ -770,8 +877,29 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     };
   }, [showEmojiPanel]);
 
-  function appendEmoji(emoji: string) {
-    setChatInput((prev) => {
+
+
+  useEffect(() => {
+    if (!chatImageFile) {
+      setChatImagePreviewUrl((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return null;
+      });
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(chatImageFile);
+    setChatImagePreviewUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return objectUrl;
+    });
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [chatImageFile]);
+
+  function appendEmoji(emoji: string) {    setChatInput((prev) => {
       const nextValue = `${prev}${emoji}`;
       return nextValue.slice(0, 500);
     });
@@ -1003,13 +1131,36 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                   borderRadius: 24,
                   overflow: 'hidden',
                   display: 'block',
-                  position: 'relative',
                   background: '#000',
                   boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 0 1px rgba(96,165,250,0.06), 0 20px 40px rgba(0,0,0,0.28)',
                 }}
               >
-                {showIframe ? (
-                  <>
+                {activeTab === 'biblioteca' && activeImageUrl ? (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'grid',
+                      placeItems: 'center',
+                      background: '#000',
+                      padding: 18,
+                    }}
+                  >
+                    <img
+                      src={activeImageUrl}
+                      alt={activeImageTitle || 'Imagen de biblioteca'}
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        width: 'auto',
+                        height: 'auto',
+                        objectFit: 'contain',
+                        display: 'block',
+                        borderRadius: 18,
+                      }}
+                    />
+                  </div>
+                ) : showIframe ? (
                   <div style={{
   position: 'relative',
   top: '50%',
@@ -1036,34 +1187,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                     />
 
                   </div>
-                  {activeTab === 'biblioteca' && activeImageUrl ? (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'grid',
-                        placeItems: 'center',
-                        background: 'rgba(0,0,0,0.58)',
-                        padding: 18,
-                        zIndex: 2,
-                      }}
-                    >
-                      <img
-                        src={activeImageUrl}
-                        alt={activeImageTitle || 'Imagen de biblioteca'}
-                        style={{
-                          maxWidth: '100%',
-                          maxHeight: '100%',
-                          width: 'auto',
-                          height: 'auto',
-                          objectFit: 'contain',
-                          display: 'block',
-                          borderRadius: 18,
-                        }}
-                      />
-                    </div>
-                  ) : null}
-                  </>
                 ) : hasPlayableVideo ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
                     <div>
@@ -1564,9 +1687,29 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                               </div>
                             </div>
 
-                            <div style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.96)', whiteSpace: 'pre-wrap' }}>
-                              {message.body}
-                            </div>
+                            {message.body ? (
+                              <div style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(255,255,255,0.96)', whiteSpace: 'pre-wrap' }}>
+                                {message.body}
+                              </div>
+                            ) : null}
+
+                            {message.image_url ? (
+                              <img
+                                src={message.image_url}
+                                alt="Imagen adjunta del chat"
+                                style={{
+                                  marginTop: message.body ? 10 : 0,
+                                  width: '100%',
+                                  maxWidth: 260,
+                                  maxHeight: 320,
+                                  objectFit: 'cover',
+                                  display: 'block',
+                                  borderRadius: 14,
+                                  border: '1px solid rgba(255,255,255,0.08)',
+                                  background: 'rgba(255,255,255,0.04)',
+                                }}
+                              />
+                            ) : null}
                           </div>
                         );
                       })
@@ -1577,13 +1720,84 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
                   <form
                     onSubmit={sendChatMessage}
+                    onDragOver={handleChatDragOver}
+                    onDragLeave={handleChatDragLeave}
+                    onDrop={handleChatDrop}
                     style={{
                       padding: 12,
                       borderTop: '1px solid rgba(255,255,255,0.06)',
                       display: 'grid',
                       gap: 10,
+                      background: isDragOverChat ? 'rgba(59,130,246,0.08)' : 'transparent',
+                      outline: isDragOverChat ? '1px dashed rgba(96,165,250,0.5)' : 'none',
+                      outlineOffset: -1,
                     }}
                   >
+
+                    <input
+                      ref={chatFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleChatFileSelection}
+                      style={{ display: 'none' }}
+                    />
+
+                    {chatImagePreviewUrl ? (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                          padding: 10,
+                          borderRadius: 16,
+                          border: '1px solid rgba(255,255,255,0.10)',
+                          background: 'rgba(255,255,255,0.04)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', gap: 12, minWidth: 0 }}>
+                          <img
+                            src={chatImagePreviewUrl}
+                            alt="Vista previa"
+                            style={{
+                              width: 72,
+                              height: 72,
+                              objectFit: 'cover',
+                              borderRadius: 12,
+                              border: '1px solid rgba(255,255,255,0.08)',
+                              flexShrink: 0,
+                            }}
+                          />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Imagen lista para enviar</div>
+                            <div style={{ fontSize: 11, opacity: 0.72, lineHeight: 1.45 }}>
+                              Puedes escribir un comentario y enviarlo junto con esta imagen.
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={clearSelectedChatImage}
+                          style={{
+                            minWidth: 34,
+                            height: 34,
+                            borderRadius: 10,
+                            border: '1px solid rgba(255,255,255,0.10)',
+                            background: 'rgba(255,255,255,0.04)',
+                            color: 'white',
+                            cursor: 'pointer',
+                            fontSize: 16,
+                            lineHeight: 1,
+                            flexShrink: 0,
+                          }}
+                          aria-label="Quitar imagen adjunta"
+                          title="Quitar imagen"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : null}
 
                     {showEmojiPanel ? (
                       <div
@@ -1638,6 +1852,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                     <textarea
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
+                      onPaste={handleChatPaste}
                       placeholder="Escribe tu mensaje aquí..."
                       rows={3}
                       style={{
@@ -1655,8 +1870,13 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                       maxLength={500}
                     />
 
+
+                    <div style={{ fontSize: 11, opacity: 0.62, lineHeight: 1.4 }}>
+                      Puedes pegar una captura con <strong>Ctrl+V</strong> o <strong>Cmd+V</strong>, o arrastrar una imagen aquí.
+                    </div>
+
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                         <button
                           type="button"
                           onClick={() => setShowEmojiPanel((prev) => !prev)}
@@ -1675,14 +1895,32 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                         >
                           😊
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => chatFileInputRef.current?.click()}
+                          style={{
+                            minWidth: 48,
+                            height: 40,
+                            borderRadius: 12,
+                            border: '1px solid rgba(255,255,255,0.10)',
+                            background: chatImageFile ? 'rgba(34,197,94,0.18)' : 'rgba(255,255,255,0.04)',
+                            color: 'white',
+                            fontSize: 18,
+                            cursor: 'pointer',
+                          }}
+                          aria-label="Adjuntar imagen"
+                          title="Adjuntar imagen"
+                        >
+                          📎
+                        </button>
                         <div style={{ fontSize: 11, opacity: 0.58 }}>
-                          {chatInput.trim().length}/500
+                          {chatInput.trim().length}/500{chatImageFile ? ' • imagen lista' : ''}
                         </div>
                       </div>
                       <button
                         type="submit"
                         className="btn btn-primary"
-                        disabled={!chatInput.trim() || sendingChat}
+                        disabled={(!chatInput.trim() && !chatImageFile) || sendingChat}
                         style={{ minWidth: 140 }}
                       >
                         {sendingChat ? 'Enviando...' : 'Enviar mensaje'}
