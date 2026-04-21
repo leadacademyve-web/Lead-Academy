@@ -342,6 +342,13 @@ const LIBRARY_ITEMS: LibraryItem[] = [
     url: '/Plan de inversiones en Excel.xlsx',
     description: 'Descargar archivo',
   },
+{
+  id: 'tc2000-layout hora',
+  title: 'TC2000 - Marco de tiempo Hora',
+  kind: 'Link',
+  url: 'https://www.tc2000.com/~u16xJ9',
+  description: 'Abrir en TC2000',
+},
   {
     id: 'est-apertura-bajista',
     title: 'Est. Apertura bajista',
@@ -442,7 +449,6 @@ export default function DashboardPage() {
   const [chatImageFile, setChatImageFile] = useState<File | null>(null);
   const [chatImagePreviewUrl, setChatImagePreviewUrl] = useState<string | null>(null);
   const [isDragOverChat, setIsDragOverChat] = useState(false);
-  const [expandedChatImageUrl, setExpandedChatImageUrl] = useState<string | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const emojiPanelRef = useRef<HTMLDivElement | null>(null);
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -462,24 +468,33 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     [selectedLibraryItemId]
   );
 
-  function openLibraryItem(item: LibraryItem) {
-    setSelectedLibraryItemId(item.id);
+function openLibraryItem(item: LibraryItem) {
+  setSelectedLibraryItemId(item.id);
 
-    if (item.kind === 'download') {
-      if (typeof window !== 'undefined') {
-        const link = document.createElement('a');
-        link.href = item.url;
-        link.download = item.title;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+  if (item.kind === 'download') {
+
+    // 🔥 AQUÍ VA EL CAMBIO
+    if (item.url.startsWith('http')) {
+      window.open(item.url, '_blank');
       return;
     }
 
-    setActiveImageUrl(item.url);
-    setActiveImageTitle(item.title);
+    // 👇 esto queda para archivos locales
+    if (typeof window !== 'undefined') {
+      const link = document.createElement('a');
+      link.href = item.url;
+      link.download = item.title;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    return;
   }
+
+  setActiveImageUrl(item.url);
+  setActiveImageTitle(item.title);
+}
 
   const visibleLibraryVideos = useMemo(() => {
     if (!isEditingProfile) return videos;
@@ -877,25 +892,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       document.removeEventListener('mousedown', handlePointerDown);
     };
   }, [showEmojiPanel]);
-
-  useEffect(() => {
-    if (!expandedChatImageUrl) return;
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setExpandedChatImageUrl(null);
-      }
-    }
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [expandedChatImageUrl]);
 
 
 
@@ -1714,38 +1710,21 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
                             ) : null}
 
                             {message.image_url ? (
-                              <button
-                                type="button"
-                                onClick={() => setExpandedChatImageUrl(message.image_url)}
-                                title="Abrir imagen"
-                                aria-label="Abrir imagen adjunta"
+                              <img
+                                src={message.image_url}
+                                alt="Imagen adjunta del chat"
                                 style={{
                                   marginTop: message.body ? 10 : 0,
-                                  padding: 0,
-                                  border: 0,
-                                  background: 'transparent',
-                                  cursor: 'zoom-in',
-                                  display: 'block',
                                   width: '100%',
-                                  textAlign: 'left',
+                                  maxWidth: 260,
+                                  maxHeight: 320,
+                                  objectFit: 'cover',
+                                  display: 'block',
+                                  borderRadius: 14,
+                                  border: '1px solid rgba(255,255,255,0.08)',
+                                  background: 'rgba(255,255,255,0.04)',
                                 }}
-                              >
-                                <img
-                                  src={message.image_url}
-                                  alt="Imagen adjunta del chat"
-                                  style={{
-                                    width: '100%',
-                                    maxWidth: 260,
-                                    maxHeight: 320,
-                                    objectFit: 'cover',
-                                    display: 'block',
-                                    borderRadius: 14,
-                                    border: '1px solid rgba(255,255,255,0.08)',
-                                    background: 'rgba(255,255,255,0.04)',
-                                    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
-                                  }}
-                                />
-                              </button>
+                              />
                             ) : null}
                           </div>
                         );
@@ -2069,64 +2048,6 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
           )}
         </aside>
       </div>
-
-      {expandedChatImageUrl ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Vista ampliada de imagen del chat"
-          onClick={() => setExpandedChatImageUrl(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            background: 'rgba(2,6,23,0.86)',
-            backdropFilter: 'blur(6px)',
-            display: 'grid',
-            placeItems: 'center',
-            padding: '24px',
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setExpandedChatImageUrl(null)}
-            aria-label="Cerrar imagen ampliada"
-            style={{
-              position: 'absolute',
-              top: 20,
-              right: 20,
-              width: 44,
-              height: 44,
-              borderRadius: 999,
-              border: '1px solid rgba(255,255,255,0.16)',
-              background: 'rgba(15,23,42,0.72)',
-              color: 'white',
-              fontSize: 24,
-              lineHeight: 1,
-              cursor: 'pointer',
-            }}
-          >
-            ×
-          </button>
-
-          <img
-            src={expandedChatImageUrl}
-            alt="Imagen ampliada del chat"
-            onClick={(event) => event.stopPropagation()}
-            style={{
-              maxWidth: 'min(92vw, 1400px)',
-              maxHeight: '88vh',
-              width: 'auto',
-              height: 'auto',
-              borderRadius: 18,
-              display: 'block',
-              boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
-              border: '1px solid rgba(255,255,255,0.10)',
-              background: 'rgba(255,255,255,0.02)',
-            }}
-          />
-        </div>
-      ) : null}
     </main>
   );
 }
