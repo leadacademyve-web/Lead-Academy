@@ -444,6 +444,7 @@ export default function DashboardPage() {
   const [selectedLibraryItemId, setSelectedLibraryItemId] = useState<string | null>(null);
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
   const [activeImageTitle, setActiveImageTitle] = useState<string | null>(null);
+  const [activeLibraryVideo, setActiveLibraryVideo] = useState<LibraryItem | null>(null);
   const [nowText, setNowText] = useState('');
   const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', email: '' });
   const [selectedCountryCode, setSelectedCountryCode] = useState(DEFAULT_COUNTRY_CODE);
@@ -488,6 +489,8 @@ function openLibraryItem(item: LibraryItem) {
   setSelectedLibraryItemId(item.id);
 
   if (item.kind === 'download') {
+    setActiveLibraryVideo(null);
+
     if (item.url.startsWith('http')) {
       window.open(item.url, '_blank', 'noopener,noreferrer');
       return;
@@ -508,31 +511,11 @@ function openLibraryItem(item: LibraryItem) {
   if (item.kind === 'video') {
     setActiveImageUrl(null);
     setActiveImageTitle(null);
-    setActiveTab('videos');
-
-    const libraryVideoId = `library-video-${item.id}`;
-
-    setVideos((prev) => {
-      const withoutOldLibraryVideos = prev.filter((video) => !String(video.id).startsWith('library-video-'));
-
-      return [
-        ...withoutOldLibraryVideos,
-        {
-          id: libraryVideoId,
-          title: item.title,
-          description: item.description || 'Video de biblioteca',
-          video_url: item.url,
-          published_at: null,
-          is_live: false,
-          is_published: true,
-        },
-      ];
-    });
-
-    setSelectedVideoId(libraryVideoId);
+    setActiveLibraryVideo(item);
     return;
   }
 
+  setActiveLibraryVideo(null);
   setActiveImageUrl(item.url);
   setActiveImageTitle(item.title);
 }
@@ -1194,7 +1177,30 @@ return normalized;
                   boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 0 1px rgba(96,165,250,0.06), 0 20px 40px rgba(0,0,0,0.28)',
                 }}
               >
-                {activeTab === 'biblioteca' && activeImageUrl ? (
+                {activeTab === 'biblioteca' && activeLibraryVideo ? (
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: '100%',
+                      border: 0,
+                      display: 'block',
+                    }}
+                  >
+                    <iframe
+                      src={`${activeLibraryVideo.url}${activeLibraryVideo.url.includes('?') ? '&' : '?'}quality=1080&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
+                      title={activeLibraryVideo.title || 'Video de biblioteca'}
+                      allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
+                      allowFullScreen
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 0,
+                        display: 'block',
+                      }}
+                    />
+                  </div>
+                ) : activeTab === 'biblioteca' && activeImageUrl ? (
                   <div
                     style={{
                       width: '100%',
@@ -1428,7 +1434,10 @@ return normalized;
                         return (
                           <button
                             key={video.id}
-                            onClick={() => setSelectedVideoId(video.id)}
+                            onClick={() => {
+                              setActiveLibraryVideo(null);
+                              setSelectedVideoId(video.id);
+                            }}
                             style={{
                               textAlign: 'left',
                               padding: '14px 16px',
