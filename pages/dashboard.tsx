@@ -486,10 +486,20 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   );
 
 function openLibraryItem(item: LibraryItem) {
+  if (selectedLibraryItemId === item.id) {
+    setSelectedLibraryItemId(null);
+    setActiveLibraryVideo(null);
+    setActiveImageUrl(null);
+    setActiveImageTitle(null);
+    return;
+  }
+
   setSelectedLibraryItemId(item.id);
 
   if (item.kind === 'download') {
     setActiveLibraryVideo(null);
+    setActiveImageUrl(null);
+    setActiveImageTitle(null);
 
     if (item.url.startsWith('http')) {
       window.open(item.url, '_blank', 'noopener,noreferrer');
