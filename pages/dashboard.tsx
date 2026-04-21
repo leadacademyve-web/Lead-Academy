@@ -350,6 +350,13 @@ const LIBRARY_ITEMS: LibraryItem[] = [
   description: 'Abrir en TC2000',
 },
   {
+  id: 'tc2000-layout 15 min',
+  title: 'TC2000 - Marco de tiempo Hora/15 min',
+  kind: 'download',
+  url: 'https://www.tc2000.com/~u16xJ9',
+  description: 'Abrir en TC2000',
+},
+  {
     id: 'est-apertura-bajista',
     title: 'Est. Apertura bajista',
     kind: 'image',
@@ -1968,7 +1975,9 @@ function openLibraryItem(item: LibraryItem) {
                           }}
                         >
                           <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
-                            {item.kind === 'download' ? 'Descarga' : 'Biblioteca'}
+                            {item.kind === 'download'
+  ? (item.url.startsWith('http') ? 'Link' : 'Descarga')
+  : 'Biblioteca'}
                           </div>
                           <div style={{ fontWeight: 700, fontSize: 18 }}>{item.title}</div>
                         </button>
