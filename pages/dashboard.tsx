@@ -537,9 +537,25 @@ function openLibraryItem(item: LibraryItem) {
       query.or(`is_live.eq.true,and(is_live.eq.false,published_at.gte.${accessStartValue})`);
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return normalizeLibraryVideos((data || []) as Partial<ClassVideo>[], streamUrl);
+const { data, error } = await query;
+if (error) throw error;
+
+const normalized = normalizeLibraryVideos((data || []) as Partial<ClassVideo>[], streamUrl);
+
+// 🔥 AQUÍ AGREGAS TUS VIDEOS DE VIMEO
+const extraPortalVideos: ClassVideo[] = [
+  {
+    id: 'video-vimeo-1',
+    title: 'Configuración TC2000',
+    description: 'Video desde Vimeo',
+    video_url: 'https://player.vimeo.com/video/1185325573', // 👈 pega aquí tu link real
+    published_at: null,
+    is_live: false,
+    is_published: true,
+  },
+];
+
+return [...normalized, ...extraPortalVideos];
   }
 
   async function syncAccessForEmail(email: string) {
