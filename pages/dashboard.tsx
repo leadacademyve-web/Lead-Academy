@@ -344,14 +344,14 @@ const LIBRARY_ITEMS: LibraryItem[] = [
   },
 {
   id: 'tc2000-layout hora',
-  title: 'TC2000 - Marco de tiempo Hora',
+  title: 'TC2000 Marco tiempo Hora',
   kind: 'download',
   url: 'https://www.tc2000.com/~u16xJ9',
   description: 'Abrir en TC2000',
 },
   {
   id: 'tc2000-layout 15 min',
-  title: 'TC2000 - Marco de tiempo Hora/15 min',
+  title: 'TC2000 Marco tiempo Hora/15 min',
   kind: 'download',
   url: 'https://www.tc2000.com/~u16xJ9',
   description: 'Abrir en TC2000',
