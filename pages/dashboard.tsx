@@ -366,6 +366,13 @@ const LIBRARY_ITEMS: LibraryItem[] = [
     description: 'Reproducir video',
   },
   {
+  id: 'video-compra-venta-thinkorswim',
+  title: 'Compra y venta Thinkorswim',
+  kind: 'video',
+  url: 'https://player.vimeo.com/video/1185336836',
+  description: 'Reproducir video',
+},
+  {
     id: 'est-apertura-bajista',
     title: 'Est. Apertura bajista',
     kind: 'image',
