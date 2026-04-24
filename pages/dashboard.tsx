@@ -493,8 +493,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   );
 
 function openLibraryItem(item: LibraryItem) {
-  if (selectedLibraryItemId === item.id) {
-    setSelectedLibraryItemId(null);
+if (selectedLibraryItemId === item.id && item.kind !== 'download') {    setSelectedLibraryItemId(null);
     setActiveLibraryVideo(null);
     setActiveImageUrl(null);
     setActiveImageTitle(null);
