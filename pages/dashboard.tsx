@@ -451,6 +451,7 @@ export default function DashboardPage() {
   const [selectedLibraryItemId, setSelectedLibraryItemId] = useState<string | null>(null);
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
   const [activeImageTitle, setActiveImageTitle] = useState<string | null>(null);
+  const [chatZoomImageUrl, setChatZoomImageUrl] = useState<string | null>(null);
   const [activeLibraryVideo, setActiveLibraryVideo] = useState<LibraryItem | null>(null);
   const [nowText, setNowText] = useState('');
   const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', email: '' });
@@ -1781,6 +1782,7 @@ return normalized;
                               <img
                                 src={message.image_url}
                                 alt="Imagen adjunta del chat"
+                                onClick={() => setChatZoomImageUrl(message.image_url)}
                                 style={{
                                   marginTop: message.body ? 10 : 0,
                                   width: '100%',
@@ -1791,6 +1793,7 @@ return normalized;
                                   borderRadius: 14,
                                   border: '1px solid rgba(255,255,255,0.08)',
                                   background: 'rgba(255,255,255,0.04)',
+                                  cursor: 'zoom-in',
                                 }}
                               />
                             ) : null}
@@ -2124,6 +2127,59 @@ return normalized;
           )}
         </aside>
       </div>
+
+      {chatZoomImageUrl ? (
+        <div
+          onClick={() => setChatZoomImageUrl(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.72)',
+            display: 'grid',
+            placeItems: 'center',
+            padding: 24,
+            backdropFilter: 'blur(6px)',
+          }}
+        >
+          <img
+            src={chatZoomImageUrl}
+            alt="Imagen ampliada del chat"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '92vw',
+              maxHeight: '88vh',
+              objectFit: 'contain',
+              borderRadius: 18,
+              boxShadow: '0 24px 80px rgba(0,0,0,0.55)',
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={() => setChatZoomImageUrl(null)}
+            aria-label="Cerrar imagen ampliada"
+            title="Cerrar"
+            style={{
+              position: 'fixed',
+              top: 22,
+              right: 28,
+              width: 42,
+              height: 42,
+              borderRadius: 999,
+              border: '1px solid rgba(255,255,255,0.22)',
+              background: 'rgba(15,23,42,0.85)',
+              color: 'white',
+              fontSize: 22,
+              cursor: 'pointer',
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
+
     </main>
   );
 }
