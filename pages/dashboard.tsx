@@ -516,7 +516,7 @@ function openLibraryItem(item: LibraryItem) {
     if (typeof window !== 'undefined') {
       const link = document.createElement('a');
       link.href = item.url;
-      link.download = item.title;
+      link.download = item.url.split('/').pop();
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
