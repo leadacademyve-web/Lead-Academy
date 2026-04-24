@@ -53,7 +53,7 @@ const plans = [
     key: 'fourWeeks',
     title: '$369 x 20 clases',
     description: 'Elige cómo quieres pagar este acceso al portal.',
-    buttonLabel: 'Comprar este plan',
+    buttonLabel: 'Comprar este ',
     subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME',
   },
@@ -338,7 +338,7 @@ const EMOJI_CATEGORIES = [
 ];
 const LIBRARY_ITEMS: LibraryItem[] = [
   {
-    id: 'Plan-inversiones',
+    id: 'Plan-inversiones.xlsx',
     title: 'Plan-inversiones.xlsx',
     kind: 'download',
     url: '/Plan-inversiones.xlsx',
