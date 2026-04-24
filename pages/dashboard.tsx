@@ -338,10 +338,10 @@ const EMOJI_CATEGORIES = [
 ];
 const LIBRARY_ITEMS: LibraryItem[] = [
   {
-    id: 'plan-inversiones-excel',
-    title: 'Plan de inversiones en Excel.xlsx',
+    id: 'plan-inversiones',
+    title: 'Plan-inversiones.xlsx',
     kind: 'download',
-    url: '/Plan de inversiones en Excel.xlsx',
+    url: '/Plan-inversiones.xlsx',
     description: 'Descargar archivo',
   },
 {
