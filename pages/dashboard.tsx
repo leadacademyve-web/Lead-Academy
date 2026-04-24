@@ -513,14 +513,14 @@ function openLibraryItem(item: LibraryItem) {
       return;
     }
 
-    if (typeof window !== 'undefined') {
-      const link = document.createElement('a');
-      link.href = item.url;
-      link.download = item.url.split('/').pop();
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+if (typeof window !== 'undefined') {
+  const link = document.createElement('a');
+  link.href = encodeURI(item.url);
+  link.download = item.url.split('/').pop() || item.title;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 
     return;
   }
