@@ -338,7 +338,7 @@ const EMOJI_CATEGORIES = [
 ];
 const LIBRARY_ITEMS: LibraryItem[] = [
   {
-    id: 'plan-inversiones',
+    id: 'Plan-inversiones',
     title: 'Plan-inversiones.xlsx',
     kind: 'download',
     url: '/Plan-inversiones.xlsx',
