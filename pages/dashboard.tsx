@@ -560,14 +560,17 @@ if (typeof window !== 'undefined') {
     );
   }, [videos]);
 
-  async function loadLibraryVideos(accessStartValue: string | null) {
+  async function loadLibraryVideos(accessStartValue: string | null, planValue?: string | null) {
     const query = supabase
       .from('class_videos')
       .select('id,title,description,video_url,published_at,is_live,is_published')
       .eq('is_published', true)
       .order('published_at', { ascending: false });
 
-    if (accessStartValue) {
+    const shouldFilterByPurchaseDate =
+      String(planValue || '').toUpperCase() === 'WEEKLY';
+
+    if (accessStartValue && shouldFilterByPurchaseDate) {
       query.or(`is_live.eq.true,and(is_live.eq.false,published_at.gte.${accessStartValue})`);
     }
 
@@ -587,7 +590,7 @@ return normalized;
     setLastClassWarning(Boolean(access.lastClassWarning));
 
     if (access.active) {
-      const normalizedVideos = await loadLibraryVideos(access.accessStartAt ?? null).catch(() => {
+      const normalizedVideos = await loadLibraryVideos(access.accessStartAt ?? null, access.plan ?? null).catch(() => {
         const liveOnly = buildLiveVideo(streamUrl);
         return liveOnly ? [liveOnly] : [];
       });
@@ -661,7 +664,7 @@ return normalized;
         setLastClassWarning(Boolean(access.lastClassWarning));
 
         if (access.active) {
-          const normalizedVideos = await loadLibraryVideos(access.accessStartAt ?? null).catch(() => {
+          const normalizedVideos = await loadLibraryVideos(access.accessStartAt ?? null, access.plan ?? null).catch(() => {
             const liveOnly = buildLiveVideo(streamUrl);
             return liveOnly ? [liveOnly] : [];
           });
