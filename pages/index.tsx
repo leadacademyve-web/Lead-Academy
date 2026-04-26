@@ -7,28 +7,30 @@ import { getLiveAccessByEmail } from '@/src/lib/liveAccess'
 const plans = [
   {
     id: 'week',
-    title: '5 clases - Operaciones en vivo',
+    title: '5 dias de mercado consecutivos de acceso - Operaciones en vivo',
     price: 'US$99',
     note: 'Renovación semanal si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME',
     bullets: [
-      { text: 'Acceso a la clase en vivo y repeticiones', available: true },
-      { text: 'Acceso a la biblioteca de instrucciones', available: false },
-      { text: 'Acceso completo al portal y a las estrategias', available: false },
+      { text: 'Acceso a las clases en vivo, repeticiones, chat-live y biblioteca', available: true },
+      { text: 'Acceso inmediato al portal', available: true },
+      { text: 'Ultimas 5 grabaciones disponibles', available: false },
+      { text: 'Videos con estrategias de compra y venta', available: false },
     ],
   },
   {
     id: 'two-weeks',
-    title: '10 clases - Operaciones en vivo',
+    title: '10 dias de mercado consecutivos de acceso - Operaciones en vivo',
     price: 'US$189',
     note: 'Renovación quincenal si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME',
     bullets: [
-      { text: 'Acceso a la clase en vivo y repeticiones', available: true },
-      { text: 'Acceso a la biblioteca de instrucciones', available: true },
-      { text: 'Acceso completo al portal y a las estrategias', available: false },
+      { text: 'Acceso a las clases en vivo, repeticiones, chat-live y biblioteca', available: true },
+      { text: 'Acceso inmediato al portal', available: true },
+      { text: 'Ultimas 5 grabaciones disponibles', available: true },
+      { text: 'Videos con estrategias de compra y venta', available: false },
      ],
   },
   {
@@ -39,9 +41,10 @@ const plans = [
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME',
     bullets: [
-      { text: 'Acceso a la clase en vivo y repeticiones', available: true },
-      { text: 'Acceso a la biblioteca de instrucciones', available: true },
-      { text: 'Acceso completo al portal y a las estrategias', available: true },
+      { text: 'Acceso a las clases en vivo, repeticiones, chat-live y biblioteca', available: true },
+      { text: 'Acceso inmediato al portal', available: true },
+      { text: 'Ultimas 5 grabaciones disponibles', available: true },
+      { text: 'Videos con estrategias de compra y venta', available: true },
     ],
   },
 ]
