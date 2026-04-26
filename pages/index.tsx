@@ -7,7 +7,7 @@ import { getLiveAccessByEmail } from '@/src/lib/liveAccess'
 const plans = [
   {
     id: 'week',
-    title: '5 dias de mercado consecutivos de acceso - Operaciones en vivo',
+    title: 'Acceso al portal por 5 días hábiles de mercado - Operaciones en vivo',
     price: 'US$99',
     note: 'Renovación semanal si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY',
@@ -21,7 +21,7 @@ const plans = [
   },
   {
     id: 'two-weeks',
-    title: '10 dias de mercado consecutivos de acceso - Operaciones en vivo',
+    title: 'Acceso al portal por 10 días hábiles de mercado - Operaciones en vivo',
     price: 'US$189',
     note: 'Renovación quincenal si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS',
@@ -35,7 +35,7 @@ const plans = [
   },
   {
     id: 'month',
-    title: '20 dias de mercado consecutivos de acceso - Operaciones en vivo',
+    title: 'Acceso al portal por 20 días hábiles de mercado - Operaciones en vivo',
     price: 'US$369',
     note: 'Renovación mensual si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
