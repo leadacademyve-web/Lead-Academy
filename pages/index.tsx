@@ -35,7 +35,7 @@ const plans = [
   },
   {
     id: 'month',
-    title: '20 clases - Operaciones en vivo',
+    title: '20 dias de mercado consecutivos de acceso - Operaciones en vivo',
     price: 'US$369',
     note: 'Renovación mensual si eliges suscripción',
     priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
