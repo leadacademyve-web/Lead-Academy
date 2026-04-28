@@ -425,6 +425,42 @@ function normalizeEmailList(raw: string) {
     .filter(Boolean);
 }
 
+
+const INTENSIVE_COURSE_DATE_KEY = 'intensive_course_start_date';
+
+function dateInputFromSetting(value?: string | null) {
+  if (!value) return '';
+  const raw = String(value).trim();
+  const directDate = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (directDate?.[1]) return directDate[1];
+
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return '';
+
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(d);
+
+    const year = parts.find((part) => part.type === 'year')?.value;
+    const month = parts.find((part) => part.type === 'month')?.value;
+    const day = parts.find((part) => part.type === 'day')?.value;
+
+    if (year && month && day) return `${year}-${month}-${day}`;
+  } catch {
+    // ignore Intl errors
+  }
+
+  return raw.slice(0, 10);
+}
+
+function courseDateSettingValue(dateValue: string) {
+  return `${dateValue}T00:00:00-04:00`;
+}
+
 function isChatAdminEmail(email?: string | null) {
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) return false;
@@ -474,6 +510,11 @@ export default function DashboardPage() {
   const [chatImageFile, setChatImageFile] = useState<File | null>(null);
   const [chatImagePreviewUrl, setChatImagePreviewUrl] = useState<string | null>(null);
   const [isDragOverChat, setIsDragOverChat] = useState(false);
+  const [courseDate, setCourseDate] = useState('');
+  const [loadingCourseDate, setLoadingCourseDate] = useState(false);
+  const [savingCourseDate, setSavingCourseDate] = useState(false);
+  const [courseDateMessage, setCourseDateMessage] = useState<string | null>(null);
+  const [courseDateError, setCourseDateError] = useState<string | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const emojiPanelRef = useRef<HTMLDivElement | null>(null);
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -890,6 +931,59 @@ return normalized;
   }
 
 
+  async function loadCourseDateSetting() {
+    if (!isChatAdmin || loadingCourseDate) return;
+
+    setLoadingCourseDate(true);
+    setCourseDateError(null);
+
+    const { data, error } = await supabase
+      .from('portal_settings')
+      .select('value')
+      .eq('key', INTENSIVE_COURSE_DATE_KEY)
+      .maybeSingle();
+
+    if (error) {
+      setCourseDateError(`No se pudo cargar la fecha del curso. ${error.message || ''}`.trim());
+      setLoadingCourseDate(false);
+      return;
+    }
+
+    setCourseDate(dateInputFromSetting(data?.value));
+    setLoadingCourseDate(false);
+  }
+
+  async function saveCourseDateSetting() {
+    if (!isChatAdmin || savingCourseDate) return;
+
+    const normalizedDate = courseDate.trim();
+    if (!normalizedDate) {
+      setCourseDateError('Selecciona la fecha del próximo curso intensivo.');
+      setCourseDateMessage(null);
+      return;
+    }
+
+    setSavingCourseDate(true);
+    setCourseDateError(null);
+    setCourseDateMessage(null);
+
+    const { error } = await supabase.from('portal_settings').upsert({
+      key: INTENSIVE_COURSE_DATE_KEY,
+      value: courseDateSettingValue(normalizedDate),
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      setCourseDateError(`No se pudo guardar la fecha. ${error.message || ''}`.trim());
+      setSavingCourseDate(false);
+      return;
+    }
+
+    setCourseDateMessage('Fecha del curso intensivo guardada correctamente.');
+    setSavingCourseDate(false);
+  }
+
+
   useEffect(() => {
     if (!accessActive) return;
 
@@ -914,6 +1008,12 @@ return normalized;
       supabase.removeChannel(channel);
     };
   }, [accessActive]);
+
+  useEffect(() => {
+    if (!isChatAdmin || activeTab !== 'chatLive') return;
+    loadCourseDateSetting();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isChatAdmin, activeTab]);
 
   useEffect(() => {
     if (activeTab !== 'chatLive') return;
@@ -1684,6 +1784,56 @@ return normalized;
                         </button>
                       ) : null}
                     </div>
+
+                    {isChatAdmin ? (
+                      <div
+                        style={{
+                          marginTop: 14,
+                          padding: 12,
+                          borderRadius: 16,
+                          border: '1px solid rgba(245,158,11,0.22)',
+                          background: 'linear-gradient(180deg, rgba(245,158,11,0.10) 0%, rgba(255,255,255,0.025) 100%)',
+                        }}
+                      >
+                        <div className="eyebrow" style={{ marginBottom: 8 }}>Configuración admin</div>
+                        <label className="label" style={{ marginBottom: 10, fontSize: 12 }}>
+                          Fecha del próximo curso intensivo
+                          <input
+                            className="input"
+                            type="date"
+                            value={courseDate}
+                            onChange={(e) => {
+                              setCourseDate(e.target.value);
+                              setCourseDateMessage(null);
+                              setCourseDateError(null);
+                            }}
+                            disabled={loadingCourseDate || savingCourseDate}
+                            style={{ marginTop: 8 }}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={saveCourseDateSetting}
+                          disabled={loadingCourseDate || savingCourseDate || !courseDate}
+                          style={{ width: '100%', padding: '8px 12px', fontSize: 12 }}
+                        >
+                          {savingCourseDate ? 'Guardando fecha...' : 'Guardar fecha del curso'}
+                        </button>
+                        <p className="helper" style={{ marginTop: 8, marginBottom: 0, fontSize: 11, lineHeight: 1.45 }}>
+                          Esta fecha se guarda en Supabase y será usada automáticamente por Stripe para activar el acceso del curso intensivo.
+                        </p>
+                        {loadingCourseDate ? (
+                          <p className="helper" style={{ marginTop: 8, marginBottom: 0, fontSize: 11 }}>Cargando fecha actual...</p>
+                        ) : null}
+                        {courseDateMessage ? (
+                          <p className="success" style={{ marginTop: 8, marginBottom: 0, fontSize: 11 }}>{courseDateMessage}</p>
+                        ) : null}
+                        {courseDateError ? (
+                          <p className="error" style={{ marginTop: 8, marginBottom: 0, fontSize: 11 }}>{courseDateError}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div
