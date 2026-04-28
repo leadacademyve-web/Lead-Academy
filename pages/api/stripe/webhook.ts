@@ -62,9 +62,21 @@ async function createUserClassAccess(args: { email: string; level: string; total
 
   let startDate = new Date();
 
-  if (args.level === 'INTENSIVE_TWO_DAY') {
-    startDate = new Date('2026-04-18T00:00:00');
+if (args.level === 'INTENSIVE_TWO_DAY') {
+  const { data, error } = await supabase
+    .from('portal_settings')
+    .select('value')
+    .eq('key', 'intensive_course_start_date')
+    .single();
+
+  if (error) {
+    console.error('Error fetching course date:', error);
   }
+
+  if (data?.value) {
+    startDate = new Date(data.value);
+  }
+}
 
   const payload = {
     email: args.email.toLowerCase(),
