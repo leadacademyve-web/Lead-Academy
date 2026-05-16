@@ -35,7 +35,7 @@ type LibraryItem = {
 const plans = [
   {
     key: 'week',
-    title: '$99 x 5 clases',
+    title: '$99 x 5 clases de operaciones en vivo',
     description: 'Elige cómo quieres pagar este acceso al portal.',
     buttonLabel: 'Comprar este plan',
     subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY',
@@ -43,7 +43,7 @@ const plans = [
   },
   {
     key: 'twoWeeks',
-    title: '$189 x 10 clases',
+    title: '$189 x 10 clases de operaciones en vivo',
     description: 'Elige cómo quieres pagar este acceso al portal.',
     buttonLabel: 'Comprar este plan',
     subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS',
@@ -51,7 +51,7 @@ const plans = [
   },
   {
     key: 'fourWeeks',
-    title: '$369 x 20 clases',
+    title: '$369 x 20 clases de operaciones en vivo',
     description: 'Elige cómo quieres pagar este acceso al portal.',
     buttonLabel: 'Comprar este ',
     subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
