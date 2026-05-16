@@ -60,7 +60,7 @@ const plans = [
   {
     key: 'intensiveApril2026',
     title: '$500 x 5 clases',
-    description: 'Curso intensivo del 18 al 19 de abril 2026',
+    description: 'Curso intensivo',
     buttonLabel: 'Inscribirme',
     subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME',
     oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME',
