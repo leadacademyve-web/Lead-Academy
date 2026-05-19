@@ -15,9 +15,8 @@ const plans = [
     bullets: [
       { text: 'Acceso a las clases en vivo, repeticiones, chat-live y biblioteca', available: true },
       { text: 'Acceso inmediato al portal', available: true },
-      { text: 'Ultimas 5 grabaciones disponibles', available: false },
-      { text: 'Videos con estrategias de compra y venta', available: false },
-    ],
+      { text: 'Ultimas 5 grabaciones disponibles y videos con estrategias de compra y venta', available: true },
+      ],
   },
   {
     id: 'two-weeks',
@@ -29,8 +28,8 @@ const plans = [
     bullets: [
       { text: 'Acceso a las clases en vivo, repeticiones, chat-live y biblioteca', available: true },
       { text: 'Acceso inmediato al portal', available: true },
-      { text: 'Ultimas 5 grabaciones disponibles', available: true },
-      { text: 'Videos con estrategias de compra y venta', available: false },
+      { text: 'Ultimas 5 grabaciones disponibles y videos con estrategias de compra y venta', available: true },
+      { text: 'Descuento por 10 dias de acceso', available: true },
      ],
   },
   {
@@ -43,8 +42,8 @@ const plans = [
     bullets: [
       { text: 'Acceso a las clases en vivo, repeticiones, chat-live y biblioteca', available: true },
       { text: 'Acceso inmediato al portal', available: true },
-      { text: 'Ultimas 5 grabaciones disponibles', available: true },
-      { text: 'Videos con estrategias de compra y venta', available: true },
+      { text: 'Ultimas 5 grabaciones disponibles y videos con estrategias de compra y venta', available: true },
+      { text: 'Mejor descuento por 20 dias de acceso', available: true },
     ],
   },
 ]
