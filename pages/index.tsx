@@ -206,14 +206,14 @@ export default function HomePage() {
             marginTop: 18,
             minWidth: 220,
             position: 'relative',
-            left: '-28%',
+            left: '-8%',
             transform: 'translateX(-50%)',
             zIndex: 3,
             cursor: 'pointer',
             textAlign: 'center',
           }}
         >
-          Inscribirme en el curso US$500
+          Inscribirme en este curso intensivo US$500
         </Link>
       </div>
 
