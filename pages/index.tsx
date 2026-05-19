@@ -16,6 +16,7 @@ const plans = [
       { text: 'Acceso a las clases en vivo, repeticiones, chat-live y biblioteca', available: true },
       { text: 'Acceso inmediato al portal', available: true },
       { text: 'Ultimas 5 grabaciones disponibles y videos con estrategias de compra y venta', available: true },
+      { text: 'Pago unico por 5 dias de acceso', available: true },
       ],
   },
   {
