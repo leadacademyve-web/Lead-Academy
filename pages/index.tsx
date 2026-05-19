@@ -213,7 +213,7 @@ export default function HomePage() {
             textAlign: 'center',
           }}
         >
-          Inscribirme en este curso intensivo US$500
+          Inscribirme en el curso US$500
         </Link>
       </div>
 
