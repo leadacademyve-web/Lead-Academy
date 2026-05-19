@@ -231,7 +231,7 @@ export default function HomePage() {
         }}>
           <div>
             <h1 style={{ fontSize: 48, lineHeight: 1.1 }}>
-             Lead Academy <br />
+             L.A. Corporation <br />
 Trading & Investing
             </h1>
 
