@@ -204,9 +204,9 @@ export default function HomePage() {
           className="btn btn-primary"
           style={{
             marginTop: 18,
-            minWidth: 220,
+            minWidth: 240,
             position: 'relative',
-            left: '-8%',
+            left: '-0%',
             transform: 'translateX(-50%)',
             zIndex: 3,
             cursor: 'pointer',
