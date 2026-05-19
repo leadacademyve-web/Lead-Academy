@@ -206,7 +206,7 @@ export default function HomePage() {
             marginTop: 18,
             minWidth: 220,
             position: 'relative',
-            left: '-48%',
+            left: '-28%',
             transform: 'translateX(-50%)',
             zIndex: 3,
             cursor: 'pointer',
