@@ -382,7 +382,7 @@ Trading & Investing
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 40, opacity: 0.6 }}>
-          Soporte: Escríbenos a Leadacademyve@gmail.com · WhatsApp: +1 786 620 4377
+          Soporte: Escríbenos a Lead@leadacademy.com.ve · WhatsApp: +1 786 620 4377
         </div>
       </section>
     </main>
