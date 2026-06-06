@@ -285,12 +285,14 @@ export default function HomePage() {
           color: rgba(255, 255, 255, 0.86);
         }
 
-        .nav a {
+        .nav span {
           color: inherit;
           text-decoration: none;
+          cursor: default;
+          user-select: none;
         }
 
-        .nav a:first-child {
+        .nav span:first-child {
           color: #38a9ff;
           border-bottom: 2px solid #0c8fff;
           padding-bottom: 8px;
@@ -401,35 +403,54 @@ export default function HomePage() {
         .heroVisual {
           position: absolute;
           z-index: 2;
-          left: 52%;
-          top: 66px;
-          width: min(910px, 45vw);
-          height: 590px;
+          left: 50%;
+          top: 104px;
+          width: min(900px, 45vw);
+          height: 560px;
           transform: translateX(-50%);
           background: url("/alejandro-finol-nyse.jpg");
           background-size: cover;
           background-position: 50% center;
-          filter: saturate(1.16) contrast(1.08) brightness(1.08);
-          opacity: 1;
+          filter: saturate(1.03) contrast(1.01) brightness(1.01);
+          opacity: 0.98;
           pointer-events: none;
           border: 0;
           box-shadow: none;
           mask-image: radial-gradient(
-            ellipse at 52% 50%,
+            ellipse at 52% 58%,
             black 0%,
-            black 42%,
-            rgba(0, 0, 0, 0.72) 56%,
-            rgba(0, 0, 0, 0.28) 68%,
-            transparent 82%
+            black 36%,
+            rgba(0, 0, 0, 0.72) 51%,
+            rgba(0, 0, 0, 0.28) 66%,
+            transparent 80%
           );
           -webkit-mask-image: radial-gradient(
-            ellipse at 52% 50%,
+            ellipse at 52% 58%,
             black 0%,
-            black 42%,
-            rgba(0, 0, 0, 0.72) 56%,
-            rgba(0, 0, 0, 0.28) 68%,
-            transparent 82%
+            black 36%,
+            rgba(0, 0, 0, 0.72) 51%,
+            rgba(0, 0, 0, 0.28) 66%,
+            transparent 80%
           );
+        }
+
+        .heroVisual::before,
+        .heroVisual::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+        }
+
+        .heroVisual::before {
+          background:
+            linear-gradient(180deg, rgba(1, 7, 20, 0.72) 0%, transparent 16%, transparent 72%, rgba(1, 7, 20, 0.92) 100%),
+            linear-gradient(90deg, rgba(1, 7, 20, 0.88) 0%, transparent 18%, transparent 74%, rgba(1, 7, 20, 0.86) 100%);
+        }
+
+        .heroVisual::after {
+          background: radial-gradient(circle at 52% 44%, rgba(0, 145, 255, 0.08), transparent 46%);
+          mix-blend-mode: screen;
         }
 
         .heroCopy,
@@ -568,42 +589,45 @@ export default function HomePage() {
         .seminarPanel::before {
           content: "";
           position: absolute;
-          right: -80px;
-          top: 142px;
-          width: 500px;
-          height: 410px;
+          right: -118px;
+          top: 178px;
+          width: 540px;
+          height: 390px;
           background:
             linear-gradient(
               90deg,
-              rgba(1, 7, 20, 0.82) 0%,
-              rgba(1, 7, 20, 0.06) 24%,
-              rgba(1, 7, 20, 0.02) 58%,
-              rgba(1, 7, 20, 0.82) 100%
+              rgba(1, 7, 20, 0.92) 0%,
+              rgba(1, 7, 20, 0.20) 28%,
+              rgba(1, 7, 20, 0.04) 54%,
+              rgba(1, 7, 20, 0.90) 100%
             ),
             linear-gradient(
               180deg,
-              rgba(1, 7, 20, 0.1) 0%,
-              rgba(1, 7, 20, 0.08) 54%,
-              rgba(1, 7, 20, 0.92) 100%
+              rgba(1, 7, 20, 0.82) 0%,
+              rgba(1, 7, 20, 0.08) 24%,
+              rgba(1, 7, 20, 0.10) 58%,
+              rgba(1, 7, 20, 0.95) 100%
             ),
             url("/wall-street-bull.jpg");
           background-size: cover;
           background-position: center;
-          opacity: 0.28;
-          filter: saturate(1.05) contrast(1.14) brightness(0.72) blur(0.35px);
+          opacity: 0.24;
+          filter: saturate(0.98) contrast(1.03) brightness(0.86) blur(0.2px);
           mask-image: radial-gradient(
-            ellipse at 52% 50%,
+            ellipse at 56% 60%,
             black 0%,
-            black 42%,
-            rgba(0, 0, 0, 0.62) 62%,
-            transparent 84%
+            black 34%,
+            rgba(0, 0, 0, 0.55) 54%,
+            rgba(0, 0, 0, 0.18) 68%,
+            transparent 80%
           );
           -webkit-mask-image: radial-gradient(
-            ellipse at 52% 50%,
+            ellipse at 56% 60%,
             black 0%,
-            black 42%,
-            rgba(0, 0, 0, 0.62) 62%,
-            transparent 84%
+            black 34%,
+            rgba(0, 0, 0, 0.55) 54%,
+            rgba(0, 0, 0, 0.18) 68%,
+            transparent 80%
           );
           z-index: -1;
           pointer-events: none;
@@ -939,13 +963,13 @@ export default function HomePage() {
       <section className="hero">
         <div className="heroCopy">
           <nav className="nav" style={{ marginBottom: 36 }}>
-            <a href="#">Inicio</a>
-            <a href="#">Cursos⌄</a>
-            <a href="#planes">Planes</a>
-            <a href="#portal">Operaciones en vivo</a>
-            <a href="#resultados">Resultados</a>
-            <a href="#">Recursos⌄</a>
-            <a href="#">Sobre mí</a>
+            <span>Inicio</span>
+            <span>Cursos</span>
+            <span>Planes</span>
+            <span>Operaciones en vivo</span>
+            <span>Resultados</span>
+            <span>Recursos</span>
+            <span>Sobre mí</span>
           </nav>
 
           <div className="pill">
