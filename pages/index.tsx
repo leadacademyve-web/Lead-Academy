@@ -353,13 +353,13 @@ export default function HomePage() {
         }
 
         .hero {
-          min-height: 705px;
+          min-height: 860px;
           position: relative;
           display: grid;
           grid-template-columns: minmax(520px, 0.40fr) minmax(460px, 0.35fr) minmax(330px, 0.25fr);
           gap: 28px;
           align-items: center;
-          padding: 42px 42px 34px;
+          padding: 42px 42px 70px;
           overflow: hidden;
         }
 
@@ -408,34 +408,34 @@ export default function HomePage() {
         .heroVisual {
           position: absolute;
           z-index: 2;
-          left: 53.5%;
-          top: 82px;
-          width: min(1180px, 66vw);
-          height: 660px;
+          left: 54.25%;
+          top: 74px;
+          width: min(1440px, 75vw);
+          height: 780px;
           transform: translateX(-50%);
           background: url("/alejandro-finol-nyse.jpg");
-          background-size: contain;
+          background-size: cover;
           background-repeat: no-repeat;
           background-position: 50% center;
-          filter: saturate(1.05) contrast(1.02) brightness(1.08);
+          filter: saturate(1.04) contrast(1.01) brightness(1.07);
           opacity: 1;
           pointer-events: none;
           border: 0;
           box-shadow: none;
           mask-image: radial-gradient(
-            ellipse at 50% 54%,
+            ellipse at 50% 53%,
             black 0%,
-            black 52%,
-            rgba(0, 0, 0, 0.80) 68%,
-            rgba(0, 0, 0, 0.34) 84%,
+            black 54%,
+            rgba(0, 0, 0, 0.84) 68%,
+            rgba(0, 0, 0, 0.40) 85%,
             transparent 98%
           );
           -webkit-mask-image: radial-gradient(
-            ellipse at 50% 54%,
+            ellipse at 50% 53%,
             black 0%,
-            black 52%,
-            rgba(0, 0, 0, 0.80) 68%,
-            rgba(0, 0, 0, 0.34) 84%,
+            black 54%,
+            rgba(0, 0, 0, 0.84) 68%,
+            rgba(0, 0, 0, 0.40) 85%,
             transparent 98%
           );
         }
@@ -450,8 +450,8 @@ export default function HomePage() {
 
         .heroVisual::before {
           background:
-            linear-gradient(180deg, rgba(1, 7, 20, 0.10) 0%, transparent 18%, transparent 72%, rgba(1, 7, 20, 0.76) 100%),
-            linear-gradient(90deg, rgba(1, 7, 20, 0.88) 0%, rgba(1, 7, 20, 0.42) 16%, transparent 33%, transparent 80%, rgba(1, 7, 20, 0.88) 100%);
+            linear-gradient(180deg, rgba(1, 7, 20, 0.08) 0%, transparent 16%, transparent 72%, rgba(1, 7, 20, 0.78) 100%),
+            linear-gradient(90deg, rgba(1, 7, 20, 0.92) 0%, rgba(1, 7, 20, 0.50) 14%, transparent 30%, transparent 78%, rgba(1, 7, 20, 0.90) 100%);
         }
 
         .heroVisual::after {
@@ -563,7 +563,7 @@ export default function HomePage() {
         .signature {
           position: absolute;
           left: 51.5%;
-          bottom: 82px;
+          bottom: 108px;
           text-align: right;
           font-size: 17px;
           color: rgba(255, 255, 255, 0.9);
@@ -589,7 +589,7 @@ export default function HomePage() {
           align-items: flex-start;
           overflow: visible;
           isolation: isolate;
-          margin-left: -8px;
+          margin-left: -24px;
           text-shadow: 0 3px 18px rgba(0, 0, 0, 0.72);
         }
 
@@ -597,9 +597,9 @@ export default function HomePage() {
           content: "";
           position: absolute;
           right: -250px;
-          top: -4px;
-          width: 820px;
-          height: 650px;
+          top: -8px;
+          width: 860px;
+          height: 680px;
           background:
             linear-gradient(
               90deg,
@@ -619,8 +619,8 @@ export default function HomePage() {
           background-size: contain;
           background-repeat: no-repeat;
           background-position: right center;
-          opacity: 1;
-          filter: saturate(1.22) contrast(1.12) brightness(1.14);
+          opacity: 0.98;
+          filter: saturate(1.16) contrast(1.08) brightness(1.10);
           mask-image: radial-gradient(
             ellipse at 68% 48%,
             black 0%,
