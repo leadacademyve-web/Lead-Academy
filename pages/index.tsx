@@ -354,7 +354,7 @@ export default function HomePage() {
           min-height: 705px;
           position: relative;
           display: grid;
-          grid-template-columns: minmax(500px, 0.43fr) minmax(360px, 0.31fr) minmax(330px, 0.26fr);
+          grid-template-columns: minmax(520px, 0.40fr) minmax(460px, 0.35fr) minmax(330px, 0.25fr);
           gap: 28px;
           align-items: center;
           padding: 42px 42px 34px;
@@ -399,44 +399,36 @@ export default function HomePage() {
         }
 
         .heroVisual {
-          position: relative;
+          position: absolute;
           z-index: 2;
-          width: 100%;
-          height: 560px;
-          align-self: end;
-          background:
-            linear-gradient(
-              90deg,
-              rgba(1, 7, 20, 0.78) 0%,
-              rgba(1, 7, 20, 0.08) 20%,
-              rgba(1, 7, 20, 0.00) 56%,
-              rgba(1, 7, 20, 0.70) 100%
-            ),
-            linear-gradient(
-              180deg,
-              rgba(1, 7, 20, 0.02) 0%,
-              rgba(1, 7, 20, 0.06) 56%,
-              rgba(1, 7, 20, 0.92) 100%
-            ),
-            url("/alejandro-finol-nyse.jpg");
+          left: 52%;
+          top: 66px;
+          width: min(910px, 45vw);
+          height: 590px;
+          transform: translateX(-50%);
+          background: url("/alejandro-finol-nyse.jpg");
           background-size: cover;
-          background-position: 52% center;
-          filter: saturate(1.12) contrast(1.06) brightness(1.02);
-          opacity: 0.98;
+          background-position: 50% center;
+          filter: saturate(1.16) contrast(1.08) brightness(1.08);
+          opacity: 1;
           pointer-events: none;
+          border: 0;
+          box-shadow: none;
           mask-image: radial-gradient(
             ellipse at 52% 50%,
             black 0%,
-            black 52%,
-            rgba(0, 0, 0, 0.62) 72%,
-            transparent 92%
+            black 42%,
+            rgba(0, 0, 0, 0.72) 56%,
+            rgba(0, 0, 0, 0.28) 68%,
+            transparent 82%
           );
           -webkit-mask-image: radial-gradient(
             ellipse at 52% 50%,
             black 0%,
-            black 52%,
-            rgba(0, 0, 0, 0.62) 72%,
-            transparent 92%
+            black 42%,
+            rgba(0, 0, 0, 0.72) 56%,
+            rgba(0, 0, 0, 0.28) 68%,
+            transparent 82%
           );
         }
 
@@ -444,6 +436,14 @@ export default function HomePage() {
         .seminarPanel {
           position: relative;
           z-index: 4;
+        }
+
+        .heroCopy {
+          grid-column: 1;
+        }
+
+        .seminarPanel {
+          grid-column: 3;
         }
 
         .pill {
@@ -535,8 +535,8 @@ export default function HomePage() {
 
         .signature {
           position: absolute;
-          left: 56%;
-          bottom: 82px;
+          left: 53%;
+          bottom: 78px;
           text-align: right;
           font-size: 17px;
           color: rgba(255, 255, 255, 0.9);
@@ -562,7 +562,7 @@ export default function HomePage() {
           align-items: flex-start;
           overflow: visible;
           isolation: isolate;
-          margin-left: -8px;
+          margin-left: -18px;
         }
 
         .seminarPanel::before {
@@ -905,8 +905,13 @@ export default function HomePage() {
           }
 
           .heroVisual {
+            position: relative;
+            left: auto;
+            top: auto;
+            width: 100%;
             height: 420px;
-            opacity: 0.72;
+            transform: none;
+            opacity: 0.9;
             mask-image: none;
             -webkit-mask-image: none;
           }
