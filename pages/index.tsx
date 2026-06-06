@@ -411,8 +411,8 @@ export default function HomePage() {
           background: url("/alejandro-finol-nyse.jpg");
           background-size: cover;
           background-position: 50% center;
-          filter: saturate(1.03) contrast(1.01) brightness(1.01);
-          opacity: 0.98;
+          filter: saturate(1.05) contrast(1.03) brightness(1.12);
+          opacity: 1;
           pointer-events: none;
           border: 0;
           box-shadow: none;
@@ -444,7 +444,7 @@ export default function HomePage() {
 
         .heroVisual::before {
           background:
-            linear-gradient(180deg, rgba(1, 7, 20, 0.72) 0%, transparent 16%, transparent 72%, rgba(1, 7, 20, 0.92) 100%),
+            linear-gradient(180deg, rgba(1, 7, 20, 0.42) 0%, transparent 16%, transparent 72%, rgba(1, 7, 20, 0.82) 100%),
             linear-gradient(90deg, rgba(1, 7, 20, 0.88) 0%, transparent 18%, transparent 74%, rgba(1, 7, 20, 0.86) 100%);
         }
 
@@ -611,8 +611,8 @@ export default function HomePage() {
             url("/wall-street-bull.jpg");
           background-size: cover;
           background-position: center;
-          opacity: 0.42;
-          filter: saturate(1.05) contrast(1.08) brightness(0.95);
+          opacity: 0.72;
+          filter: saturate(1.15) contrast(1.12) brightness(1.12);
           mask-image: radial-gradient(
             ellipse at 56% 60%,
             black 0%,
