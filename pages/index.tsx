@@ -351,13 +351,13 @@ export default function HomePage() {
         }
 
         .hero {
-          min-height: 675px;
+          min-height: 705px;
           position: relative;
           display: grid;
-          grid-template-columns: minmax(480px, 0.62fr) minmax(360px, 0.38fr);
-          gap: 22px;
+          grid-template-columns: minmax(500px, 0.43fr) minmax(360px, 0.31fr) minmax(330px, 0.26fr);
+          gap: 28px;
           align-items: center;
-          padding: 42px 42px 24px;
+          padding: 42px 42px 34px;
           overflow: hidden;
         }
 
@@ -369,15 +369,15 @@ export default function HomePage() {
           background:
             linear-gradient(
               90deg,
-              rgba(1, 7, 20, 0.96) 0%,
-              rgba(1, 7, 20, 0.82) 30%,
-              rgba(2, 8, 23, 0.12) 54%,
-              rgba(2, 8, 23, 0.52) 76%,
-              rgba(2, 8, 23, 0.92) 100%
+              rgba(1, 7, 20, 0.97) 0%,
+              rgba(1, 7, 20, 0.90) 25%,
+              rgba(2, 8, 23, 0.36) 45%,
+              rgba(2, 8, 23, 0.62) 74%,
+              rgba(2, 8, 23, 0.96) 100%
             ),
             radial-gradient(
-              circle at 56% 38%,
-              rgba(0, 145, 255, 0.18),
+              circle at 58% 38%,
+              rgba(0, 145, 255, 0.22),
               transparent 34%
             );
           z-index: 1;
@@ -389,9 +389,9 @@ export default function HomePage() {
           inset: 0;
           background: linear-gradient(
             180deg,
-            rgba(1, 7, 20, 0.18) 0%,
-            transparent 16%,
-            rgba(1, 7, 20, 0.18) 58%,
+            rgba(1, 7, 20, 0.12) 0%,
+            transparent 22%,
+            rgba(1, 7, 20, 0.16) 62%,
             rgba(1, 7, 20, 0.98) 100%
           );
           pointer-events: none;
@@ -399,45 +399,44 @@ export default function HomePage() {
         }
 
         .heroVisual {
-          position: absolute;
-          top: 0;
-          bottom: -14px;
-          left: 28%;
-          right: 0;
+          position: relative;
+          z-index: 2;
+          width: 100%;
+          height: 560px;
+          align-self: end;
           background:
             linear-gradient(
               90deg,
-              rgba(1, 7, 20, 0.86) 0%,
-              rgba(1, 7, 20, 0.10) 19%,
+              rgba(1, 7, 20, 0.78) 0%,
+              rgba(1, 7, 20, 0.08) 20%,
               rgba(1, 7, 20, 0.00) 56%,
-              rgba(1, 7, 20, 0.58) 100%
+              rgba(1, 7, 20, 0.70) 100%
             ),
             linear-gradient(
               180deg,
-              rgba(1, 7, 20, 0.04) 0%,
-              rgba(1, 7, 20, 0.08) 52%,
-              rgba(1, 7, 20, 0.9) 100%
+              rgba(1, 7, 20, 0.02) 0%,
+              rgba(1, 7, 20, 0.06) 56%,
+              rgba(1, 7, 20, 0.92) 100%
             ),
             url("/alejandro-finol-nyse.jpg");
           background-size: cover;
-          background-position: 62% center;
-          filter: saturate(1.12) contrast(1.04) brightness(1.03);
-          opacity: 0.96;
-          z-index: 0;
+          background-position: 52% center;
+          filter: saturate(1.12) contrast(1.06) brightness(1.02);
+          opacity: 0.98;
           pointer-events: none;
-          mask-image: linear-gradient(
-            90deg,
-            transparent 0%,
-            black 13%,
-            black 90%,
-            transparent 100%
+          mask-image: radial-gradient(
+            ellipse at 52% 50%,
+            black 0%,
+            black 52%,
+            rgba(0, 0, 0, 0.62) 72%,
+            transparent 92%
           );
-          -webkit-mask-image: linear-gradient(
-            90deg,
-            transparent 0%,
-            black 13%,
-            black 90%,
-            transparent 100%
+          -webkit-mask-image: radial-gradient(
+            ellipse at 52% 50%,
+            black 0%,
+            black 52%,
+            rgba(0, 0, 0, 0.62) 72%,
+            transparent 92%
           );
         }
 
@@ -470,9 +469,9 @@ export default function HomePage() {
         }
 
         h1 {
-          max-width: 690px;
-          font-size: clamp(44px, 4.05vw, 68px);
-          line-height: 1.01;
+          max-width: 640px;
+          font-size: clamp(42px, 3.35vw, 62px);
+          line-height: 1.02;
           letter-spacing: -0.06em;
           margin: 24px 0 22px;
         }
@@ -536,8 +535,8 @@ export default function HomePage() {
 
         .signature {
           position: absolute;
-          right: 36%;
-          bottom: 70px;
+          left: 56%;
+          bottom: 82px;
           text-align: right;
           font-size: 17px;
           color: rgba(255, 255, 255, 0.9);
@@ -555,7 +554,7 @@ export default function HomePage() {
         }
 
         .seminarPanel {
-          padding: 8px 0 8px 12px;
+          padding: 8px 0 8px 0;
           min-height: 520px;
           display: flex;
           flex-direction: column;
@@ -563,15 +562,16 @@ export default function HomePage() {
           align-items: flex-start;
           overflow: visible;
           isolation: isolate;
+          margin-left: -8px;
         }
 
         .seminarPanel::before {
           content: "";
           position: absolute;
-          right: -68px;
-          top: 155px;
-          width: 520px;
-          height: 420px;
+          right: -80px;
+          top: 142px;
+          width: 500px;
+          height: 410px;
           background:
             linear-gradient(
               90deg,
@@ -589,8 +589,8 @@ export default function HomePage() {
             url("/wall-street-bull.jpg");
           background-size: cover;
           background-position: center;
-          opacity: 0.42;
-          filter: saturate(1.05) contrast(1.14) brightness(0.78) blur(0.2px);
+          opacity: 0.28;
+          filter: saturate(1.05) contrast(1.14) brightness(0.72) blur(0.35px);
           mask-image: radial-gradient(
             ellipse at 52% 50%,
             black 0%,
@@ -619,7 +619,7 @@ export default function HomePage() {
         }
 
         .seminarDate {
-          font-size: 42px;
+          font-size: 38px;
           font-weight: 900;
           line-height: 0.95;
           margin-bottom: 16px;
@@ -639,7 +639,7 @@ export default function HomePage() {
         }
 
         .seminarTitle {
-          font-size: 28px;
+          font-size: 26px;
           line-height: 1.08;
           font-weight: 900;
           text-transform: uppercase;
@@ -648,7 +648,7 @@ export default function HomePage() {
 
         .seminarPrice {
           color: #1499ff;
-          font-size: 42px;
+          font-size: 40px;
           font-weight: 900;
           margin-bottom: 20px;
           text-shadow: 0 0 28px rgba(0, 140, 255, 0.48);
@@ -905,9 +905,8 @@ export default function HomePage() {
           }
 
           .heroVisual {
-            left: 0;
-            right: 0;
-            opacity: 0.34;
+            height: 420px;
+            opacity: 0.72;
             mask-image: none;
             -webkit-mask-image: none;
           }
@@ -933,10 +932,6 @@ export default function HomePage() {
       `}</style>
 
       <section className="hero">
-        <div className="heroVisual" />
-        <div className="signature">
-          Con el ingeniero<strong>Alejandro Finol</strong>
-        </div>
         <div className="heroCopy">
           <nav className="nav" style={{ marginBottom: 36 }}>
             <a href="#">Inicio</a>
@@ -1001,6 +996,11 @@ export default function HomePage() {
           >
             <span className="greenDot" /> {accessMessage}
           </p>
+        </div>
+
+        <div className="heroVisual" />
+        <div className="signature">
+          Con el ingeniero<strong>Alejandro Finol</strong>
         </div>
 
         <aside className="seminarPanel">
