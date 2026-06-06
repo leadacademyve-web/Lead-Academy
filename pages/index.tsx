@@ -288,13 +288,14 @@ export default function HomePage() {
         }
 
         .hero {
-          min-height: 660px;
+          min-height: 690px;
           position: relative;
           display: grid;
-          grid-template-columns: 1fr 1.05fr 0.66fr;
-          gap: 20px;
+          grid-template-columns: minmax(480px, 0.92fr) minmax(310px, 0.42fr);
+          gap: 28px;
           align-items: center;
-          padding: 42px 42px 22px;
+          padding: 58px 42px 28px;
+          overflow: hidden;
         }
 
         .hero::before {
@@ -303,15 +304,43 @@ export default function HomePage() {
           inset: 0;
           pointer-events: none;
           background:
-            linear-gradient(90deg, rgba(1, 7, 20, 0.92) 0%, rgba(2, 8, 23, 0.44) 45%, rgba(2, 8, 23, 0.92) 100%),
-            radial-gradient(circle at 55% 38%, rgba(0, 145, 255, 0.16), transparent 34%);
+            linear-gradient(90deg, rgba(1, 7, 20, 0.96) 0%, rgba(2, 8, 23, 0.58) 36%, rgba(2, 8, 23, 0.86) 70%, rgba(2, 8, 23, 0.98) 100%),
+            radial-gradient(circle at 55% 38%, rgba(0, 145, 255, 0.18), transparent 36%);
+          z-index: 1;
+        }
+
+        .hero::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background:
+            linear-gradient(180deg, transparent 0%, rgba(1, 7, 20, 0.22) 54%, rgba(1, 7, 20, 0.98) 100%);
+          pointer-events: none;
+          z-index: 3;
+        }
+
+        .heroVisual {
+          position: absolute;
+          top: 20px;
+          bottom: -30px;
+          left: 30%;
+          right: 18%;
+          background:
+            linear-gradient(90deg, rgba(1, 7, 20, 0.94) 0%, rgba(1, 7, 20, 0.06) 20%, rgba(1, 7, 20, 0.06) 72%, rgba(1, 7, 20, 0.92) 100%),
+            linear-gradient(180deg, rgba(1, 7, 20, 0.03) 0%, rgba(1, 7, 20, 0.88) 90%),
+            url('/alejandro-finol-nyse.jpg');
+          background-size: cover;
+          background-position: center;
+          filter: saturate(1.04) contrast(1.02);
+          opacity: 0.9;
+          z-index: 0;
+          pointer-events: none;
         }
 
         .heroCopy,
-        .heroPerson,
         .seminarPanel {
           position: relative;
-          z-index: 2;
+          z-index: 4;
         }
 
         .pill {
@@ -400,28 +429,14 @@ export default function HomePage() {
           border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
-        .heroPerson {
-          min-height: 610px;
-          align-self: stretch;
-          background:
-            linear-gradient(90deg, rgba(1, 8, 23, 0.88) 0%, rgba(1, 8, 23, 0.05) 36%, rgba(1, 8, 23, 0.76) 100%),
-            linear-gradient(180deg, rgba(1, 8, 23, 0.02) 0%, rgba(1, 8, 23, 0.82) 86%),
-            url('/alejandro-finol-nyse.jpg');
-          background-size: cover;
-          background-position: center;
-          border-radius: 0 0 26px 26px;
-          margin-left: -120px;
-          margin-right: -85px;
-          filter: saturate(1.04) contrast(1.03);
-        }
-
         .signature {
           position: absolute;
-          right: 76px;
-          bottom: 70px;
+          right: 32%;
+          bottom: 88px;
           text-align: right;
           font-size: 17px;
           color: rgba(255, 255, 255, 0.9);
+          z-index: 5;
         }
 
         .signature strong {
@@ -435,12 +450,34 @@ export default function HomePage() {
         }
 
         .seminarPanel {
-          padding: 8px 6px;
-          min-height: 520px;
+          padding: 8px 0 8px 18px;
+          min-height: 540px;
           display: flex;
           flex-direction: column;
           justify-content: center;
           align-items: flex-start;
+          overflow: visible;
+        }
+
+        .seminarPanel::before {
+          content: '';
+          position: absolute;
+          right: -34px;
+          top: 170px;
+          width: 380px;
+          height: 245px;
+          background:
+            linear-gradient(90deg, rgba(1, 7, 20, 0) 0%, rgba(1, 7, 20, 0.05) 42%, rgba(1, 7, 20, 0.82) 100%),
+            linear-gradient(180deg, rgba(1, 7, 20, 0) 0%, rgba(1, 7, 20, 0.72) 100%),
+            url('/wall-street-bull.jpg');
+          background-size: cover;
+          background-position: center;
+          opacity: 0.72;
+          filter: saturate(0.95) contrast(1.06);
+          mask-image: radial-gradient(ellipse at center, black 42%, rgba(0,0,0,0.82) 60%, transparent 84%);
+          -webkit-mask-image: radial-gradient(ellipse at center, black 42%, rgba(0,0,0,0.82) 60%, transparent 84%);
+          z-index: -1;
+          pointer-events: none;
         }
 
         .seminarOverline {
@@ -468,18 +505,7 @@ export default function HomePage() {
           margin-bottom: 22px;
         }
 
-        .bullStage {
-          width: 100%;
-          height: 170px;
-          border-radius: 14px;
-          margin: 4px 0 22px;
-          background:
-            linear-gradient(90deg, rgba(1, 8, 23, 0.18), rgba(1, 8, 23, 0.74)),
-            url('/wall-street-bull.jpg');
-          background-size: cover;
-          background-position: center;
-          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 48px rgba(0, 140, 255, 0.18);
-        }
+        .bullStage { display: none; }
 
         .seminarTitle {
           font-size: 30px;
@@ -733,9 +759,14 @@ export default function HomePage() {
             grid-template-columns: 1fr;
           }
 
-          .heroPerson {
-            margin: 0;
-            min-height: 480px;
+          .heroVisual {
+            left: 0;
+            right: 0;
+            opacity: 0.28;
+          }
+
+          .signature {
+            display: none;
           }
 
           .seminarPanel {
@@ -754,22 +785,9 @@ export default function HomePage() {
         }
       `}</style>
 
-      <header className="topBar">
-        <div className="brand">
-          <img src="/logo.png" alt="Lead Academy" />
-          <div>
-            <div className="brandTitle">Lead Academy - Trading & Investing</div>
-            <div className="brandSub">Portal Privado - Versión para escritorio - No compatible con dispositivos móviles</div>
-          </div>
-        </div>
-
-        <div className="topActions">
-          <Link href="/login" className="btnGhost">Iniciar sesión</Link>
-          <Link href={user ? '/dashboard' : '/signup'} className="btnMain">{user ? 'Ir al portal' : 'Ir al portal'}</Link>
-        </div>
-      </header>
-
       <section className="hero">
+        <div className="heroVisual" />
+        <div className="signature">Con el ingeniero<strong>Alejandro Finol</strong></div>
         <div className="heroCopy">
           <nav className="nav" style={{ marginBottom: 36 }}>
             <a href="#">Inicio</a>
@@ -811,10 +829,6 @@ export default function HomePage() {
           >
             <span className="greenDot" /> {accessMessage}
           </p>
-        </div>
-
-        <div className="heroPerson">
-          <div className="signature">Con el ingeniero<strong>Alejandro Finol</strong></div>
         </div>
 
         <aside className="seminarPanel">
