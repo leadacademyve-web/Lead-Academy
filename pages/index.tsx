@@ -408,34 +408,35 @@ export default function HomePage() {
         .heroVisual {
           position: absolute;
           z-index: 2;
-          left: 56%;
-          top: 86px;
-          width: min(1260px, 69vw);
-          height: 620px;
+          left: 53.5%;
+          top: 82px;
+          width: min(1180px, 66vw);
+          height: 660px;
           transform: translateX(-50%);
           background: url("/alejandro-finol-nyse.jpg");
-          background-size: cover;
-          background-position: 47% center;
-          filter: saturate(1.06) contrast(1.02) brightness(1.09);
+          background-size: contain;
+          background-repeat: no-repeat;
+          background-position: 50% center;
+          filter: saturate(1.05) contrast(1.02) brightness(1.08);
           opacity: 1;
           pointer-events: none;
           border: 0;
           box-shadow: none;
           mask-image: radial-gradient(
-            ellipse at 48% 53%,
+            ellipse at 50% 54%,
             black 0%,
-            black 46%,
-            rgba(0, 0, 0, 0.76) 63%,
-            rgba(0, 0, 0, 0.30) 80%,
-            transparent 96%
+            black 52%,
+            rgba(0, 0, 0, 0.80) 68%,
+            rgba(0, 0, 0, 0.34) 84%,
+            transparent 98%
           );
           -webkit-mask-image: radial-gradient(
-            ellipse at 48% 53%,
+            ellipse at 50% 54%,
             black 0%,
-            black 46%,
-            rgba(0, 0, 0, 0.76) 63%,
-            rgba(0, 0, 0, 0.30) 80%,
-            transparent 96%
+            black 52%,
+            rgba(0, 0, 0, 0.80) 68%,
+            rgba(0, 0, 0, 0.34) 84%,
+            transparent 98%
           );
         }
 
@@ -449,8 +450,8 @@ export default function HomePage() {
 
         .heroVisual::before {
           background:
-            linear-gradient(180deg, rgba(1, 7, 20, 0.18) 0%, transparent 20%, transparent 72%, rgba(1, 7, 20, 0.78) 100%),
-            linear-gradient(90deg, rgba(1, 7, 20, 0.86) 0%, rgba(1, 7, 20, 0.44) 17%, transparent 34%, transparent 76%, rgba(1, 7, 20, 0.86) 100%);
+            linear-gradient(180deg, rgba(1, 7, 20, 0.10) 0%, transparent 18%, transparent 72%, rgba(1, 7, 20, 0.76) 100%),
+            linear-gradient(90deg, rgba(1, 7, 20, 0.88) 0%, rgba(1, 7, 20, 0.42) 16%, transparent 33%, transparent 80%, rgba(1, 7, 20, 0.88) 100%);
         }
 
         .heroVisual::after {
@@ -561,8 +562,8 @@ export default function HomePage() {
 
         .signature {
           position: absolute;
-          left: 52%;
-          bottom: 70px;
+          left: 51.5%;
+          bottom: 82px;
           text-align: right;
           font-size: 17px;
           color: rgba(255, 255, 255, 0.9);
@@ -588,52 +589,53 @@ export default function HomePage() {
           align-items: flex-start;
           overflow: visible;
           isolation: isolate;
-          margin-left: -18px;
+          margin-left: -8px;
           text-shadow: 0 3px 18px rgba(0, 0, 0, 0.72);
         }
 
         .seminarPanel::before {
           content: "";
           position: absolute;
-          right: -260px;
-          top: 46px;
-          width: 760px;
-          height: 570px;
+          right: -250px;
+          top: -4px;
+          width: 820px;
+          height: 650px;
           background:
             linear-gradient(
               90deg,
-              rgba(1, 7, 20, 0.74) 0%,
-              rgba(1, 7, 20, 0.28) 22%,
-              rgba(1, 7, 20, 0.02) 58%,
-              rgba(1, 7, 20, 0.54) 100%
+              rgba(1, 7, 20, 0.72) 0%,
+              rgba(1, 7, 20, 0.24) 22%,
+              rgba(1, 7, 20, 0.00) 58%,
+              rgba(1, 7, 20, 0.46) 100%
             ),
             linear-gradient(
               180deg,
-              rgba(1, 7, 20, 0.40) 0%,
-              rgba(1, 7, 20, 0.04) 24%,
-              rgba(1, 7, 20, 0.06) 62%,
-              rgba(1, 7, 20, 0.70) 100%
+              rgba(1, 7, 20, 0.28) 0%,
+              rgba(1, 7, 20, 0.02) 24%,
+              rgba(1, 7, 20, 0.04) 62%,
+              rgba(1, 7, 20, 0.72) 100%
             ),
             url("/wall-street-bull.jpg");
-          background-size: cover;
-          background-position: center 48%;
-          opacity: 0.92;
-          filter: saturate(1.18) contrast(1.10) brightness(1.08);
+          background-size: contain;
+          background-repeat: no-repeat;
+          background-position: right center;
+          opacity: 1;
+          filter: saturate(1.22) contrast(1.12) brightness(1.14);
           mask-image: radial-gradient(
-            ellipse at 62% 50%,
+            ellipse at 68% 48%,
             black 0%,
-            black 50%,
-            rgba(0, 0, 0, 0.70) 68%,
-            rgba(0, 0, 0, 0.26) 83%,
-            transparent 96%
+            black 54%,
+            rgba(0, 0, 0, 0.74) 72%,
+            rgba(0, 0, 0, 0.28) 86%,
+            transparent 98%
           );
           -webkit-mask-image: radial-gradient(
-            ellipse at 62% 50%,
+            ellipse at 68% 48%,
             black 0%,
-            black 50%,
-            rgba(0, 0, 0, 0.70) 68%,
-            rgba(0, 0, 0, 0.26) 83%,
-            transparent 96%
+            black 54%,
+            rgba(0, 0, 0, 0.74) 72%,
+            rgba(0, 0, 0, 0.28) 86%,
+            transparent 98%
           );
           z-index: -1;
           pointer-events: none;
