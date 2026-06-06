@@ -1,165 +1,210 @@
-import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/router'
-import { useAuthUser } from '@/src/context/AuthUserProvider'
-import { getLiveAccessByEmail } from '@/src/lib/liveAccess'
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { useAuthUser } from "@/src/context/AuthUserProvider";
+import { getLiveAccessByEmail } from "@/src/lib/liveAccess";
 
 const plans = [
   {
-    id: 'week',
-    days: '5 DÍAS',
-    title: 'Acceso al portal por 5 días hábiles de mercado - Operaciones en vivo',
-    price: 'US$99',
-    note: 'Renovación semanal',
-    priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY',
-    oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME',
+    id: "week",
+    days: "5 DÍAS",
+    title:
+      "Acceso al portal por 5 días hábiles de mercado - Operaciones en vivo",
+    price: "US$99",
+    note: "Renovación semanal",
+    priceKey: "NEXT_PUBLIC_STRIPE_PRICE_WEEKLY",
+    oneTimePriceKey: "NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME",
     bullets: [
-      'Clases en vivo',
-      'Operaciones en vivo',
-      'Repeticiones y chat en vivo',
-      'Biblioteca de recursos',
-      'Pago único por 5 días de acceso',
+      "Clases en vivo",
+      "Operaciones en vivo",
+      "Repeticiones y chat en vivo",
+      "Biblioteca de recursos",
+      "Pago único por 5 días de acceso",
     ],
   },
   {
-    id: 'two-weeks',
-    days: '10 DÍAS',
-    title: 'Acceso al portal por 10 días hábiles de mercado - Operaciones en vivo',
-    price: 'US$189',
-    note: 'Renovación quincenal',
-    priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS',
-    oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME',
+    id: "two-weeks",
+    days: "10 DÍAS",
+    title:
+      "Acceso al portal por 10 días hábiles de mercado - Operaciones en vivo",
+    price: "US$189",
+    note: "Renovación quincenal",
+    priceKey: "NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS",
+    oneTimePriceKey: "NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME",
     bullets: [
-      'Clases en vivo',
-      'Operaciones en vivo',
-      'Repeticiones y chat en vivo',
-      'Biblioteca de recursos',
-      'Descuento por 10 días de acceso',
+      "Clases en vivo",
+      "Operaciones en vivo",
+      "Repeticiones y chat en vivo",
+      "Biblioteca de recursos",
+      "Descuento por 10 días de acceso",
     ],
   },
   {
-    id: 'month',
-    days: '20 DÍAS',
-    title: 'Acceso al portal por 20 días hábiles de mercado - Operaciones en vivo',
-    price: 'US$369',
-    note: 'Renovación mensual',
-    priceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS',
-    oneTimePriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME',
+    id: "month",
+    days: "20 DÍAS",
+    title:
+      "Acceso al portal por 20 días hábiles de mercado - Operaciones en vivo",
+    price: "US$369",
+    note: "Renovación mensual",
+    priceKey: "NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS",
+    oneTimePriceKey: "NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME",
     featured: true,
     bullets: [
-      'Clases en vivo',
-      'Operaciones en vivo',
-      'Repeticiones y chat en vivo',
-      'Biblioteca de recursos',
-      'Mejor descuento por 20 días de acceso',
+      "Clases en vivo",
+      "Operaciones en vivo",
+      "Repeticiones y chat en vivo",
+      "Biblioteca de recursos",
+      "Mejor descuento por 20 días de acceso",
     ],
   },
-]
+];
 
 const portalItems = [
-  { icon: '▣', title: 'OPERACIONES EN VIVO', text: 'Acompaña cada operación en tiempo real', badge: 'LIVE' },
-  { icon: '▶', title: 'REPETICIONES GRABADAS', text: 'Accede a todas las clases y operaciones' },
-  { icon: '▥', title: 'ESTRATEGIAS PROBADAS', text: 'Métodos profesionales aplicados en el mercado real' },
-  { icon: '▤', title: 'EARNINGS REPORTS', text: 'Análisis antes y después de los reportes' },
-  { icon: '◈', title: 'GESTIÓN DE RIESGO', text: 'Aprende a proteger tu capital con reglas claras' },
-  { icon: '◉', title: 'BIBLIOTECA DE VIDEOS, DOCUMENTOS, INSTRUCTIVOS Y CHAT LIVE', text: 'Interactúa con el instructor y la comunidad' },
-  { icon: '🔔', title: 'ALERTAS DE MERCADO', text: 'Señales y alertas en tiempo real' },
-]
+  {
+    icon: "▣",
+    title: "OPERACIONES EN VIVO",
+    text: "Acompaña cada operación en tiempo real",
+    badge: "LIVE",
+  },
+  {
+    icon: "▶",
+    title: "REPETICIONES GRABADAS",
+    text: "Accede a todas las clases y operaciones",
+  },
+  {
+    icon: "▥",
+    title: "ESTRATEGIAS PROBADAS",
+    text: "Métodos profesionales aplicados en el mercado real",
+  },
+  {
+    icon: "▤",
+    title: "EARNINGS REPORTS",
+    text: "Análisis antes y después de los reportes",
+  },
+  {
+    icon: "◈",
+    title: "GESTIÓN DE RIESGO",
+    text: "Aprende a proteger tu capital con reglas claras",
+  },
+  {
+    icon: "◉",
+    title: "BIBLIOTECA DE VIDEOS, DOCUMENTOS, INSTRUCTIVOS Y CHAT LIVE",
+    text: "Interactúa con el instructor y la comunidad",
+  },
+  {
+    icon: "🔔",
+    title: "ALERTAS DE MERCADO",
+    text: "Señales y alertas en tiempo real",
+  },
+];
 
 const outcomeItems = [
-  { icon: '↗', text: 'Serás capaz de duplicar tu cuenta bancaria en tu primer mes de inversiones real.' },
-  { icon: '◎', text: 'Identificar el momento preciso de compra y venta para tomar importantes rentabilidades.' },
-  { icon: '🏦', text: 'Abrir tu cuenta bancaria en $ en EEUU para inversiones en la bolsa, uso personal o de negocios.' },
-  { icon: '◌', text: 'Operaciones en vivo todos los días como acompañamiento para que mires los resultados incluso antes de empezar a operar.' },
-  { icon: '🎯', title: '100%', text: 'Enfoque práctico' },
-  { icon: 'NYSE', title: 'NYSE', text: 'Operamos en la bolsa de New York' },
-]
+  {
+    icon: "↗",
+    text: "Serás capaz de duplicar tu cuenta bancaria en tu primer mes de inversiones real.",
+  },
+  {
+    icon: "◎",
+    text: "Identificar el momento preciso de compra y venta para tomar importantes rentabilidades.",
+  },
+  {
+    icon: "🏦",
+    text: "Abrir tu cuenta bancaria en $ en EEUU para inversiones en la bolsa, uso personal o de negocios.",
+  },
+  {
+    icon: "◌",
+    text: "Operaciones en vivo todos los días como acompañamiento para que mires los resultados incluso antes de empezar a operar.",
+  },
+  { icon: "🎯", title: "100%", text: "Enfoque práctico" },
+  { icon: "NYSE", title: "NYSE", text: "Operamos en la bolsa de New York" },
+];
 
 const intensiveCheckoutHref = (user: unknown) =>
   user
-    ? `/checkout-confirm?oneTimePriceKey=${encodeURIComponent('NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME')}&title=${encodeURIComponent('Seminario intensivo en vivo de inversiones en Wall Street')}&price=${encodeURIComponent('US$500')}&forcePurchaseType=one_time&hidePurchaseType=1&classesOverride=5&levelOverride=${encodeURIComponent('INTENSIVE_TWO_DAY')}`
-    : '/signup'
+    ? `/checkout-confirm?oneTimePriceKey=${encodeURIComponent("NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME")}&title=${encodeURIComponent("Seminario intensivo en vivo de inversiones en Wall Street")}&price=${encodeURIComponent("US$500")}&forcePurchaseType=one_time&hidePurchaseType=1&classesOverride=5&levelOverride=${encodeURIComponent("INTENSIVE_TWO_DAY")}`
+    : "/signup";
 
 export default function HomePage() {
-  const router = useRouter()
-  const { user } = useAuthUser()
-  const [accessActive, setAccessActive] = useState(false)
-  const [accessPlan, setAccessPlan] = useState<string | null>(null)
-  const [classesRemaining, setClassesRemaining] = useState<number | null>(null)
-  const [accessStartAt, setAccessStartAt] = useState<string | null>(null)
+  const router = useRouter();
+  const { user } = useAuthUser();
+  const [accessActive, setAccessActive] = useState(false);
+  const [accessPlan, setAccessPlan] = useState<string | null>(null);
+  const [classesRemaining, setClassesRemaining] = useState<number | null>(null);
+  const [accessStartAt, setAccessStartAt] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!router.isReady) return
-    if (router.query.recoverPortal !== '1') return
+    if (!router.isReady) return;
+    if (router.query.recoverPortal !== "1") return;
 
     try {
-      sessionStorage.setItem('lead_portal_recovery_returning', '1')
+      sessionStorage.setItem("lead_portal_recovery_returning", "1");
     } catch {
       // ignore storage errors
     }
 
-    router.push('/dashboard')
-  }, [router])
+    router.push("/dashboard");
+  }, [router]);
 
   useEffect(() => {
-    let mounted = true
+    let mounted = true;
 
     async function loadAccess() {
       if (!user?.email) {
-        if (!mounted) return
-        setAccessActive(false)
-        setAccessPlan(null)
-        setClassesRemaining(null)
-        setAccessStartAt(null)
-        return
+        if (!mounted) return;
+        setAccessActive(false);
+        setAccessPlan(null);
+        setClassesRemaining(null);
+        setAccessStartAt(null);
+        return;
       }
 
       try {
-        const access = await getLiveAccessByEmail(user.email)
-        if (!mounted) return
-        setAccessActive(access.active)
-        setAccessPlan(access.plan ?? null)
-        setClassesRemaining(access.classesRemaining ?? null)
-        setAccessStartAt(access.accessStartAt ?? null)
+        const access = await getLiveAccessByEmail(user.email);
+        if (!mounted) return;
+        setAccessActive(access.active);
+        setAccessPlan(access.plan ?? null);
+        setClassesRemaining(access.classesRemaining ?? null);
+        setAccessStartAt(access.accessStartAt ?? null);
       } catch {
-        if (!mounted) return
-        setAccessActive(false)
-        setAccessPlan(null)
-        setClassesRemaining(null)
-        setAccessStartAt(null)
+        if (!mounted) return;
+        setAccessActive(false);
+        setAccessPlan(null);
+        setClassesRemaining(null);
+        setAccessStartAt(null);
       }
     }
 
-    loadAccess()
+    loadAccess();
 
     return () => {
-      mounted = false
-    }
-  }, [user?.email])
+      mounted = false;
+    };
+  }, [user?.email]);
 
   const accessMessage = useMemo(() => {
-    const startDate = accessStartAt ? new Date(accessStartAt) : null
+    const startDate = accessStartAt ? new Date(accessStartAt) : null;
     const hasScheduledCourseAccess =
       !accessActive &&
-      accessPlan === 'INTENSIVE_TWO_DAY' &&
+      accessPlan === "INTENSIVE_TWO_DAY" &&
       classesRemaining !== null &&
       classesRemaining > 0 &&
       startDate !== null &&
-      startDate.getTime() > Date.now()
+      startDate.getTime() > Date.now();
 
-    if (accessActive) return 'Tu acceso al portal está activo.'
+    if (accessActive) return "Tu acceso al portal está activo.";
 
     if (hasScheduledCourseAccess) {
-      return 'Tu acceso al portal inicia el día del seminario intensivo. Incluye 5 días gratis de acceso a operaciones en vivo.'
+      return "Tu acceso al portal inicia el día del seminario intensivo. Incluye 5 días gratis de acceso a operaciones en vivo.";
     }
 
-    if (classesRemaining === 0) return 'Tu saldo de clases se ha agotado. Renueva tu suscripción para continuar.'
+    if (classesRemaining === 0)
+      return "Tu saldo de clases se ha agotado. Renueva tu suscripción para continuar.";
 
-    return 'El acceso a clases en vivo se habilita únicamente para estudiantes con suscripción activa.'
-  }, [accessActive, accessPlan, classesRemaining, accessStartAt])
+    return "El acceso a clases en vivo se habilita únicamente para estudiantes con suscripción activa.";
+  }, [accessActive, accessPlan, classesRemaining, accessStartAt]);
 
-  const paid = router.query.paid === '1'
-  const canceled = router.query.canceled === '1'
+  const paid = router.query.paid === "1";
+  const canceled = router.query.canceled === "1";
 
   return (
     <main className="pageShell">
@@ -168,14 +213,29 @@ export default function HomePage() {
           min-height: 100vh;
           color: #fff;
           background:
-            radial-gradient(circle at 55% 4%, rgba(0, 136, 255, 0.32), transparent 29%),
-            radial-gradient(circle at 85% 24%, rgba(0, 93, 255, 0.22), transparent 30%),
+            radial-gradient(
+              circle at 55% 4%,
+              rgba(0, 136, 255, 0.32),
+              transparent 29%
+            ),
+            radial-gradient(
+              circle at 85% 24%,
+              rgba(0, 93, 255, 0.22),
+              transparent 30%
+            ),
             linear-gradient(180deg, rgba(2, 8, 23, 0.68), rgba(1, 5, 15, 0.97)),
-            url('/trading-bg.jpg');
+            url("/trading-bg.jpg");
           background-size: cover;
           background-position: center top;
           background-attachment: fixed;
-          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          font-family:
+            Inter,
+            ui-sans-serif,
+            system-ui,
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            sans-serif;
           overflow-x: hidden;
         }
 
@@ -256,7 +316,10 @@ export default function HomePage() {
           font-weight: 800;
           text-decoration: none;
           border: 1px solid transparent;
-          transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+          transition:
+            transform 0.18s ease,
+            box-shadow 0.18s ease,
+            border-color 0.18s ease;
           cursor: pointer;
           white-space: nowrap;
         }
@@ -288,53 +351,94 @@ export default function HomePage() {
         }
 
         .hero {
-          min-height: 690px;
+          min-height: 675px;
           position: relative;
           display: grid;
-          grid-template-columns: minmax(480px, 0.92fr) minmax(310px, 0.42fr);
-          gap: 28px;
+          grid-template-columns: minmax(520px, 0.74fr) minmax(340px, 0.36fr);
+          gap: 34px;
           align-items: center;
-          padding: 58px 42px 28px;
+          padding: 46px 42px 24px;
           overflow: hidden;
         }
 
         .hero::before {
-          content: '';
+          content: "";
           position: absolute;
           inset: 0;
           pointer-events: none;
           background:
-            linear-gradient(90deg, rgba(1, 7, 20, 0.96) 0%, rgba(2, 8, 23, 0.58) 36%, rgba(2, 8, 23, 0.86) 70%, rgba(2, 8, 23, 0.98) 100%),
-            radial-gradient(circle at 55% 38%, rgba(0, 145, 255, 0.18), transparent 36%);
+            linear-gradient(
+              90deg,
+              rgba(1, 7, 20, 0.97) 0%,
+              rgba(1, 7, 20, 0.91) 23%,
+              rgba(2, 8, 23, 0.22) 49%,
+              rgba(2, 8, 23, 0.65) 70%,
+              rgba(2, 8, 23, 0.94) 100%
+            ),
+            radial-gradient(
+              circle at 56% 38%,
+              rgba(0, 145, 255, 0.18),
+              transparent 34%
+            );
           z-index: 1;
         }
 
         .hero::after {
-          content: '';
+          content: "";
           position: absolute;
           inset: 0;
-          background:
-            linear-gradient(180deg, transparent 0%, rgba(1, 7, 20, 0.22) 54%, rgba(1, 7, 20, 0.98) 100%);
+          background: linear-gradient(
+            180deg,
+            rgba(1, 7, 20, 0.18) 0%,
+            transparent 16%,
+            rgba(1, 7, 20, 0.18) 58%,
+            rgba(1, 7, 20, 0.98) 100%
+          );
           pointer-events: none;
           z-index: 3;
         }
 
         .heroVisual {
           position: absolute;
-          top: 20px;
-          bottom: -30px;
-          left: 30%;
-          right: 18%;
+          top: 0;
+          bottom: -14px;
+          left: 26%;
+          right: 0;
           background:
-            linear-gradient(90deg, rgba(1, 7, 20, 0.94) 0%, rgba(1, 7, 20, 0.06) 20%, rgba(1, 7, 20, 0.06) 72%, rgba(1, 7, 20, 0.92) 100%),
-            linear-gradient(180deg, rgba(1, 7, 20, 0.03) 0%, rgba(1, 7, 20, 0.88) 90%),
-            url('/alejandro-finol-nyse.jpg');
+            linear-gradient(
+              90deg,
+              rgba(1, 7, 20, 0.92) 0%,
+              rgba(1, 7, 20, 0.12) 18%,
+              rgba(1, 7, 20, 0.02) 58%,
+              rgba(1, 7, 20, 0.66) 100%
+            ),
+            linear-gradient(
+              180deg,
+              rgba(1, 7, 20, 0.04) 0%,
+              rgba(1, 7, 20, 0.08) 52%,
+              rgba(1, 7, 20, 0.9) 100%
+            ),
+            url("/alejandro-finol-nyse.jpg");
           background-size: cover;
-          background-position: center;
-          filter: saturate(1.04) contrast(1.02);
-          opacity: 0.9;
+          background-position: center right;
+          filter: saturate(1.12) contrast(1.05) brightness(0.92);
+          opacity: 0.86;
           z-index: 0;
           pointer-events: none;
+          mask-image: linear-gradient(
+            90deg,
+            transparent 0%,
+            black 18%,
+            black 88%,
+            transparent 100%
+          );
+          -webkit-mask-image: linear-gradient(
+            90deg,
+            transparent 0%,
+            black 18%,
+            black 88%,
+            transparent 100%
+          );
         }
 
         .heroCopy,
@@ -366,9 +470,10 @@ export default function HomePage() {
         }
 
         h1 {
-          font-size: clamp(48px, 5.4vw, 84px);
-          line-height: 0.98;
-          letter-spacing: -0.07em;
+          max-width: 780px;
+          font-size: clamp(46px, 4.45vw, 74px);
+          line-height: 1.01;
+          letter-spacing: -0.06em;
           margin: 24px 0 22px;
         }
 
@@ -378,7 +483,7 @@ export default function HomePage() {
         }
 
         .heroText {
-          max-width: 640px;
+          max-width: 600px;
           color: rgba(255, 255, 255, 0.82);
           font-size: 18px;
           line-height: 1.55;
@@ -431,8 +536,8 @@ export default function HomePage() {
 
         .signature {
           position: absolute;
-          right: 32%;
-          bottom: 88px;
+          right: 34%;
+          bottom: 72px;
           text-align: right;
           font-size: 17px;
           color: rgba(255, 255, 255, 0.9);
@@ -443,15 +548,15 @@ export default function HomePage() {
           display: block;
           font-size: 33px;
           color: #f4b313;
-          font-family: 'Brush Script MT', 'Segoe Script', cursive;
+          font-family: "Brush Script MT", "Segoe Script", cursive;
           font-weight: 400;
           line-height: 1;
           text-shadow: 0 0 22px rgba(244, 179, 19, 0.28);
         }
 
         .seminarPanel {
-          padding: 8px 0 8px 18px;
-          min-height: 540px;
+          padding: 8px 0 8px 12px;
+          min-height: 520px;
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -460,22 +565,45 @@ export default function HomePage() {
         }
 
         .seminarPanel::before {
-          content: '';
+          content: "";
           position: absolute;
-          right: -34px;
-          top: 170px;
-          width: 380px;
-          height: 245px;
+          right: -150px;
+          top: 122px;
+          width: 520px;
+          height: 350px;
           background:
-            linear-gradient(90deg, rgba(1, 7, 20, 0) 0%, rgba(1, 7, 20, 0.05) 42%, rgba(1, 7, 20, 0.82) 100%),
-            linear-gradient(180deg, rgba(1, 7, 20, 0) 0%, rgba(1, 7, 20, 0.72) 100%),
-            url('/wall-street-bull.jpg');
+            linear-gradient(
+              90deg,
+              rgba(1, 7, 20, 0.96) 0%,
+              rgba(1, 7, 20, 0.18) 22%,
+              rgba(1, 7, 20, 0.08) 56%,
+              rgba(1, 7, 20, 0.92) 100%
+            ),
+            linear-gradient(
+              180deg,
+              rgba(1, 7, 20, 0.1) 0%,
+              rgba(1, 7, 20, 0.08) 54%,
+              rgba(1, 7, 20, 0.92) 100%
+            ),
+            url("/wall-street-bull.jpg");
           background-size: cover;
           background-position: center;
-          opacity: 0.72;
-          filter: saturate(0.95) contrast(1.06);
-          mask-image: radial-gradient(ellipse at center, black 42%, rgba(0,0,0,0.82) 60%, transparent 84%);
-          -webkit-mask-image: radial-gradient(ellipse at center, black 42%, rgba(0,0,0,0.82) 60%, transparent 84%);
+          opacity: 0.86;
+          filter: saturate(1.05) contrast(1.12) brightness(0.9);
+          mask-image: radial-gradient(
+            ellipse at 52% 50%,
+            black 0%,
+            black 48%,
+            rgba(0, 0, 0, 0.76) 64%,
+            transparent 86%
+          );
+          -webkit-mask-image: radial-gradient(
+            ellipse at 52% 50%,
+            black 0%,
+            black 48%,
+            rgba(0, 0, 0, 0.76) 64%,
+            transparent 86%
+          );
           z-index: -1;
           pointer-events: none;
         }
@@ -490,7 +618,7 @@ export default function HomePage() {
         }
 
         .seminarDate {
-          font-size: 44px;
+          font-size: 42px;
           font-weight: 900;
           line-height: 0.95;
           margin-bottom: 16px;
@@ -505,10 +633,12 @@ export default function HomePage() {
           margin-bottom: 22px;
         }
 
-        .bullStage { display: none; }
+        .bullStage {
+          display: none;
+        }
 
         .seminarTitle {
-          font-size: 30px;
+          font-size: 28px;
           line-height: 1.08;
           font-weight: 900;
           text-transform: uppercase;
@@ -566,7 +696,11 @@ export default function HomePage() {
           padding: 34px 34px 30px;
           min-height: 450px;
           border-radius: 18px;
-          background: linear-gradient(180deg, rgba(5, 16, 35, 0.86), rgba(2, 8, 23, 0.72));
+          background: linear-gradient(
+            180deg,
+            rgba(5, 16, 35, 0.86),
+            rgba(2, 8, 23, 0.72)
+          );
           border: 1px solid rgba(255, 255, 255, 0.12);
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
           display: flex;
@@ -575,7 +709,9 @@ export default function HomePage() {
 
         .planCard.featured {
           border-color: rgba(0, 145, 255, 0.98);
-          box-shadow: 0 0 44px rgba(0, 145, 255, 0.55), inset 0 0 34px rgba(0, 145, 255, 0.08);
+          box-shadow:
+            0 0 44px rgba(0, 145, 255, 0.55),
+            inset 0 0 34px rgba(0, 145, 255, 0.08);
         }
 
         .featuredBadge {
@@ -668,7 +804,11 @@ export default function HomePage() {
         .outcomeCard {
           min-height: 172px;
           border-radius: 14px;
-          background: linear-gradient(180deg, rgba(5, 16, 35, 0.84), rgba(2, 8, 23, 0.7));
+          background: linear-gradient(
+            180deg,
+            rgba(5, 16, 35, 0.84),
+            rgba(2, 8, 23, 0.7)
+          );
           border: 1px solid rgba(255, 184, 18, 0.22);
           padding: 20px 16px;
           text-align: center;
@@ -678,10 +818,14 @@ export default function HomePage() {
 
         .portalCard::before,
         .outcomeCard::before {
-          content: '';
+          content: "";
           position: absolute;
           inset: 0;
-          background: radial-gradient(circle at 50% 0%, rgba(0, 145, 255, 0.18), transparent 55%);
+          background: radial-gradient(
+            circle at 50% 0%,
+            rgba(0, 145, 255, 0.18),
+            transparent 55%
+          );
           opacity: 0.85;
         }
 
@@ -762,7 +906,9 @@ export default function HomePage() {
           .heroVisual {
             left: 0;
             right: 0;
-            opacity: 0.28;
+            opacity: 0.34;
+            mask-image: none;
+            -webkit-mask-image: none;
           }
 
           .signature {
@@ -787,7 +933,9 @@ export default function HomePage() {
 
       <section className="hero">
         <div className="heroVisual" />
-        <div className="signature">Con el ingeniero<strong>Alejandro Finol</strong></div>
+        <div className="signature">
+          Con el ingeniero<strong>Alejandro Finol</strong>
+        </div>
         <div className="heroCopy">
           <nav className="nav" style={{ marginBottom: 36 }}>
             <a href="#">Inicio</a>
@@ -799,32 +947,55 @@ export default function HomePage() {
             <a href="#">Sobre mí</a>
           </nav>
 
-          <div className="pill">SEMINARIO INTENSIVO EN VIVO <span className="redDot" /></div>
+          <div className="pill">
+            SEMINARIO INTENSIVO EN VIVO <span className="redDot" />
+          </div>
           <h1>
-            Aprende a invertir en <span className="blueText">opciones financieras</span> en la bolsa de <span className="blueText">New York</span>
+            Aprende a invertir en{" "}
+            <span className="blueText">opciones financieras</span> en la bolsa
+            de <span className="blueText">New York</span>
           </h1>
           <p className="heroText">
-            Seminario Intensivo en Vivo de Inversiones en la Bolsa de Wall Street. Acceso exclusivo a operaciones reales en vivo, estrategias profesionales, clases en directo, grabaciones, biblioteca y chat privado.
+            Seminario Intensivo en Vivo de Inversiones en la Bolsa de Wall
+            Street. Acceso exclusivo a operaciones reales en vivo, estrategias
+            profesionales, clases en directo, grabaciones, biblioteca y chat
+            privado.
           </p>
 
-          {paid && <div className="statusPaid">✅ Pago procesado correctamente. Tu acceso al portal se activará el día del seminario intensivo.</div>}
-          {canceled && <div className="statusCanceled">❌ El pago fue cancelado. Puedes intentarlo nuevamente cuando lo desees.</div>}
+          {paid && (
+            <div className="statusPaid">
+              ✅ Pago procesado correctamente. Tu acceso al portal se activará
+              el día del seminario intensivo.
+            </div>
+          )}
+          {canceled && (
+            <div className="statusCanceled">
+              ❌ El pago fue cancelado. Puedes intentarlo nuevamente cuando lo
+              desees.
+            </div>
+          )}
 
           <div className="heroActions">
-            <Link href={user ? '/dashboard' : '/signup'} className="btnBlue">ENTRAR AL PORTAL →</Link>
-            <a href="#planes" className="btnGhost">VER PLANES DE ACCESO</a>
+            <Link href={user ? "/dashboard" : "/signup"} className="btnBlue">
+              ENTRAR AL PORTAL →
+            </Link>
+            <a href="#planes" className="btnGhost">
+              VER PLANES DE ACCESO
+            </a>
           </div>
 
           <p
             className="accessState"
             style={{
               color: accessActive
-                ? 'rgba(34, 255, 130, 0.95)'
-                : accessPlan === 'INTENSIVE_TWO_DAY' && classesRemaining !== null && classesRemaining > 0
-                  ? 'rgba(253, 224, 71, 0.98)'
+                ? "rgba(34, 255, 130, 0.95)"
+                : accessPlan === "INTENSIVE_TWO_DAY" &&
+                    classesRemaining !== null &&
+                    classesRemaining > 0
+                  ? "rgba(253, 224, 71, 0.98)"
                   : classesRemaining === 0
-                    ? 'rgba(252, 165, 165, 0.98)'
-                    : 'rgba(34, 255, 130, 0.95)',
+                    ? "rgba(252, 165, 165, 0.98)"
+                    : "rgba(34, 255, 130, 0.95)",
             }}
           >
             <span className="greenDot" /> {accessMessage}
@@ -833,13 +1004,43 @@ export default function HomePage() {
 
         <aside className="seminarPanel">
           <div className="seminarOverline">Próximo seminario en vivo</div>
-          <div className="seminarDate">20 y 21<br />de Junio</div>
-          <div className="seminarTime">◷ <span>12:00 pm<br />Hora de NY</span></div>
+          <div className="seminarDate">
+            20 y 21
+            <br />
+            de Junio
+          </div>
+          <div className="seminarTime">
+            ◷{" "}
+            <span>
+              12:00 pm
+              <br />
+              Hora de NY
+            </span>
+          </div>
           <div className="bullStage" />
-          <div className="seminarTitle">Wall Street<br />Options<br />Intensive</div>
+          <div className="seminarTitle">
+            Wall Street
+            <br />
+            Options
+            <br />
+            Intensive
+          </div>
           <div className="seminarPrice">US$500</div>
-          <Link href={intensiveCheckoutHref(user)} className="btnBlue" style={{ width: '100%', maxWidth: 300 }}>RESERVAR MI CUPO →</Link>
-          <div className="included">🎁 <span>INCLUYE 5 DÍAS GRATIS<br />DE ACCESO A OPERACIONES EN VIVO</span></div>
+          <Link
+            href={intensiveCheckoutHref(user)}
+            className="btnBlue"
+            style={{ width: "100%", maxWidth: 300 }}
+          >
+            RESERVAR MI CUPO →
+          </Link>
+          <div className="included">
+            🎁{" "}
+            <span>
+              INCLUYE 5 DÍAS GRATIS
+              <br />
+              DE ACCESO A OPERACIONES EN VIVO
+            </span>
+          </div>
         </aside>
       </section>
 
@@ -847,25 +1048,33 @@ export default function HomePage() {
         <h2 className="planTitle">ELIGE TU PLAN DE ACCESO</h2>
         <div className="plansGrid">
           {plans.map((plan) => (
-            <div key={plan.id} className={`planCard ${plan.featured ? 'featured' : ''}`}>
-              {plan.featured && <div className="featuredBadge">★ MÁS ELEGIDO</div>}
+            <div
+              key={plan.id}
+              className={`planCard ${plan.featured ? "featured" : ""}`}
+            >
+              {plan.featured && (
+                <div className="featuredBadge">★ MÁS ELEGIDO</div>
+              )}
               <div className="planDays">{plan.days}</div>
               <div className="planSub">HÁBILES DE MERCADO</div>
               <div className="planPrice">{plan.price}</div>
               <div className="planNote">{plan.note}</div>
               <ul className="planBullets">
                 {plan.bullets.map((bullet) => (
-                  <li key={bullet}><span className="check">✓</span><span>{bullet}</span></li>
+                  <li key={bullet}>
+                    <span className="check">✓</span>
+                    <span>{bullet}</span>
+                  </li>
                 ))}
               </ul>
               <Link
                 href={
                   user
                     ? `/checkout-confirm?subscriptionPriceKey=${encodeURIComponent(plan.priceKey)}&oneTimePriceKey=${encodeURIComponent(plan.oneTimePriceKey)}&title=${encodeURIComponent(plan.title)}&price=${encodeURIComponent(plan.price)}`
-                    : '/signup'
+                    : "/signup"
                 }
-                className={plan.featured ? 'btnBlue' : 'btnDark'}
-                style={{ width: '100%' }}
+                className={plan.featured ? "btnBlue" : "btnDark"}
+                style={{ width: "100%" }}
               >
                 ELEGIR PLAN
               </Link>
@@ -897,7 +1106,9 @@ export default function HomePage() {
       </section>
 
       <section id="resultados" className="sectionWrap">
-        <h2 className="outcomesTitle">¿QUÉ SERÁS CAPAZ DE HACER DESPUÉS DEL SEMINARIO?</h2>
+        <h2 className="outcomesTitle">
+          ¿QUÉ SERÁS CAPAZ DE HACER DESPUÉS DEL SEMINARIO?
+        </h2>
         <div className="outcomesGrid">
           {outcomeItems.map((item, index) => (
             <div key={`${item.text}-${index}`} className="outcomeCard">
@@ -911,7 +1122,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      <div className="support">Soporte: Escríbenos a Lead@leadacademy.com.ve · WhatsApp: +1 786 620 4377</div>
+      <div className="support">
+        Soporte: Escríbenos a Lead@leadacademy.com.ve · WhatsApp: +1 786 620
+        4377
+      </div>
     </main>
-  )
+  );
 }
