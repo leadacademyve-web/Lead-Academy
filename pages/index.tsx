@@ -611,8 +611,8 @@ export default function HomePage() {
             url("/wall-street-bull.jpg");
           background-size: cover;
           background-position: center;
-          opacity: 0.24;
-          filter: saturate(0.98) contrast(1.03) brightness(0.86) blur(0.2px);
+          opacity: 0.42;
+          filter: saturate(1.05) contrast(1.08) brightness(0.95);
           mask-image: radial-gradient(
             ellipse at 56% 60%,
             black 0%,
@@ -663,11 +663,12 @@ export default function HomePage() {
         }
 
         .seminarTitle {
-          font-size: 26px;
-          line-height: 1.08;
+          font-size: 24px;
+          line-height: 1.15;
           font-weight: 900;
           text-transform: uppercase;
           margin-bottom: 22px;
+          max-width: 300px;
         }
 
         .seminarPrice {
@@ -1049,11 +1050,9 @@ export default function HomePage() {
           </div>
           <div className="bullStage" />
           <div className="seminarTitle">
-            Wall Street
+            Seminario Intensivo
             <br />
-            Options
-            <br />
-            Intensive
+            de Opciones Financieras
           </div>
           <div className="seminarPrice">US$500</div>
           <Link
