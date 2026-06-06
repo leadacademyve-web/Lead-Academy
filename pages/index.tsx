@@ -371,16 +371,21 @@ export default function HomePage() {
           background:
             linear-gradient(
               90deg,
-              rgba(1, 7, 20, 0.95) 0%,
-              rgba(1, 7, 20, 0.82) 23%,
-              rgba(2, 8, 23, 0.22) 44%,
-              rgba(2, 8, 23, 0.46) 73%,
+              rgba(1, 7, 20, 0.96) 0%,
+              rgba(1, 7, 20, 0.82) 22%,
+              rgba(2, 8, 23, 0.18) 43%,
+              rgba(2, 8, 23, 0.30) 66%,
               rgba(2, 8, 23, 0.88) 100%
             ),
             radial-gradient(
-              circle at 60% 36%,
-              rgba(0, 145, 255, 0.30),
-              transparent 38%
+              circle at 58% 36%,
+              rgba(0, 145, 255, 0.34),
+              transparent 40%
+            ),
+            radial-gradient(
+              circle at 83% 42%,
+              rgba(0, 145, 255, 0.18),
+              transparent 30%
             );
           z-index: 1;
         }
@@ -403,34 +408,34 @@ export default function HomePage() {
         .heroVisual {
           position: absolute;
           z-index: 2;
-          left: 53%;
-          top: 82px;
-          width: min(1260px, 66vw);
-          height: 620px;
+          left: 58%;
+          top: 58px;
+          width: min(1500px, 82vw);
+          height: 675px;
           transform: translateX(-50%);
           background: url("/alejandro-finol-nyse.jpg");
           background-size: cover;
-          background-position: 48% center;
-          filter: saturate(1.08) contrast(1.04) brightness(1.16);
+          background-position: 50% center;
+          filter: saturate(1.05) contrast(1.02) brightness(1.08);
           opacity: 1;
           pointer-events: none;
           border: 0;
           box-shadow: none;
           mask-image: radial-gradient(
-            ellipse at 49% 54%,
+            ellipse at 47% 52%,
             black 0%,
-            black 44%,
-            rgba(0, 0, 0, 0.78) 60%,
-            rgba(0, 0, 0, 0.34) 76%,
-            transparent 92%
+            black 50%,
+            rgba(0, 0, 0, 0.78) 66%,
+            rgba(0, 0, 0, 0.30) 82%,
+            transparent 97%
           );
           -webkit-mask-image: radial-gradient(
-            ellipse at 49% 54%,
+            ellipse at 47% 52%,
             black 0%,
-            black 44%,
-            rgba(0, 0, 0, 0.78) 60%,
-            rgba(0, 0, 0, 0.34) 76%,
-            transparent 92%
+            black 50%,
+            rgba(0, 0, 0, 0.78) 66%,
+            rgba(0, 0, 0, 0.30) 82%,
+            transparent 97%
           );
         }
 
@@ -444,8 +449,8 @@ export default function HomePage() {
 
         .heroVisual::before {
           background:
-            linear-gradient(180deg, rgba(1, 7, 20, 0.20) 0%, transparent 24%, transparent 70%, rgba(1, 7, 20, 0.68) 100%),
-            linear-gradient(90deg, rgba(1, 7, 20, 0.74) 0%, transparent 20%, transparent 78%, rgba(1, 7, 20, 0.72) 100%);
+            linear-gradient(180deg, rgba(1, 7, 20, 0.10) 0%, transparent 18%, transparent 72%, rgba(1, 7, 20, 0.72) 100%),
+            linear-gradient(90deg, rgba(1, 7, 20, 0.82) 0%, rgba(1, 7, 20, 0.34) 16%, transparent 34%, transparent 78%, rgba(1, 7, 20, 0.78) 100%);
         }
 
         .heroVisual::after {
@@ -583,51 +588,52 @@ export default function HomePage() {
           align-items: flex-start;
           overflow: visible;
           isolation: isolate;
-          margin-left: -18px;
+          margin-left: -55px;
+          text-shadow: 0 3px 18px rgba(0, 0, 0, 0.72);
         }
 
         .seminarPanel::before {
           content: "";
           position: absolute;
-          right: -70px;
-          top: 96px;
-          width: 620px;
-          height: 480px;
+          right: -210px;
+          top: 28px;
+          width: 850px;
+          height: 610px;
           background:
             linear-gradient(
               90deg,
-              rgba(1, 7, 20, 0.52) 0%,
-              rgba(1, 7, 20, 0.08) 25%,
+              rgba(1, 7, 20, 0.68) 0%,
+              rgba(1, 7, 20, 0.18) 23%,
               rgba(1, 7, 20, 0.00) 58%,
-              rgba(1, 7, 20, 0.50) 100%
+              rgba(1, 7, 20, 0.38) 100%
             ),
             linear-gradient(
               180deg,
-              rgba(1, 7, 20, 0.36) 0%,
-              rgba(1, 7, 20, 0.02) 24%,
-              rgba(1, 7, 20, 0.04) 60%,
-              rgba(1, 7, 20, 0.58) 100%
+              rgba(1, 7, 20, 0.32) 0%,
+              rgba(1, 7, 20, 0.00) 22%,
+              rgba(1, 7, 20, 0.02) 64%,
+              rgba(1, 7, 20, 0.62) 100%
             ),
             url("/wall-street-bull.jpg");
           background-size: cover;
           background-position: center 46%;
-          opacity: 0.96;
-          filter: saturate(1.22) contrast(1.16) brightness(1.22);
+          opacity: 1;
+          filter: saturate(1.24) contrast(1.14) brightness(1.16);
           mask-image: radial-gradient(
-            ellipse at 52% 48%,
+            ellipse at 58% 50%,
             black 0%,
-            black 48%,
-            rgba(0, 0, 0, 0.72) 64%,
-            rgba(0, 0, 0, 0.30) 78%,
-            transparent 92%
+            black 54%,
+            rgba(0, 0, 0, 0.72) 70%,
+            rgba(0, 0, 0, 0.26) 84%,
+            transparent 96%
           );
           -webkit-mask-image: radial-gradient(
-            ellipse at 52% 48%,
+            ellipse at 58% 50%,
             black 0%,
-            black 48%,
-            rgba(0, 0, 0, 0.72) 64%,
-            rgba(0, 0, 0, 0.30) 78%,
-            transparent 92%
+            black 54%,
+            rgba(0, 0, 0, 0.72) 70%,
+            rgba(0, 0, 0, 0.26) 84%,
+            transparent 96%
           );
           z-index: -1;
           pointer-events: none;
@@ -673,10 +679,10 @@ export default function HomePage() {
 
         .seminarPrice {
           color: #1499ff;
-          font-size: 40px;
+          font-size: 46px;
           font-weight: 900;
           margin-bottom: 20px;
-          text-shadow: 0 0 28px rgba(0, 140, 255, 0.48);
+          text-shadow: 0 0 30px rgba(0, 140, 255, 0.54);
         }
 
         .included {
