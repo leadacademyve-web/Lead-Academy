@@ -16,8 +16,7 @@ const plans = [
     priceKey: "NEXT_PUBLIC_STRIPE_PRICE_WEEKLY",
     oneTimePriceKey: "NEXT_PUBLIC_STRIPE_PRICE_WEEKLY_ONE_TIME",
     bullets: [
-      "Clases en vivo",
-      "Operaciones en vivo",
+      "Clases y operaciones en vivo",
       "Repeticiones y chat en vivo",
       "Biblioteca de recursos",
       "Pago único por 5 días de acceso",
@@ -33,8 +32,7 @@ const plans = [
     priceKey: "NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS",
     oneTimePriceKey: "NEXT_PUBLIC_STRIPE_PRICE_TWO_WEEKS_ONE_TIME",
     bullets: [
-      "Clases en vivo",
-      "Operaciones en vivo",
+      "Clases y operaciones en vivo",
       "Repeticiones y chat en vivo",
       "Biblioteca de recursos",
       "Descuento por 10 días de acceso",
@@ -51,8 +49,7 @@ const plans = [
     oneTimePriceKey: "NEXT_PUBLIC_STRIPE_PRICE_FOUR_WEEKS_ONE_TIME",
     featured: true,
     bullets: [
-      "Clases en vivo",
-      "Operaciones en vivo",
+      "Clases y operaciones en vivo",
       "Repeticiones y chat en vivo",
       "Biblioteca de recursos",
       "Mejor descuento por 20 días de acceso",
@@ -62,33 +59,33 @@ const plans = [
 
 const portalItems = [
   {
-    icon: "▣",
+    icon: "📡",
     title: "OPERACIONES EN VIVO",
     text: "Acompaña cada operación en tiempo real",
     badge: "LIVE",
   },
   {
-    icon: "▶",
+    icon: "▶️",
     title: "REPETICIONES GRABADAS",
     text: "Accede a todas las clases y operaciones",
   },
   {
-    icon: "▥",
+    icon: "📈",
     title: "ESTRATEGIAS PROBADAS",
     text: "Métodos profesionales aplicados en el mercado real",
   },
   {
-    icon: "▤",
+    icon: "📊",
     title: "EARNINGS REPORTS",
     text: "Análisis antes y después de los reportes",
   },
   {
-    icon: "◈",
+    icon: "🛡️",
     title: "GESTIÓN DE RIESGO",
     text: "Aprende a proteger tu capital con reglas claras",
   },
   {
-    icon: "◉",
+    icon: "💬",
     title: "BIBLIOTECA DE VIDEOS, DOCUMENTOS, INSTRUCTIVOS Y CHAT LIVE",
     text: "Interactúa con el instructor y la comunidad",
   },
@@ -101,22 +98,22 @@ const portalItems = [
 
 const outcomeItems = [
   {
-    icon: "↗",
-    text: "Serás capaz de duplicar tu cuenta bancaria en tu primer mes de inversiones real.",
+    icon: "🚀",
+    text: "Serás capaz de duplicar tu cuenta bancaria en tu primer mes de inversiones real o MUCHO MAS !.",
   },
   {
-    icon: "◎",
+    icon: "🎯",
     text: "Identificar el momento preciso de compra y venta para tomar importantes rentabilidades.",
   },
   {
     icon: "🏦",
-    text: "Abrir tu cuenta bancaria en $ en EEUU para inversiones en la bolsa, uso personal o de negocios.",
+    text: "Abrir tu cuenta bancaria en dólares en EEUU para inversiones en la bolsa, uso personal o de negocios.",
   },
   {
-    icon: "◌",
+    icon: "📡",
     text: "Operaciones en vivo todos los días como acompañamiento para que mires los resultados incluso antes de empezar a operar.",
   },
-  { icon: "🎯", title: "100%", text: "Enfoque práctico" },
+  { icon: "🎯", title: "100%", text: "Enfoque práctico con predicciones de movimientos" },
   { icon: "NYSE", title: "NYSE", text: "Operamos en la bolsa de New York" },
 ];
 
@@ -421,7 +418,16 @@ export default function HomePage() {
           box-shadow: 0 0 38px rgba(0, 140, 255, 0.38);
         }
 
-        .btnGhost,
+        .btnGhost {
+          color: #fff;
+          background: rgba(7, 15, 31, 0.62);
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 10px 24px rgba(0, 0, 0, 0.18);
+          backdrop-filter: blur(8px);
+        }
+
         .btnDark {
           color: #fff;
           background: rgba(7, 15, 31, 0.62);
@@ -435,6 +441,54 @@ export default function HomePage() {
           transform: translateY(-2px);
         }
 
+        .btnGhost:hover {
+          border-color: rgba(255, 255, 255, 0.36);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.10),
+            0 14px 32px rgba(0, 0, 0, 0.30);
+        }
+
+
+        .heroActions .btnGhost,
+        .seminarPanel .btnGhost {
+          color: #fff;
+          background: rgba(7, 15, 31, 0.62);
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 10px 24px rgba(0, 0, 0, 0.18);
+          backdrop-filter: blur(8px);
+        }
+
+        .heroActions .btnGhost:hover,
+        .seminarPanel .btnGhost:hover {
+          transform: translateY(-2px);
+          border-color: rgba(255, 255, 255, 0.36);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.10),
+            0 14px 32px rgba(0, 0, 0, 0.30);
+        }
+
+        .planChooseButton {
+          width: 100%;
+          justify-content: center;
+          color: #fff !important;
+          background: rgba(7, 15, 31, 0.62) !important;
+          border: 1px solid rgba(255, 255, 255, 0.22) !important;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 10px 24px rgba(0, 0, 0, 0.18) !important;
+          backdrop-filter: blur(8px);
+        }
+
+        .planChooseButton:hover {
+          transform: translateY(-2px);
+          border-color: rgba(255, 255, 255, 0.36) !important;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.10),
+            0 14px 32px rgba(0, 0, 0, 0.30) !important;
+        }
+
         .hero {
           min-height: 790px;
           position: relative;
@@ -442,7 +496,7 @@ export default function HomePage() {
           grid-template-columns: minmax(520px, 0.40fr) minmax(460px, 0.35fr) minmax(330px, 0.25fr);
           gap: 28px;
           align-items: center;
-          padding: 42px 42px 34px;
+          padding: 42px 42px 42px;
           overflow: hidden;
           background:
             linear-gradient(
@@ -491,10 +545,10 @@ export default function HomePage() {
           inset: 0;
           background: linear-gradient(
             180deg,
-            rgba(1, 7, 20, 0.12) 0%,
+            rgba(1, 7, 20, 0.06) 0%,
             transparent 22%,
-            rgba(1, 7, 20, 0.16) 62%,
-            rgba(1, 7, 20, 0.98) 100%
+            rgba(1, 7, 20, 0.10) 62%,
+            rgba(1, 7, 20, 0.50) 100%
           );
           pointer-events: none;
           z-index: 3;
@@ -603,8 +657,8 @@ export default function HomePage() {
 
         .signature {
           position: absolute;
-          left: 51.8%;
-          bottom: 72px;
+          left: 35%;
+          bottom: 40px;
           text-align: right;
           font-size: 17px;
           color: rgba(255, 255, 255, 0.9);
@@ -630,7 +684,7 @@ export default function HomePage() {
           align-items: flex-start;
           overflow: visible;
           isolation: isolate;
-          margin-left: -12px;
+          margin-left: -180px;
           text-shadow: 0 3px 18px rgba(0, 0, 0, 0.72);
         }
 
@@ -830,17 +884,32 @@ export default function HomePage() {
         .portalCard,
         .outcomeCard {
           min-height: 172px;
-          border-radius: 14px;
-          background: linear-gradient(
-            180deg,
-            rgba(5, 16, 35, 0.84),
-            rgba(2, 8, 23, 0.7)
-          );
-          border: 1px solid rgba(255, 184, 18, 0.22);
-          padding: 20px 16px;
+          border-radius: 18px;
+          background:
+            linear-gradient(180deg, rgba(8, 24, 52, 0.82), rgba(2, 8, 23, 0.74)),
+            radial-gradient(circle at 50% 0%, rgba(0, 145, 255, 0.16), transparent 58%);
+          border: 1px solid rgba(0, 145, 255, 0.18);
+          padding: 22px 18px;
           text-align: center;
           position: relative;
           overflow: hidden;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 18px 40px rgba(0, 0, 0, 0.18);
+          transition:
+            transform 0.22s ease,
+            border-color 0.22s ease,
+            box-shadow 0.22s ease;
+        }
+
+        .portalCard:hover,
+        .outcomeCard:hover {
+          transform: translateY(-6px);
+          border-color: rgba(0, 145, 255, 0.48);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.10),
+            0 22px 52px rgba(0, 0, 0, 0.30),
+            0 0 34px rgba(0, 145, 255, 0.20);
         }
 
         .portalCard::before,
@@ -848,12 +917,15 @@ export default function HomePage() {
           content: "";
           position: absolute;
           inset: 0;
-          background: radial-gradient(
-            circle at 50% 0%,
-            rgba(0, 145, 255, 0.18),
-            transparent 55%
-          );
-          opacity: 0.85;
+          background:
+            linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.06) 42%, transparent 70%);
+          opacity: 0;
+          transition: opacity 0.22s ease;
+        }
+
+        .portalCard:hover::before,
+        .outcomeCard:hover::before {
+          opacity: 1;
         }
 
         .cardContent {
@@ -863,15 +935,24 @@ export default function HomePage() {
 
         .portalIcon,
         .outcomeIcon {
-          height: 48px;
+          width: 58px;
+          height: 58px;
+          margin: 0 auto 18px;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #169dff;
-          font-size: 33px;
+          border-radius: 18px;
+          color: #23a8ff;
+          font-size: 30px;
           font-weight: 900;
-          margin-bottom: 14px;
-          text-shadow: 0 0 26px rgba(0, 145, 255, 0.75);
+          background:
+            linear-gradient(180deg, rgba(0, 145, 255, 0.18), rgba(0, 74, 173, 0.08)),
+            rgba(4, 18, 42, 0.62);
+          border: 1px solid rgba(0, 165, 255, 0.34);
+          box-shadow:
+            0 0 30px rgba(0, 145, 255, 0.22),
+            inset 0 1px 0 rgba(255, 255, 255, 0.10);
+          text-shadow: 0 0 22px rgba(0, 145, 255, 0.75);
         }
 
         .portalCard h3 {
@@ -893,12 +974,13 @@ export default function HomePage() {
           left: 14px;
           top: 14px;
           z-index: 3;
-          background: #ff2937;
+          background: linear-gradient(135deg, #ff2937, #ff5a66);
           color: #fff;
-          border-radius: 6px;
-          padding: 4px 8px;
+          border-radius: 8px;
+          padding: 5px 9px;
           font-size: 12px;
           font-weight: 900;
+          box-shadow: 0 0 22px rgba(255, 41, 55, 0.45);
         }
 
         .outcomesGrid {
@@ -953,13 +1035,13 @@ export default function HomePage() {
       <section className="hero">
         <div className="heroCopy">
           <nav className="nav" style={{ marginBottom: 36 }}>
-            <span>Inicio</span>
-            <span>Cursos</span>
-            <span>Planes</span>
-            <span>Operaciones en vivo</span>
-            <span>Resultados</span>
-            <span>Recursos</span>
-            <span>Sobre mí</span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
           </nav>
 
           <div className="pill">
@@ -991,8 +1073,8 @@ export default function HomePage() {
           )}
 
           <div className="heroActions">
-            <Link href={user ? "/dashboard" : "/signup"} className="btnBlue">
-              ENTRAR AL PORTAL →
+            <Link href={user ? "/dashboard" : "/signup"} legacyBehavior>
+              <a className="btnGhost">ENTRAR AL PORTAL</a>
             </Link>
             <a href="#planes" className="btnGhost">
               VER PLANES DE ACCESO
@@ -1047,12 +1129,8 @@ export default function HomePage() {
             de Opciones Financieras
           </div>
           <div className="seminarPrice">US$500</div>
-          <Link
-            href={intensiveCheckoutHref(user)}
-            className="btnBlue"
-            style={{ width: "100%", maxWidth: 300 }}
-          >
-            RESERVAR MI CUPO →
+          <Link href={intensiveCheckoutHref(user)} legacyBehavior>
+            <a className="btnGhost">RESERVAR MI CUPO →</a>
           </Link>
           <div className="included">
             🎁{" "}
@@ -1066,7 +1144,7 @@ export default function HomePage() {
       </section>
 
       <section id="planes" className="sectionWrap">
-        <h2 className="planTitle">ELIGE TU PLAN DE ACCESO</h2>
+        <h2 className="planTitle">Planes de acceso a operaciones en vivo (quienes hayan tomado el seminario)</h2>
         <div className="plansGrid">
           {plans.map((plan) => (
             <div
@@ -1094,10 +1172,9 @@ export default function HomePage() {
                     ? `/checkout-confirm?subscriptionPriceKey=${encodeURIComponent(plan.priceKey)}&oneTimePriceKey=${encodeURIComponent(plan.oneTimePriceKey)}&title=${encodeURIComponent(plan.title)}&price=${encodeURIComponent(plan.price)}`
                     : "/signup"
                 }
-                className={plan.featured ? "btnBlue" : "btnDark"}
-                style={{ width: "100%" }}
+                legacyBehavior
               >
-                ELEGIR PLAN
+                <a className="btnGhost planChooseButton">ELEGIR PLAN</a>
               </Link>
             </div>
           ))}
@@ -1106,7 +1183,7 @@ export default function HomePage() {
         <div className="trustRow">
           <span>ϟ Acceso inmediato</span>
           <span>▱ Pago seguro</span>
-          <span>◉ Sin contratos, sin letras pequeñas</span>
+          <span>◉ Pago unico o suscripción</span>
         </div>
       </section>
 
