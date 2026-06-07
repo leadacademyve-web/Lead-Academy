@@ -56,7 +56,7 @@ export const COUNTRY_OPTIONS: CountryOption[] = [
   { code: '+421', label: 'Eslovaquia (+421)', placeholder: '912123456' },
   { code: '+386', label: 'Eslovenia (+386)', placeholder: '31234567' },
   { code: '+34', label: 'España (+34)', placeholder: '612345678' },
-  { code: '+1', label: 'EEUU - Canada (+1)', placeholder: '7865551816' },
+  { code: '+1', label: 'EEUU - Canada (+1)', placeholder: '7865571816' },
   { code: '+372', label: 'Estonia (+372)', placeholder: '51234567' },
   { code: '+251', label: 'Etiopía (+251)', placeholder: '911234567' },
   { code: '+63', label: 'Filipinas (+63)', placeholder: '9171234567' },
