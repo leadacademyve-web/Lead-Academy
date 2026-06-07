@@ -128,8 +128,7 @@ export default function LoginPage() {
 
           <div className="auth-security-note">
             <span>▱</span>
-            <p>
-              Tu información está protegida dentro del portal privado de Lead Academy.
+            <p>Tu información está protegida dentro del portal privado de Lead Academy.
             </p>
           </div>
         </div>
@@ -141,7 +140,7 @@ export default function LoginPage() {
           <div className="auth-image-shade" />
           <div className="auth-image-overlay">
             <strong>Operaciones en vivo</strong>
-            <span>NYSE • NASDAQ • S&amp;P500 • RUSSELL • DOW JONES • OPCIONES CALL Y PUT</span>
+            <span>NYSE • NASDAQ • S&amp;P500 • RUSSELL • DOW JONES • OPCIONES</span>
           </div>
         </div>
       </section>
