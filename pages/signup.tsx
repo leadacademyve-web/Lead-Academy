@@ -96,35 +96,47 @@ export default function SignupPage() {
   return (
     <main className="auth-wrap auth-wrap-premium">
       <section className="auth-premium-card">
-        <div className="auth-premium-form">
-          <div className="auth-brand-block">
-            <img
-              src="/Logo.png"
-              alt="Lead Academy"
-              className="auth-logo-image"
+        <div className="auth-premium-form" style={{ paddingTop: 34, paddingBottom: 34 }}>
+          <div className="auth-brand-block" style={{ marginBottom: 18 }}>
+            <div
               style={{
-                width: 58,
-                height: 58,
-                objectFit: 'contain',
-                display: 'block',
+                width: 92,
+                height: 72,
+                flex: '0 0 92px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
-            />
+            >
+              <img
+                src="/Logo.png"
+                alt="Lead Academy"
+                className="auth-logo-image"
+                style={{
+                  width: 150,
+                  height: 150,
+                  objectFit: 'contain',
+                  display: 'block',
+                }}
+              />
+            </div>
             <div>
               <div className="auth-brand-title">Lead Academy Corporation</div>
               <div className="auth-brand-sub">Trading &amp; Investing</div>
             </div>
           </div>
 
-          <h1>Crear cuenta</h1>
-          <p className="helper">
+          <h1 style={{ marginBottom: 14 }}>Crear cuenta</h1>
+          <p className="helper" style={{ marginBottom: 0 }}>
             Tu acceso al portal se activará cuando tu suscripción esté activa.
           </p>
 
-          <form onSubmit={onSubmit}>
-            <label className="label">
+          <form onSubmit={onSubmit} style={{ marginTop: 22 }}>
+            <label className="label" style={{ marginBottom: 12, gap: 8 }}>
               Nombre completo
               <input
                 className="input"
+                style={{ minHeight: 48 }}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 autoComplete="name"
@@ -132,11 +144,12 @@ export default function SignupPage() {
               />
             </label>
 
-            <label className="label">
+            <label className="label" style={{ marginBottom: 12, gap: 8 }}>
               Número telefónico
-              <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 10 }}>
                 <select
                   className="input"
+                  style={{ minHeight: 48 }}
                   value={countryCode}
                   onChange={(e) => setCountryCode(e.target.value)}
                   aria-label="Código de país"
@@ -150,6 +163,7 @@ export default function SignupPage() {
 
                 <input
                   className="input"
+                  style={{ minHeight: 48 }}
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/[^\d]/g, ''))}
@@ -164,10 +178,11 @@ export default function SignupPage() {
               </p>
             </label>
 
-            <label className="label">
+            <label className="label" style={{ marginBottom: 12, gap: 8 }}>
               Correo electrónico
               <input
                 className="input"
+                style={{ minHeight: 48 }}
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -176,32 +191,36 @@ export default function SignupPage() {
               />
             </label>
 
-            <label className="label">
-              Contraseña
-              <input
-                className="input"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
-                required
-              />
-            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <label className="label" style={{ marginBottom: 12, gap: 8 }}>
+                Contraseña
+                <input
+                  className="input"
+                  style={{ minHeight: 48 }}
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  required
+                />
+              </label>
 
-            <label className="label">
-              Confirmar contraseña
-              <input
-                className="input"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                autoComplete="new-password"
-                required
-              />
-            </label>
+              <label className="label" style={{ marginBottom: 12, gap: 8 }}>
+                Confirmar contraseña
+                <input
+                  className="input"
+                  style={{ minHeight: 48 }}
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                  required
+                />
+              </label>
+            </div>
 
-            <div className="auth-premium-actions">
-              <button className="btn btn-primary auth-main-button" disabled={loading} type="submit">
+            <div className="auth-premium-actions" style={{ marginTop: 16, gap: 10 }}>
+              <button className="btn btn-primary auth-main-button" style={{ minHeight: 54 }} disabled={loading} type="submit">
                 {loading ? 'Creando...' : 'Crear cuenta'}
               </button>
 
