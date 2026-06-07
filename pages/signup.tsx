@@ -99,7 +99,7 @@ export default function SignupPage() {
         <div className="auth-premium-form">
           <div className="auth-brand-block">
             <img
-              public="/logo.png"
+              src="/logo.png"
               alt="Lead Academy"
               className="auth-logo-image"
               style={{
