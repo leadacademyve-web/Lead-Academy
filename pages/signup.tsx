@@ -94,103 +94,140 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="auth-wrap">
-      <div className="auth-card">
-        <h1>Crear cuenta</h1>
-        <p className="helper">Tu acceso al portal se activará cuando tu suscripción esté activa.</p>
-
-        <form onSubmit={onSubmit}>
-          <label className="label">
-            Nombre completo
-            <input
-              className="input"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              autoComplete="name"
-              required
+    <main className="auth-wrap auth-wrap-premium">
+      <section className="auth-premium-card">
+        <div className="auth-premium-form">
+          <div className="auth-brand-block">
+            <img
+              src="/logo.png"
+              alt="Lead Academy"
+              className="auth-logo-image"
+              style={{
+                width: 58,
+                height: 58,
+                objectFit: 'contain',
+                display: 'block',
+              }}
             />
-          </label>
-
-          <label className="label">
-            Número telefónico
-            <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 10 }}>
-              <select
-                className="input"
-                value={countryCode}
-                onChange={(e) => setCountryCode(e.target.value)}
-                aria-label="Código de país"
-              >
-                {COUNTRY_OPTIONS.map((option) => (
-                  <option key={option.code} value={option.code}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                className="input"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/[^\d]/g, ''))}
-                autoComplete="tel-national"
-                inputMode="numeric"
-                placeholder={selectedCountry.placeholder}
-                required
-              />
+            <div>
+              <div className="auth-brand-title">Lead Academy Corporation</div>
+              <div className="auth-brand-sub">Trading &amp; Investing</div>
             </div>
-            <p className="helper" style={{ marginTop: 8, marginBottom: 0 }}>
-              Se guardará en formato internacional, por ejemplo: {selectedCountry.code}{selectedCountry.placeholder}
-            </p>
-          </label>
-
-          <label className="label">
-            Correo electrónico
-            <input
-              className="input"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
-          </label>
-
-          <label className="label">
-            Contraseña
-            <input
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-              required
-            />
-          </label>
-
-          <label className="label">
-            Confirmar contraseña
-            <input
-              className="input"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              autoComplete="new-password"
-              required
-            />
-          </label>
-
-          <div className="actions">
-            <button className="btn btn-primary" disabled={loading} type="submit">
-              {loading ? 'Creando...' : 'Crear cuenta'}
-            </button>
-            <Link href="/login" className="btn btn-secondary">Ya tengo cuenta</Link>
-            <Link href="/" className="btn btn-ghost">Inicio</Link>
           </div>
 
-          {error && <p className="error">{error}</p>}
-          {success && <p className="success">{success}</p>}
-        </form>
-      </div>
+          <h1>Crear cuenta</h1>
+          <p className="helper">
+            Tu acceso al portal se activará cuando tu suscripción esté activa.
+          </p>
+
+          <form onSubmit={onSubmit}>
+            <label className="label">
+              Nombre completo
+              <input
+                className="input"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                autoComplete="name"
+                required
+              />
+            </label>
+
+            <label className="label">
+              Número telefónico
+              <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 10 }}>
+                <select
+                  className="input"
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  aria-label="Código de país"
+                >
+                  {COUNTRY_OPTIONS.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  className="input"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/[^\d]/g, ''))}
+                  autoComplete="tel-national"
+                  inputMode="numeric"
+                  placeholder={selectedCountry.placeholder}
+                  required
+                />
+              </div>
+              <p className="helper" style={{ marginTop: 8, marginBottom: 0 }}>
+                Se guardará en formato internacional, por ejemplo: {selectedCountry.code}{selectedCountry.placeholder}
+              </p>
+            </label>
+
+            <label className="label">
+              Correo electrónico
+              <input
+                className="input"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+              />
+            </label>
+
+            <label className="label">
+              Contraseña
+              <input
+                className="input"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+              />
+            </label>
+
+            <label className="label">
+              Confirmar contraseña
+              <input
+                className="input"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+              />
+            </label>
+
+            <div className="auth-premium-actions">
+              <button className="btn btn-primary auth-main-button" disabled={loading} type="submit">
+                {loading ? 'Creando...' : 'Crear cuenta'}
+              </button>
+
+              <div className="auth-secondary-row">
+                <Link href="/login" className="btn btn-secondary">Ya tengo cuenta</Link>
+                <Link href="/" className="btn btn-ghost">Inicio</Link>
+              </div>
+            </div>
+
+            {error && <p className="error">{error}</p>}
+            {success && <p className="success">{success}</p>}
+          </form>
+        </div>
+
+        <div className="auth-premium-image">
+          <img
+            src="/wall-street-bull.jpg"
+            alt="Wall Street Bull"
+          />
+          <div className="auth-image-shade" />
+          <div className="auth-image-overlay">
+            <strong>Operaciones en vivo</strong>
+            <span>NYSE • NASDAQ • S&amp;P500 • RUSSELL • DOW JONES • OPCIONES</span>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
