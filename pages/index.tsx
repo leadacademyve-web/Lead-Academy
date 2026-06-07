@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAuthUser } from "@/src/context/AuthUserProvider";
 import { getLiveAccessByEmail } from "@/src/lib/liveAccess";
+import { supabase } from "@/src/lib/supabaseClient";
 
 const plans = [
   {
@@ -124,6 +125,66 @@ const intensiveCheckoutHref = (user: unknown) =>
     ? `/checkout-confirm?oneTimePriceKey=${encodeURIComponent("NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME")}&title=${encodeURIComponent("Seminario intensivo en vivo de inversiones en Wall Street")}&price=${encodeURIComponent("US$500")}&forcePurchaseType=one_time&hidePurchaseType=1&classesOverride=5&levelOverride=${encodeURIComponent("INTENSIVE_TWO_DAY")}`
     : "/signup";
 
+const INTENSIVE_COURSE_DATE_KEY = "intensive_course_start_date";
+
+function capitalize(value: string) {
+  if (!value) return "";
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function getLocalDateFromSetting(value?: string | null) {
+  if (!value) return null;
+
+  const raw = String(value).trim();
+  const directDate = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (directDate) {
+    const [, year, month, day] = directDate;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  return parsed;
+}
+
+function formatSeminarDateRange(value?: string | null) {
+  const startDate = getLocalDateFromSetting(value);
+
+  if (!startDate) {
+    return {
+      days: "Próximamente",
+      monthLine: "",
+    };
+  }
+
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + 1);
+
+  const startDay = startDate.getDate();
+  const endDay = endDate.getDate();
+
+  const startMonth = capitalize(
+    startDate.toLocaleDateString("es-ES", { month: "long" })
+  );
+  const endMonth = capitalize(
+    endDate.toLocaleDateString("es-ES", { month: "long" })
+  );
+
+  if (startMonth === endMonth) {
+    return {
+      days: `${startDay} y ${endDay}`,
+      monthLine: `de ${startMonth}`,
+    };
+  }
+
+  return {
+    days: `${startDay} de ${startMonth}`,
+    monthLine: `y ${endDay} de ${endMonth}`,
+  };
+}
+
 export default function HomePage() {
   const router = useRouter();
   const { user } = useAuthUser();
@@ -131,6 +192,7 @@ export default function HomePage() {
   const [accessPlan, setAccessPlan] = useState<string | null>(null);
   const [classesRemaining, setClassesRemaining] = useState<number | null>(null);
   const [accessStartAt, setAccessStartAt] = useState<string | null>(null);
+  const [seminarStartDate, setSeminarStartDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -144,6 +206,28 @@ export default function HomePage() {
 
     router.push("/dashboard");
   }, [router]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSeminarDate() {
+      const { data, error } = await supabase
+        .from("portal_settings")
+        .select("value")
+        .eq("key", INTENSIVE_COURSE_DATE_KEY)
+        .maybeSingle();
+
+      if (!mounted || error) return;
+
+      setSeminarStartDate(data?.value ?? null);
+    }
+
+    loadSeminarDate();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -203,6 +287,11 @@ export default function HomePage() {
     return "El acceso a clases en vivo se habilita únicamente para estudiantes con suscripción activa.";
   }, [accessActive, accessPlan, classesRemaining, accessStartAt]);
 
+  const seminarDateDisplay = useMemo(
+    () => formatSeminarDateRange(seminarStartDate),
+    [seminarStartDate]
+  );
+
   const paid = router.query.paid === "1";
   const canceled = router.query.canceled === "1";
 
@@ -213,18 +302,12 @@ export default function HomePage() {
           min-height: 100vh;
           color: #fff;
           background:
-            radial-gradient(
-              circle at 55% 4%,
-              rgba(0, 136, 255, 0.32),
-              transparent 29%
-            ),
-            radial-gradient(
-              circle at 85% 24%,
-              rgba(0, 93, 255, 0.22),
-              transparent 30%
-            ),
-            linear-gradient(180deg, rgba(2, 8, 23, 0.68), rgba(1, 5, 15, 0.97)),
-            url("/trading-bg.jpg");
+  linear-gradient(
+    180deg,
+    rgba(2, 8, 23, 0.20),
+    rgba(1, 5, 15, 0.65)
+  ),
+  url("/trading-bg.jpg");
           background-size: cover;
           background-position: center top;
           background-attachment: fixed;
@@ -353,7 +436,7 @@ export default function HomePage() {
         }
 
         .hero {
-          min-height: 705px;
+          min-height: 790px;
           position: relative;
           display: grid;
           grid-template-columns: minmax(520px, 0.40fr) minmax(460px, 0.35fr) minmax(330px, 0.25fr);
@@ -361,6 +444,27 @@ export default function HomePage() {
           align-items: center;
           padding: 42px 42px 34px;
           overflow: hidden;
+          background:
+            linear-gradient(
+              90deg,
+              rgba(1, 7, 20, 0.00) 0%,
+              rgba(1, 7, 20, 0.00) 18%,
+              rgba(1, 7, 20, 0.00) 38%,
+              rgba(1, 7, 20, 0.00) 58%,
+              rgba(1, 7, 20, 0.00) 78%,
+              rgba(1, 7, 20, 0.00) 100%
+            ),
+            linear-gradient(
+              180deg,
+              rgba(1, 7, 20, 0.00) 0%,
+              rgba(1, 7, 20, 0.00) 30%,
+              rgba(1, 7, 20, 0.00) 68%,
+              rgba(1, 7, 20, 0.00) 100%
+            ),
+            url("/trading-hero-final.jpg");
+          background-size: cover;
+          background-position: center center;
+          background-repeat: no-repeat;
         }
 
         .hero::before {
@@ -369,27 +473,18 @@ export default function HomePage() {
           inset: 0;
           pointer-events: none;
           background:
-            linear-gradient(
-              90deg,
-              rgba(1, 7, 20, 0.96) 0%,
-              rgba(1, 7, 20, 0.82) 22%,
-              rgba(2, 8, 23, 0.18) 43%,
-              rgba(2, 8, 23, 0.30) 66%,
-              rgba(2, 8, 23, 0.88) 100%
+            radial-gradient(
+              circle at 55% 18%,
+              rgba(0, 145, 255, 0.10),
+              transparent 34%
             ),
             radial-gradient(
-              circle at 58% 36%,
-              rgba(0, 145, 255, 0.34),
-              transparent 40%
-            ),
-            radial-gradient(
-              circle at 83% 42%,
-              rgba(0, 145, 255, 0.18),
-              transparent 30%
+              circle at 82% 40%,
+              rgba(0, 145, 255, 0.10),
+              transparent 28%
             );
           z-index: 1;
         }
-
         .hero::after {
           content: "";
           position: absolute;
@@ -403,60 +498,6 @@ export default function HomePage() {
           );
           pointer-events: none;
           z-index: 3;
-        }
-
-        .heroVisual {
-          position: absolute;
-          z-index: 2;
-          left: 53.5%;
-          top: 82px;
-          width: min(1180px, 66vw);
-          height: 660px;
-          transform: translateX(-50%);
-          background: url("/alejandro-finol-nyse.jpg");
-          background-size: contain;
-          background-repeat: no-repeat;
-          background-position: 50% center;
-          filter: saturate(1.05) contrast(1.02) brightness(1.08);
-          opacity: 1;
-          pointer-events: none;
-          border: 0;
-          box-shadow: none;
-          mask-image: radial-gradient(
-            ellipse at 50% 54%,
-            black 0%,
-            black 52%,
-            rgba(0, 0, 0, 0.80) 68%,
-            rgba(0, 0, 0, 0.34) 84%,
-            transparent 98%
-          );
-          -webkit-mask-image: radial-gradient(
-            ellipse at 50% 54%,
-            black 0%,
-            black 52%,
-            rgba(0, 0, 0, 0.80) 68%,
-            rgba(0, 0, 0, 0.34) 84%,
-            transparent 98%
-          );
-        }
-
-        .heroVisual::before,
-        .heroVisual::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-        }
-
-        .heroVisual::before {
-          background:
-            linear-gradient(180deg, rgba(1, 7, 20, 0.10) 0%, transparent 18%, transparent 72%, rgba(1, 7, 20, 0.76) 100%),
-            linear-gradient(90deg, rgba(1, 7, 20, 0.88) 0%, rgba(1, 7, 20, 0.42) 16%, transparent 33%, transparent 80%, rgba(1, 7, 20, 0.88) 100%);
-        }
-
-        .heroVisual::after {
-          background: radial-gradient(circle at 52% 44%, rgba(0, 145, 255, 0.08), transparent 46%);
-          mix-blend-mode: screen;
         }
 
         .heroCopy,
@@ -562,8 +603,8 @@ export default function HomePage() {
 
         .signature {
           position: absolute;
-          left: 51.5%;
-          bottom: 82px;
+          left: 51.8%;
+          bottom: 72px;
           text-align: right;
           font-size: 17px;
           color: rgba(255, 255, 255, 0.9);
@@ -589,56 +630,8 @@ export default function HomePage() {
           align-items: flex-start;
           overflow: visible;
           isolation: isolate;
-          margin-left: -8px;
+          margin-left: -12px;
           text-shadow: 0 3px 18px rgba(0, 0, 0, 0.72);
-        }
-
-        .seminarPanel::before {
-          content: "";
-          position: absolute;
-          right: -250px;
-          top: -4px;
-          width: 820px;
-          height: 650px;
-          background:
-            linear-gradient(
-              90deg,
-              rgba(1, 7, 20, 0.72) 0%,
-              rgba(1, 7, 20, 0.24) 22%,
-              rgba(1, 7, 20, 0.00) 58%,
-              rgba(1, 7, 20, 0.46) 100%
-            ),
-            linear-gradient(
-              180deg,
-              rgba(1, 7, 20, 0.28) 0%,
-              rgba(1, 7, 20, 0.02) 24%,
-              rgba(1, 7, 20, 0.04) 62%,
-              rgba(1, 7, 20, 0.72) 100%
-            ),
-            url("/wall-street-bull.jpg");
-          background-size: contain;
-          background-repeat: no-repeat;
-          background-position: right center;
-          opacity: 1;
-          filter: saturate(1.22) contrast(1.12) brightness(1.14);
-          mask-image: radial-gradient(
-            ellipse at 68% 48%,
-            black 0%,
-            black 54%,
-            rgba(0, 0, 0, 0.74) 72%,
-            rgba(0, 0, 0, 0.28) 86%,
-            transparent 98%
-          );
-          -webkit-mask-image: radial-gradient(
-            ellipse at 68% 48%,
-            black 0%,
-            black 54%,
-            rgba(0, 0, 0, 0.74) 72%,
-            rgba(0, 0, 0, 0.28) 86%,
-            transparent 98%
-          );
-          z-index: -1;
-          pointer-events: none;
         }
 
         .seminarOverline {
@@ -937,18 +930,6 @@ export default function HomePage() {
             grid-template-columns: 1fr;
           }
 
-          .heroVisual {
-            position: relative;
-            left: auto;
-            top: auto;
-            width: 100%;
-            height: 420px;
-            transform: none;
-            opacity: 0.9;
-            mask-image: none;
-            -webkit-mask-image: none;
-          }
-
           .signature {
             display: none;
           }
@@ -1036,7 +1017,6 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="heroVisual" />
         <div className="signature">
           Con el ingeniero<strong>Alejandro Finol</strong>
         </div>
@@ -1044,9 +1024,13 @@ export default function HomePage() {
         <aside className="seminarPanel">
           <div className="seminarOverline">Próximo seminario en vivo</div>
           <div className="seminarDate">
-            20 y 21
-            <br />
-            de Junio
+            {seminarDateDisplay.days}
+            {seminarDateDisplay.monthLine ? (
+              <>
+                <br />
+                {seminarDateDisplay.monthLine}
+              </>
+            ) : null}
           </div>
           <div className="seminarTime">
             ◷{" "}
