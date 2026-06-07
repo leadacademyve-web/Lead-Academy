@@ -33,17 +33,28 @@ export default function ForgotPasswordPage() {
       <section className="auth-premium-card">
         <div className="auth-premium-form">
           <div className="auth-brand-block">
-            <img
-              src="/Logo.png"
-              alt="Lead Academy"
-              className="auth-logo-image"
+            <div
               style={{
-                width: 58,
-                height: 58,
-                objectFit: 'contain',
-                display: 'block',
+                width: 150,
+                height: 150,
+                flex: '0 0 150px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
-            />
+            >
+              <img
+                src="/Logo.png"
+                alt="Lead Academy"
+                className="auth-logo-image"
+                style={{
+                  width: 150,
+                  height: 150,
+                  objectFit: 'contain',
+                  display: 'block',
+                }}
+              />
+            </div>
             <div>
               <div className="auth-brand-title">Lead Academy Corporation</div>
               <div className="auth-brand-sub">Trading &amp; Investing</div>
