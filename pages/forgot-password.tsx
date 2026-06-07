@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
         <div className="auth-premium-form">
           <div className="auth-brand-block">
             <img
-              src="/logo.png"
+              src="/Logo.png"
               alt="Lead Academy"
               className="auth-logo-image"
               style={{
