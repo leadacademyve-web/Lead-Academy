@@ -751,6 +751,12 @@ export default function HomePage() {
           padding: 0 36px;
         }
 
+
+#planes {
+  scroll-margin-top: 100px;
+}
+
+
         .planTitle,
         .portalTitle,
         .outcomesTitle {
