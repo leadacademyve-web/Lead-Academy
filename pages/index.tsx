@@ -583,6 +583,7 @@ export default function HomePage() {
         .seminarPanel {
           padding: 8px 0 8px 0;
           min-height: 520px;
+          margin-top: -35px;
           display: flex;
           flex-direction: column;
           justify-content: center;
