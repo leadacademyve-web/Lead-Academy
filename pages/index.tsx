@@ -119,7 +119,7 @@ const outcomeItems = [
 
 const intensiveCheckoutHref = (user: unknown) =>
   user
-    ? `/checkout-confirm?oneTimePriceKey=${encodeURIComponent("NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME")}&title=${encodeURIComponent("Seminario intensivo en vivo de inversiones en Wall Street")}&price=${encodeURIComponent("US$500")}&forcePurchaseType=one_time&hidePurchaseType=1&classesOverride=5&levelOverride=${encodeURIComponent("INTENSIVE_TWO_DAY")}`
+    ? `/checkout-confirm?oneTimePriceKey=${encodeURIComponent("NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME")}&title=${encodeURIComponent("Seminario intensivo en vivo de inversiones en Wall Street")}&price=${encodeURIComponent("US$500")}&forcePurchaseType=one_time&hidePurchaseType=1&classesOverride=7&levelOverride=${encodeURIComponent("INTENSIVE_TWO_DAY")}`
     : "/signup";
 
 const INTENSIVE_COURSE_DATE_KEY = "intensive_course_start_date";
