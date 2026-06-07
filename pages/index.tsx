@@ -1136,7 +1136,7 @@ export default function HomePage() {
           </div>
           <div className="seminarPrice">US$500</div>
           <Link href={intensiveCheckoutHref(user)} legacyBehavior>
-            <a className="btnGhost">RESERVAR MI CUPO →</a>
+            <a className="btnGhost">RESERVAR MI CUPO</a>
           </Link>
           <div className="included">
             🎁{" "}
