@@ -60,7 +60,7 @@ export default function LoginPage() {
         <div className="auth-premium-form">
           <div className="auth-brand-block">
             <img
-              src="/logo.png"
+              public="/logo.png"
               alt="Lead Academy"
               className="auth-logo-image"
               style={{
