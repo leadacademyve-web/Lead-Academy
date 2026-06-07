@@ -63,7 +63,7 @@ export default function ResetPasswordPage() {
         <div className="auth-premium-form">
           <div className="auth-brand-block">
             <img
-              src="/logo.png"
+              public="/logo.png"
               alt="Lead Academy"
               className="auth-logo-image"
               style={{ width: 58, height: 58, objectFit: 'contain', display: 'block' }}
