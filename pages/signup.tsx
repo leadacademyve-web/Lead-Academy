@@ -10,6 +10,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [smsOptIn, setSmsOptIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -64,6 +65,8 @@ export default function SignupPage() {
         data: {
           full_name: fullName.trim(),
           phone: normalizedPhone,
+          sms_opt_in: smsOptIn,
+          sms_opt_in_at: smsOptIn ? new Date().toISOString() : null,
         },
       },
     });
@@ -91,6 +94,7 @@ export default function SignupPage() {
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    setSmsOptIn(false);
   }
 
   return (
@@ -176,6 +180,18 @@ export default function SignupPage() {
               <p className="helper" style={{ marginTop: 8, marginBottom: 0 }}>
                 Se guardará en formato internacional, por ejemplo: {selectedCountry.code}{selectedCountry.placeholder}
               </p>
+            </label>
+
+            <label style={{ display: 'flex', gap: 10, marginTop: 4, marginBottom: 12, alignItems: 'flex-start' }}>
+              <input
+                type="checkbox"
+                checked={smsOptIn}
+                onChange={(e) => setSmsOptIn(e.target.checked)}
+                style={{ marginTop: 4 }}
+              />
+              <span className="helper" style={{ margin: 0 }}>
+                Acepto recibir notificaciones SMS de Lead Academy Corporation relacionadas con mi cuenta, acceso al portal, operaciones en vivo, seminarios, clases, pagos, programación de eventos y actualizaciones importantes. Pueden aplicar tarifas de mensajes y datos. Responde STOP para cancelar o HELP para obtener ayuda.
+              </span>
             </label>
 
             <label className="label" style={{ marginBottom: 12, gap: 8 }}>
