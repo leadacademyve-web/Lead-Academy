@@ -64,166 +64,114 @@ export default function TermsPage() {
   const returnTo = typeof router.query.returnTo === 'string' ? router.query.returnTo : ''
 
   return (
-    <main
-      className="auth-wrap"
-      style={{
-        minHeight: '100vh',
-        padding: '54px 18px',
-        background:
-          'radial-gradient(circle at 18% 12%, rgba(0, 149, 255, 0.18), transparent 32%), radial-gradient(circle at 88% 18%, rgba(255, 184, 0, 0.12), transparent 26%), linear-gradient(135deg, #06101f 0%, #0b1629 46%, #040812 100%)',
-      }}
-    >
-      <section
-        style={{
-          width: 'min(1120px, 100%)',
-          margin: '0 auto',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: 28,
-          overflow: 'hidden',
-          background: 'rgba(7, 16, 31, 0.82)',
-          boxShadow: '0 26px 80px rgba(0,0,0,0.38)',
-          backdropFilter: 'blur(18px)',
-        }}
-      >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 0.8fr) minmax(0, 1.2fr)',
-            minHeight: 640,
-          }}
-        >
-          <aside
-            style={{
-              position: 'relative',
-              padding: '44px 38px',
-              background:
-                'linear-gradient(180deg, rgba(12, 31, 61, 0.95), rgba(4, 10, 20, 0.92))',
-              borderRight: '1px solid rgba(255,255,255,0.1)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 38 }}>
+    <main className="auth-wrap auth-wrap-premium">
+      <section className="auth-premium-card">
+        <div className="auth-premium-form" style={{ paddingTop: 34, paddingBottom: 34 }}>
+          <div className="auth-brand-block" style={{ marginBottom: 18 }}>
+            <div
+              style={{
+                width: 92,
+                height: 72,
+                flex: '0 0 92px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               <img
                 src="/Logo.png"
                 alt="Lead Academy"
-                style={{ width: 72, height: 72, objectFit: 'contain' }}
+                className="auth-logo-image"
+                style={{
+                  width: 150,
+                  height: 150,
+                  objectFit: 'contain',
+                  display: 'block',
+                }}
               />
-              <div>
-                <div style={{ color: '#fff', fontSize: 22, fontWeight: 900, lineHeight: 1.05 }}>
-                  Lead Academy Corp
+            </div>
+            <div>
+              <div className="auth-brand-title">Lead Academy Corporation</div>
+              <div className="auth-brand-sub">Trading &amp; Investing</div>
+            </div>
+          </div>
+
+          <h1 style={{ marginBottom: 14 }}>Términos y condiciones</h1>
+
+          <p className="helper" style={{ marginBottom: 0 }}>
+            El uso de esta plataforma implica la aceptación total de estos términos. Si no estás de acuerdo,
+            no debes utilizar este sitio ni adquirir acceso al portal privado.
+          </p>
+
+          <div
+            style={{
+              marginTop: 22,
+              maxHeight: 430,
+              overflowY: 'auto',
+              paddingRight: 10,
+              display: 'grid',
+              gap: 12,
+            }}
+          >
+            {sections.map((section) => (
+              <section
+                key={section.title}
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: 16,
+                  background: 'rgba(3, 12, 27, 0.42)',
+                  border: '1px solid rgba(255, 255, 255, 0.10)',
+                }}
+              >
+                <div className="eyebrow" style={{ marginBottom: 8 }}>
+                  {section.title}
                 </div>
-                <div style={{ color: '#f5b900', fontSize: 12, fontWeight: 900, letterSpacing: 2 }}>
-                  TRADING & INVESTING
-                </div>
-              </div>
-            </div>
+                <p className="helper" style={{ margin: 0, lineHeight: 1.68 }}>
+                  {section.body}
+                </p>
+              </section>
+            ))}
+          </div>
 
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 12px',
-                border: '1px solid rgba(0, 174, 255, 0.35)',
-                borderRadius: 999,
-                color: '#7dd3fc',
-                fontSize: 12,
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: 1,
-                marginBottom: 18,
-              }}
-            >
-              Documento legal
-            </div>
+          <div
+            className="notice"
+            style={{
+              marginTop: 16,
+              borderColor: 'rgba(234, 179, 8, 0.28)',
+              background: 'rgba(234, 179, 8, 0.08)',
+            }}
+          >
+            El contenido del portal es educativo. No constituye recomendación financiera ni promesa de resultados.
+          </div>
 
-            <h1
-              style={{
-                margin: 0,
-                color: '#fff',
-                fontSize: 46,
-                lineHeight: 1,
-                letterSpacing: '-1.8px',
-              }}
-            >
-              Términos y condiciones
-            </h1>
+          <div className="auth-premium-actions" style={{ marginTop: 16, gap: 10 }}>
+            {returnTo ? (
+              <Link href={returnTo} className="btn btn-primary auth-main-button" style={{ minHeight: 54 }}>
+                Volver al pago
+              </Link>
+            ) : (
+              <Link href="/" className="btn btn-primary auth-main-button" style={{ minHeight: 54 }}>
+                Volver al inicio
+              </Link>
+            )}
 
-            <p style={{ color: '#cbd5e1', fontSize: 16, lineHeight: 1.7, marginTop: 22 }}>
-              El uso de esta plataforma implica la aceptación total de los siguientes términos. Si no estás
-              de acuerdo con ellos, no debes utilizar este sitio ni adquirir acceso al portal privado.
-            </p>
-
-            <div
-              style={{
-                marginTop: 28,
-                padding: 18,
-                borderRadius: 20,
-                background: 'rgba(255, 184, 0, 0.1)',
-                border: '1px solid rgba(255, 184, 0, 0.28)',
-              }}
-            >
-              <div style={{ color: '#f5b900', fontWeight: 900, marginBottom: 8 }}>Importante</div>
-              <div style={{ color: '#dbeafe', fontSize: 14, lineHeight: 1.6 }}>
-                El contenido del portal es educativo. No constituye recomendación financiera ni promesa de
-                resultados.
-              </div>
-            </div>
-          </aside>
-
-          <div style={{ padding: '44px 42px', background: 'rgba(2, 8, 23, 0.55)' }}>
-            <div style={{ display: 'grid', gap: 16 }}>
-              {sections.map((section) => (
-                <section
-                  key={section.title}
-                  style={{
-                    padding: '18px 20px',
-                    borderRadius: 18,
-                    background: 'rgba(15, 23, 42, 0.68)',
-                    border: '1px solid rgba(148, 163, 184, 0.16)',
-                  }}
-                >
-                  <div
-                    style={{
-                      color: '#f5b900',
-                      fontSize: 13,
-                      fontWeight: 900,
-                      textTransform: 'uppercase',
-                      letterSpacing: 1,
-                      marginBottom: 8,
-                    }}
-                  >
-                    {section.title}
-                  </div>
-                  <div style={{ color: '#cbd5e1', fontSize: 15, lineHeight: 1.72 }}>{section.body}</div>
-                </section>
-              ))}
-            </div>
-
-            <div
-              className="actions"
-              style={{
-                marginTop: 26,
-                display: 'flex',
-                gap: 12,
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              {returnTo ? (
-                <Link href={returnTo} className="btn btn-primary">
-                  Volver al pago
-                </Link>
-              ) : (
-                <Link href="/" className="btn btn-primary">
-                  Volver al inicio
-                </Link>
-              )}
-
+            <div className="auth-secondary-row">
               <Link href="/privacy" className="btn btn-secondary">
-                Ver política de privacidad
+                Política de privacidad
+              </Link>
+              <Link href="/signup" className="btn btn-ghost">
+                Crear cuenta
               </Link>
             </div>
+          </div>
+        </div>
+
+        <div className="auth-premium-image">
+          <img src="/wall-street-bull.jpg" alt="Wall Street Bull" />
+          <div className="auth-image-shade" />
+          <div className="auth-image-overlay">
+            <strong>DOCUMENTO LEGAL</strong>
+            <span>TRADING • INVERSIONES • OPERACIONES EN VIVO</span>
           </div>
         </div>
       </section>
