@@ -626,6 +626,33 @@ export default function HomePage() {
           font-size: 14px;
         }
 
+        .legalLinks {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-top: 18px;
+          margin-bottom: 12px;
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.70);
+        }
+
+        .legalLinks a {
+          color: #1499ff;
+          text-decoration: none;
+          transition:
+            color 0.18s ease,
+            text-decoration-color 0.18s ease;
+        }
+
+        .legalLinks a:hover {
+          color: #42b6ff;
+          text-decoration: underline;
+        }
+
+        .legalLinks span {
+          color: rgba(255, 255, 255, 0.40);
+        }
+
         .greenDot {
           width: 10px;
           height: 10px;
@@ -1087,6 +1114,12 @@ export default function HomePage() {
             </a>
           </div>
 
+          <div className="legalLinks">
+            <Link href="/terms">Términos y Condiciones</Link>
+            <span>•</span>
+            <Link href="/privacy">Política de Privacidad</Link>
+          </div>
+
           <p
             className="accessState"
             style={{
@@ -1136,7 +1169,7 @@ export default function HomePage() {
           </div>
           <div className="seminarPrice">US$500</div>
           <Link href={intensiveCheckoutHref(user)} legacyBehavior>
-            <a className="btnGhost">RESERVAR MI CUPO</a>
+            <a className="btnGhost">RESERVAR MI CUPO →</a>
           </Link>
           <div className="included">
             🎁{" "}
@@ -1229,6 +1262,9 @@ export default function HomePage() {
       <div className="support">
         Soporte: Escríbenos a Lead@leadacademy.com.ve · WhatsApp: +1 786 620
         4377
+        <br />
+        <Link href="/terms">Términos y Condiciones</Link> · {" "}
+        <Link href="/privacy">Política de Privacidad</Link>
       </div>
     </main>
   );
