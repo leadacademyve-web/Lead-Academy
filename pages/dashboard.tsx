@@ -408,7 +408,7 @@ const LIBRARY_ITEMS: LibraryItem[] = [
     id: 'est-apertura-alcista',
     title: 'Est. Apertura alcista',
     kind: 'video',
-  url: 'https://player.vimeo.com/1203261585',
+  url: 'https://player.vimeo.com/video/1203261585',
   description: 'Reproducir video',
   },
   {
