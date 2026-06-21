@@ -425,6 +425,13 @@ const LIBRARY_ITEMS: LibraryItem[] = [
   url: 'https://player.vimeo.com/video/1203247159',
   description: 'Reproducir video',
   },
+    {
+    id: 'est-Interes compuesto',
+    title: 'Est. Interes compuesto',
+    kind: 'video',
+  url: 'https://player.vimeo.com/video/1203269150',
+  description: 'Reproducir video',
+  },
 ];
 
 
