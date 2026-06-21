@@ -394,7 +394,7 @@ const LIBRARY_ITEMS: LibraryItem[] = [
   id: 'video-compra-venta-thinkorswim',
   title: 'Compra y venta en Thinkorswim',
   kind: 'video',
-  url: 'https://player.vimeo.com/video/1185354264',
+  url: 'https://player.vimeo.com/video/1203267471',
   description: 'Reproducir video',
 },
   {
