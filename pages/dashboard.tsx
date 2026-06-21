@@ -400,26 +400,30 @@ const LIBRARY_ITEMS: LibraryItem[] = [
   strategyLibraryItem({
     id: 'est-apertura-bajista',
     title: 'Est. Apertura bajista',
-    videoUrl: STRATEGY_VIDEO_URLS.aperturaBajista,
-    fallbackImageUrl: '/Est. Apertura bajista.jpg',
+    kind: 'video',
+  url: 'https://player.vimeo.com/video/1203247156',
+  description: 'Reproducir video',
   }),
   strategyLibraryItem({
     id: 'est-apertura-alcista',
     title: 'Est. Apertura alcista',
-    videoUrl: STRATEGY_VIDEO_URLS.aperturaAlcista,
-    fallbackImageUrl: '/Est. Apertura alcista.jpg',
+    kind: 'video',
+  url: 'https://player.vimeo.com/1203247157',
+  description: 'Reproducir video',
   }),
   strategyLibraryItem({
     id: 'est-ruptura-bajista',
     title: 'Est. Ruptura bajista',
-    videoUrl: STRATEGY_VIDEO_URLS.rupturaBajista,
-    fallbackImageUrl: '/Est. Ruptura bajista.jpg',
+    kind: 'video',
+  url: 'https://player.vimeo.com/video/1203247158',
+  description: 'Reproducir video',
   }),
   strategyLibraryItem({
     id: 'est-ruptura-alcista',
     title: 'Est. Ruptura alcista',
-    videoUrl: STRATEGY_VIDEO_URLS.rupturaAlcista,
-    fallbackImageUrl: '/Est. Ruptura alcista.jpg',
+    kind: 'video',
+  url: 'https://player.vimeo.com/video/1203247159',
+  description: 'Reproducir video',
   }),
 ];
 
