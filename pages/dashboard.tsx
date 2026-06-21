@@ -397,34 +397,34 @@ const LIBRARY_ITEMS: LibraryItem[] = [
   url: 'https://player.vimeo.com/video/1185354264',
   description: 'Reproducir video',
 },
-  strategyLibraryItem({
+  {
     id: 'est-apertura-bajista',
     title: 'Est. Apertura bajista',
     kind: 'video',
   url: 'https://player.vimeo.com/video/1203247156',
   description: 'Reproducir video',
-  }),
-  strategyLibraryItem({
+  },
+  {
     id: 'est-apertura-alcista',
     title: 'Est. Apertura alcista',
     kind: 'video',
   url: 'https://player.vimeo.com/1203247157',
   description: 'Reproducir video',
-  }),
-  strategyLibraryItem({
+  },
+  {
     id: 'est-ruptura-bajista',
     title: 'Est. Ruptura bajista',
     kind: 'video',
   url: 'https://player.vimeo.com/video/1203247158',
   description: 'Reproducir video',
-  }),
-  strategyLibraryItem({
+  },
+  {
     id: 'est-ruptura-alcista',
     title: 'Est. Ruptura alcista',
     kind: 'video',
   url: 'https://player.vimeo.com/video/1203247159',
   description: 'Reproducir video',
-  }),
+  },
 ];
 
 
