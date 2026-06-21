@@ -336,6 +336,31 @@ const EMOJI_CATEGORIES = [
     emojis: ['🧠', '🤔', '😮', '😯', '😅', '😂', '😬', '😴', '😤', '🤯', '📝', '📚', '⏰', '👀', '🎉', '📣'],
   },
 ];
+
+const STRATEGY_VIDEO_URLS = {
+  aperturaBajista: '',
+  aperturaAlcista: '',
+  rupturaBajista: '',
+  rupturaAlcista: '',
+};
+
+function strategyLibraryItem(args: {
+  id: string;
+  title: string;
+  videoUrl: string;
+  fallbackImageUrl: string;
+}): LibraryItem {
+  const videoUrl = args.videoUrl.trim();
+
+  return {
+    id: args.id,
+    title: args.title,
+    kind: videoUrl ? 'video' : 'image',
+    url: videoUrl || args.fallbackImageUrl,
+    description: videoUrl ? 'Reproducir video' : 'Imagen de estrategia',
+  };
+}
+
 const LIBRARY_ITEMS: LibraryItem[] = [
   {
     id: 'Plan-inversiones.xlsx',
@@ -372,34 +397,30 @@ const LIBRARY_ITEMS: LibraryItem[] = [
   url: 'https://player.vimeo.com/video/1185354264',
   description: 'Reproducir video',
 },
-  {
+  strategyLibraryItem({
     id: 'est-apertura-bajista',
     title: 'Est. Apertura bajista',
-    kind: 'image',
-    url: '/Est. Apertura bajista.jpg',
-    description: 'Imagen de estrategia',
-  },
-  {
+    videoUrl: STRATEGY_VIDEO_URLS.aperturaBajista,
+    fallbackImageUrl: '/Est. Apertura bajista.jpg',
+  }),
+  strategyLibraryItem({
     id: 'est-apertura-alcista',
     title: 'Est. Apertura alcista',
-    kind: 'image',
-    url: '/Est. Apertura alcista.jpg',
-    description: 'Imagen de estrategia',
-  },
-  {
+    videoUrl: STRATEGY_VIDEO_URLS.aperturaAlcista,
+    fallbackImageUrl: '/Est. Apertura alcista.jpg',
+  }),
+  strategyLibraryItem({
     id: 'est-ruptura-bajista',
     title: 'Est. Ruptura bajista',
-    kind: 'image',
-    url: '/Est. Ruptura bajista.jpg',
-    description: 'Imagen de estrategia',
-  },
-  {
+    videoUrl: STRATEGY_VIDEO_URLS.rupturaBajista,
+    fallbackImageUrl: '/Est. Ruptura bajista.jpg',
+  }),
+  strategyLibraryItem({
     id: 'est-ruptura-alcista',
     title: 'Est. Ruptura alcista',
-    kind: 'image',
-    url: '/Est. Ruptura alcista.jpg',
-    description: 'Imagen de estrategia',
-  },
+    videoUrl: STRATEGY_VIDEO_URLS.rupturaAlcista,
+    fallbackImageUrl: '/Est. Ruptura alcista.jpg',
+  }),
 ];
 
 
