@@ -280,6 +280,28 @@ function formatChatMessageTime(value?: string | null) {
 }
 
 
+function chatMessageTimestampValue(message: ChatMessage) {
+  const ts = new Date(String(message.created_at || '')).getTime();
+  return Number.isNaN(ts) ? 0 : ts;
+}
+
+function isNewerChatMessage(message: ChatMessage, previousMessages: ChatMessage[]) {
+  if (!previousMessages.length) return false;
+
+  const previousIds = new Set(previousMessages.map((item) => item.id));
+  if (previousIds.has(message.id)) return false;
+
+  const newestPreviousTs = Math.max(...previousMessages.map(chatMessageTimestampValue), 0);
+  const messageTs = chatMessageTimestampValue(message);
+
+  return !messageTs || !newestPreviousTs || messageTs >= newestPreviousTs;
+}
+
+function browserCanNotify() {
+  return typeof window !== 'undefined' && 'Notification' in window;
+}
+
+
 
 function isImageFile(file: File) {
   return file.type.startsWith('image/');
@@ -531,6 +553,9 @@ export default function DashboardPage() {
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const [clearingChat, setClearingChat] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [chatSoundEnabled, setChatSoundEnabled] = useState(false);
+  const [chatRealtimeStatus, setChatRealtimeStatus] = useState<'conectando' | 'conectado' | 'reconectando' | 'desconectado'>('desconectado');
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [showEmojiPanel, setShowEmojiPanel] = useState(false);
   const [chatImageFile, setChatImageFile] = useState<File | null>(null);
   const [chatImagePreviewUrl, setChatImagePreviewUrl] = useState<string | null>(null);
@@ -543,6 +568,9 @@ export default function DashboardPage() {
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const emojiPanelRef = useRef<HTMLDivElement | null>(null);
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
+  const chatMessagesRef = useRef<ChatMessage[]>([]);
+  const chatAudioContextRef = useRef<AudioContext | null>(null);
+  const originalDocumentTitleRef = useRef<string>('');
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
@@ -847,8 +875,106 @@ return normalized;
     attachChatImage(imageFile);
   }
 
-  async function loadChatMessages() {
-    setChatLoading(true);
+  async function enableChatSound() {
+    try {
+      if (typeof window !== 'undefined') {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass && !chatAudioContextRef.current) {
+          chatAudioContextRef.current = new AudioContextClass();
+        }
+
+        if (chatAudioContextRef.current?.state === 'suspended') {
+          await chatAudioContextRef.current.resume();
+        }
+
+        if (browserCanNotify() && Notification.permission === 'default') {
+          Notification.requestPermission().catch(() => undefined);
+        }
+      }
+
+      setChatSoundEnabled(true);
+      window.setTimeout(() => {
+        playChatNotificationSound(true);
+      }, 120);
+    } catch {
+      setChatSoundEnabled(true);
+    }
+  }
+
+  function playChatNotificationSound(force = false) {
+    if ((!force && !chatSoundEnabled) || typeof window === 'undefined') return;
+
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const audioContext = chatAudioContextRef.current || (AudioContextClass ? new AudioContextClass() : null);
+      if (!audioContext) return;
+
+      chatAudioContextRef.current = audioContext;
+
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().catch(() => undefined);
+      }
+
+      const now = audioContext.currentTime;
+      const masterGain = audioContext.createGain();
+      masterGain.gain.setValueAtTime(0.0001, now);
+      masterGain.gain.exponentialRampToValueAtTime(0.42, now + 0.02);
+      masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+      masterGain.connect(audioContext.destination);
+
+      [0, 0.18].forEach((offset) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, now + offset);
+        oscillator.frequency.exponentialRampToValueAtTime(1320, now + offset + 0.08);
+
+        gain.gain.setValueAtTime(0.0001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.9, now + offset + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.16);
+
+        oscillator.connect(gain);
+        gain.connect(masterGain);
+
+        oscillator.start(now + offset);
+        oscillator.stop(now + offset + 0.18);
+      });
+    } catch {
+      // Some browsers block audio until the user clicks "Activar sonido".
+    }
+  }
+
+  function showBrowserChatNotification(message: ChatMessage) {
+    if (!browserCanNotify() || Notification.permission !== 'granted') return;
+
+    const sender = message.user_name || 'Estudiante';
+    const body = message.body ? message.body.slice(0, 120) : 'Envió una imagen en el chat.';
+
+    try {
+      const notification = new Notification(`Nuevo mensaje de ${sender}`, {
+        body,
+        icon: '/favicon.ico',
+        tag: `live-chat-${message.id}`,
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        setActiveTab('chatLive');
+        notification.close();
+      };
+    } catch {
+      // Ignore notification errors.
+    }
+  }
+
+  async function loadChatMessages(options?: { silent?: boolean }) {
+    const silent = Boolean(options?.silent);
+
+    if (!silent) {
+      setChatLoading(true);
+    }
+
     setChatError(null);
 
     const { data, error } = await supabase
@@ -858,14 +984,43 @@ return normalized;
       .limit(100);
 
     if (error) {
-      setChatMessages([]);
-      setChatError('No se pudo cargar el chat en vivo.');
+      if (!silent) {
+        setChatMessages([]);
+      }
+
+      setChatError('No se pudo cargar el chat en vivo. Reintentando automáticamente...');
       setChatLoading(false);
+      setChatRealtimeStatus('reconectando');
       return;
     }
 
-    setChatMessages((data || []) as ChatMessage[]);
+    const nextMessages = (data || []) as ChatMessage[];
+    const previousMessages = chatMessagesRef.current;
+    const currentEmail = String(userEmail || '').trim().toLowerCase();
+
+    const incomingMessages = nextMessages.filter((message) => {
+      const senderEmail = String(message.user_email || '').trim().toLowerCase();
+      const isOwnMessage = Boolean(currentEmail && senderEmail && senderEmail === currentEmail);
+      return !isOwnMessage && isNewerChatMessage(message, previousMessages);
+    });
+
+    chatMessagesRef.current = nextMessages;
+    setChatMessages(nextMessages);
     setChatLoading(false);
+    setChatRealtimeStatus('conectado');
+
+    if (incomingMessages.length > 0) {
+      const latestIncoming = incomingMessages[incomingMessages.length - 1];
+
+      playChatNotificationSound();
+      showBrowserChatNotification(latestIncoming);
+
+      const pageIsHidden = typeof document !== 'undefined' && document.visibilityState !== 'visible';
+
+      if (activeTab !== 'chatLive' || pageIsHidden) {
+        setUnreadChatCount((count) => count + incomingMessages.length);
+      }
+    }
   }
 
   async function sendChatMessage(e: FormEvent) {
@@ -1013,26 +1168,84 @@ return normalized;
     if (!accessActive) return;
 
     loadChatMessages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessActive]);
 
   useEffect(() => {
-    if (!accessActive) return;
+    if (!accessActive) {
+      setChatRealtimeStatus('desconectado');
+      return;
+    }
+
+    setChatRealtimeStatus('conectando');
 
     const channel = supabase
-      .channel('leadacademy-live-chat')
+      .channel(`leadacademy-live-chat-${Date.now()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'live_chat_messages' },
         () => {
-          loadChatMessages();
+          loadChatMessages({ silent: true });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setChatRealtimeStatus('conectado');
+          loadChatMessages({ silent: true });
+          return;
+        }
+
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          setChatRealtimeStatus('reconectando');
+        }
+      });
+
+    const pollingInterval = window.setInterval(() => {
+      loadChatMessages({ silent: true });
+    }, 5000);
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        loadChatMessages({ silent: true });
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      window.clearInterval(pollingInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       supabase.removeChannel(channel);
+      setChatRealtimeStatus('desconectado');
     };
-  }, [accessActive]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessActive, userEmail]);
+
+  useEffect(() => {
+    if (activeTab === 'chatLive') {
+      setUnreadChatCount(0);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    if (!originalDocumentTitleRef.current) {
+      originalDocumentTitleRef.current = document.title || 'Lead Academy';
+    }
+
+    const originalTitle = originalDocumentTitleRef.current;
+
+    if (unreadChatCount > 0) {
+      document.title = `(${unreadChatCount}) Nuevo mensaje - ${originalTitle}`;
+    } else {
+      document.title = originalTitle;
+    }
+
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [unreadChatCount]);
 
   useEffect(() => {
     if (!isChatAdmin || activeTab !== 'chatLive') return;
@@ -1519,7 +1732,7 @@ return normalized;
               >
                 {[
                   { key: 'videos' as const, label: 'Videos' },
-                  { key: 'chatLive' as const, label: 'Chat Live' },
+                  { key: 'chatLive' as const, label: unreadChatCount > 0 ? `Chat Live (${unreadChatCount})` : 'Chat Live' },
                   { key: 'biblioteca' as const, label: 'Biblioteca' },
                 ].map((tab) => {
                   const isActive = activeTab === tab.key;
@@ -1789,7 +2002,25 @@ return normalized;
                         <p className="helper" style={{ margin: '8px 0 0', fontSize: 12, lineHeight: 1.45 }}>
                           Escribe aquí durante la clase. Los mensajes aparecerán en tiempo real y el instructor podrá verlos y/o compartirlos.
                         </p>
+                        <p className="helper" style={{ margin: '6px 0 0', fontSize: 11, lineHeight: 1.45 }}>
+                          Estado del chat: <strong>{chatRealtimeStatus}</strong>{chatSoundEnabled ? ' · sonido activo' : ' · sonido apagado'}
+                        </p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={enableChatSound}
+                        className="btn btn-ghost"
+                        style={{
+                          padding: '8px 12px',
+                          fontSize: 12,
+                          whiteSpace: 'nowrap',
+                          border: chatSoundEnabled ? '1px solid rgba(34,197,94,0.46)' : '1px solid rgba(245,158,11,0.34)',
+                          color: 'rgba(255,255,255,0.92)',
+                          background: chatSoundEnabled ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.10)',
+                        }}
+                      >
+                        {chatSoundEnabled ? '🔊 Sonido activo' : '🔔 Activar sonido'}
+                      </button>
                       {isChatAdmin ? (
                         <button
                           type="button"
