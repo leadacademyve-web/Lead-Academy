@@ -59,7 +59,7 @@ const plans = [
   },
   {
     key: 'intensiveApril2026',
-    title: '$500 Curso Intensivo + 5 clases gratuitas de operaciones en vivo',
+    title: '$500 Curso Intensivo + 3 clases gratuitas de operaciones en vivo',
     description: 'Curso intensivo',
     buttonLabel: 'Inscribirme',
     subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME',
@@ -875,7 +875,12 @@ return normalized;
     attachChatImage(imageFile);
   }
 
-  async function enableChatSound() {
+  async function toggleChatSound() {
+    if (chatSoundEnabled) {
+      setChatSoundEnabled(false);
+      return;
+    }
+
     try {
       if (typeof window !== 'undefined') {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -1996,8 +2001,8 @@ return normalized;
                   }}
                 >
                   <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                      <div>
+                    <div style={{ display: 'grid', gap: 12 }}>
+                      <div style={{ minWidth: 0 }}>
                         <h2 style={{ margin: 0, fontSize: 22 }}>Chat Live</h2>
                         <p className="helper" style={{ margin: '8px 0 0', fontSize: 12, lineHeight: 1.45 }}>
                           Escribe aquí durante la clase. Los mensajes aparecerán en tiempo real y el instructor podrá verlos y/o compartirlos.
@@ -2006,39 +2011,54 @@ return normalized;
                           Estado del chat: <strong>{chatRealtimeStatus}</strong>{chatSoundEnabled ? ' · sonido activo' : ' · sonido apagado'}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={enableChatSound}
-                        className="btn btn-ghost"
+
+                      <div
                         style={{
-                          padding: '8px 12px',
-                          fontSize: 12,
-                          whiteSpace: 'nowrap',
-                          border: chatSoundEnabled ? '1px solid rgba(34,197,94,0.46)' : '1px solid rgba(245,158,11,0.34)',
-                          color: 'rgba(255,255,255,0.92)',
-                          background: chatSoundEnabled ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.10)',
+                          display: 'grid',
+                          gridTemplateColumns: isChatAdmin ? '1fr 1fr' : '1fr',
+                          gap: 10,
+                          alignItems: 'stretch',
+                          width: '100%',
                         }}
                       >
-                        {chatSoundEnabled ? '🔊 Sonido activo' : '🔔 Activar sonido'}
-                      </button>
-                      {isChatAdmin ? (
                         <button
                           type="button"
-                          onClick={clearAllChatMessages}
-                          disabled={clearingChat || deletingMessageId !== null || !chatMessages.length}
+                          onClick={toggleChatSound}
                           className="btn btn-ghost"
                           style={{
-                            padding: '8px 12px',
+                            width: '100%',
+                            padding: '8px 10px',
                             fontSize: 12,
                             whiteSpace: 'nowrap',
-                            border: '1px solid rgba(239,68,68,0.34)',
+                            border: chatSoundEnabled ? '1px solid rgba(34,197,94,0.46)' : '1px solid rgba(245,158,11,0.34)',
                             color: 'rgba(255,255,255,0.92)',
-                            background: clearingChat ? 'rgba(239,68,68,0.14)' : 'rgba(255,255,255,0.03)',
+                            background: chatSoundEnabled ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.10)',
                           }}
                         >
-                          {clearingChat ? 'Borrando chat...' : 'Borrar todo'}
+                          {chatSoundEnabled ? '🔇 Desactivar sonido' : '🔔 Activar sonido'}
                         </button>
-                      ) : null}
+
+                        {isChatAdmin ? (
+                          <button
+                            type="button"
+                            onClick={clearAllChatMessages}
+                            disabled={clearingChat || deletingMessageId !== null || !chatMessages.length}
+                            className="btn btn-ghost"
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              fontSize: 12,
+                              whiteSpace: 'nowrap',
+                              border: '1px solid rgba(239,68,68,0.42)',
+                              color: 'rgba(255,255,255,0.92)',
+                              background: clearingChat ? 'rgba(239,68,68,0.16)' : 'rgba(239,68,68,0.08)',
+                              opacity: clearingChat || deletingMessageId !== null || !chatMessages.length ? 0.72 : 1,
+                            }}
+                          >
+                            {clearingChat ? 'Borrando chat...' : '🗑️ Borrar todo'}
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
 
                     {isChatAdmin ? (
