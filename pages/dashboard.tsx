@@ -570,6 +570,7 @@ export default function DashboardPage() {
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
   const chatMessagesRef = useRef<ChatMessage[]>([]);
   const chatSoundEnabledRef = useRef(false);
+  const userEmailRef = useRef('');
   const activeTabRef = useRef<'videos' | 'chatLive' | 'biblioteca'>('videos');
   const notifiedChatMessageIdsRef = useRef<Set<string>>(new Set());
   const chatAudioContextRef = useRef<AudioContext | null>(null);
@@ -793,26 +794,6 @@ return normalized;
   }, [selectedVideoId]);
 
   useEffect(() => {
-    chatSoundEnabledRef.current = chatSoundEnabled;
-  }, [chatSoundEnabled]);
-
-  useEffect(() => {
-    activeTabRef.current = activeTab;
-  }, [activeTab]);
-
-  useEffect(() => {
-    notifiedChatMessageIdsRef.current.clear();
-    chatMessagesRef.current = [];
-  }, [userEmail]);
-
-  useEffect(() => {
-    if (!accessActive) {
-      notifiedChatMessageIdsRef.current.clear();
-      chatMessagesRef.current = [];
-    }
-  }, [accessActive]);
-
-  useEffect(() => {
     if (activeTab !== 'biblioteca') return;
     if (!selectedLibraryItemId && LIBRARY_ITEMS.length) {
       setSelectedLibraryItemId(LIBRARY_ITEMS[0].id);
@@ -839,6 +820,18 @@ return normalized;
   }, [router]);
 
 
+
+  useEffect(() => {
+    chatSoundEnabledRef.current = chatSoundEnabled;
+  }, [chatSoundEnabled]);
+
+  useEffect(() => {
+    userEmailRef.current = String(userEmail || '').trim().toLowerCase();
+  }, [userEmail]);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
 
   function clearSelectedChatImage() {
     setChatImageFile(null);
@@ -999,8 +992,31 @@ return normalized;
     }
   }
 
-  async function loadChatMessages(options?: { silent?: boolean }) {
+  function notifyIncomingChatMessage(message: ChatMessage) {
+    const messageId = String(message.id || '');
+    if (!messageId) return;
+
+    const senderEmail = String(message.user_email || '').trim().toLowerCase();
+    const currentEmail = userEmailRef.current;
+    const isOwnMessage = Boolean(currentEmail && senderEmail && senderEmail === currentEmail);
+
+    if (isOwnMessage || notifiedChatMessageIdsRef.current.has(messageId)) return;
+
+    notifiedChatMessageIdsRef.current.add(messageId);
+
+    playChatNotificationSound();
+    showBrowserChatNotification(message);
+
+    const pageIsHidden = typeof document !== 'undefined' && document.visibilityState !== 'visible';
+
+    if (activeTabRef.current !== 'chatLive' || pageIsHidden) {
+      setUnreadChatCount((count) => count + 1);
+    }
+  }
+
+  async function loadChatMessages(options?: { silent?: boolean; notify?: boolean }) {
     const silent = Boolean(options?.silent);
+    const shouldNotify = options?.notify !== false;
 
     if (!silent) {
       setChatLoading(true);
@@ -1027,49 +1043,35 @@ return normalized;
 
     const nextMessages = (data || []) as ChatMessage[];
     const previousMessages = chatMessagesRef.current;
-    const currentEmail = String(userEmail || '').trim().toLowerCase();
     const previousIds = new Set(previousMessages.map((item) => item.id));
-
-    const incomingMessages = nextMessages.filter((message) => {
-      const messageId = String(message.id || '');
-      if (!messageId) return false;
-
-      const senderEmail = String(message.user_email || '').trim().toLowerCase();
-      const isOwnMessage = Boolean(currentEmail && senderEmail && senderEmail === currentEmail);
-      if (isOwnMessage) return false;
-
-      if (notifiedChatMessageIdsRef.current.has(messageId)) return false;
-      if (previousIds.has(messageId)) return false;
-
-      return isNewerChatMessage(message, previousMessages);
-    });
-
-    incomingMessages.forEach((message) => {
-      if (message.id) notifiedChatMessageIdsRef.current.add(message.id);
-    });
-
-    // Keep only recent ids so the in-memory protection does not grow forever.
-    if (notifiedChatMessageIdsRef.current.size > 300) {
-      const latestIds = nextMessages.slice(-120).map((message) => message.id);
-      notifiedChatMessageIdsRef.current = new Set(latestIds);
-    }
 
     chatMessagesRef.current = nextMessages;
     setChatMessages(nextMessages);
     setChatLoading(false);
     setChatRealtimeStatus('conectado');
 
-    if (incomingMessages.length > 0) {
-      const latestIncoming = incomingMessages[incomingMessages.length - 1];
+    // Primera carga: solo establece la base actual del chat. No debe sonar por mensajes viejos.
+    if (!previousMessages.length) {
+      nextMessages.forEach((message) => {
+        if (message.id) notifiedChatMessageIdsRef.current.add(message.id);
+      });
+      return;
+    }
 
-      playChatNotificationSound();
-      showBrowserChatNotification(latestIncoming);
+    if (!shouldNotify) return;
 
-      const pageIsHidden = typeof document !== 'undefined' && document.visibilityState !== 'visible';
+    const newMessages = nextMessages.filter((message) => {
+      const messageId = String(message.id || '');
+      return Boolean(messageId && !previousIds.has(messageId));
+    });
 
-      if (activeTabRef.current !== 'chatLive' || pageIsHidden) {
-        setUnreadChatCount((count) => count + incomingMessages.length);
-      }
+    newMessages.forEach((message) => {
+      notifyIncomingChatMessage(message);
+    });
+
+    if (notifiedChatMessageIdsRef.current.size > 300) {
+      const latestIds = nextMessages.slice(-120).map((message) => message.id).filter(Boolean);
+      notifiedChatMessageIdsRef.current = new Set(latestIds);
     }
   }
 
@@ -1104,7 +1106,6 @@ return normalized;
 
       setChatInput('');
       clearSelectedChatImage();
-      loadChatMessages({ silent: true });
     } catch (e: any) {
       setChatError(e?.message || 'No se pudo enviar el mensaje.');
     } finally {
@@ -1218,7 +1219,7 @@ return normalized;
   useEffect(() => {
     if (!accessActive) return;
 
-    loadChatMessages();
+    loadChatMessages({ notify: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessActive]);
 
@@ -1235,7 +1236,10 @@ return normalized;
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'live_chat_messages' },
-        () => {
+        (payload) => {
+          if (payload.eventType === 'INSERT' && payload.new) {
+            notifyIncomingChatMessage(payload.new as ChatMessage);
+          }
           loadChatMessages({ silent: true });
         }
       )
