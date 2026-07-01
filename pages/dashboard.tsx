@@ -569,6 +569,9 @@ export default function DashboardPage() {
   const emojiPanelRef = useRef<HTMLDivElement | null>(null);
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
   const chatMessagesRef = useRef<ChatMessage[]>([]);
+  const chatSoundEnabledRef = useRef(false);
+  const activeTabRef = useRef<'videos' | 'chatLive' | 'biblioteca'>('videos');
+  const notifiedChatMessageIdsRef = useRef<Set<string>>(new Set());
   const chatAudioContextRef = useRef<AudioContext | null>(null);
   const originalDocumentTitleRef = useRef<string>('');
 
@@ -790,6 +793,26 @@ return normalized;
   }, [selectedVideoId]);
 
   useEffect(() => {
+    chatSoundEnabledRef.current = chatSoundEnabled;
+  }, [chatSoundEnabled]);
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  useEffect(() => {
+    notifiedChatMessageIdsRef.current.clear();
+    chatMessagesRef.current = [];
+  }, [userEmail]);
+
+  useEffect(() => {
+    if (!accessActive) {
+      notifiedChatMessageIdsRef.current.clear();
+      chatMessagesRef.current = [];
+    }
+  }, [accessActive]);
+
+  useEffect(() => {
     if (activeTab !== 'biblioteca') return;
     if (!selectedLibraryItemId && LIBRARY_ITEMS.length) {
       setSelectedLibraryItemId(LIBRARY_ITEMS[0].id);
@@ -876,7 +899,8 @@ return normalized;
   }
 
   async function toggleChatSound() {
-    if (chatSoundEnabled) {
+    if (chatSoundEnabledRef.current || chatSoundEnabled) {
+      chatSoundEnabledRef.current = false;
       setChatSoundEnabled(false);
       return;
     }
@@ -897,17 +921,19 @@ return normalized;
         }
       }
 
+      chatSoundEnabledRef.current = true;
       setChatSoundEnabled(true);
       window.setTimeout(() => {
         playChatNotificationSound(true);
       }, 120);
     } catch {
+      chatSoundEnabledRef.current = true;
       setChatSoundEnabled(true);
     }
   }
 
   function playChatNotificationSound(force = false) {
-    if ((!force && !chatSoundEnabled) || typeof window === 'undefined') return;
+    if ((!force && !chatSoundEnabledRef.current) || typeof window === 'undefined') return;
 
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -1002,12 +1028,31 @@ return normalized;
     const nextMessages = (data || []) as ChatMessage[];
     const previousMessages = chatMessagesRef.current;
     const currentEmail = String(userEmail || '').trim().toLowerCase();
+    const previousIds = new Set(previousMessages.map((item) => item.id));
 
     const incomingMessages = nextMessages.filter((message) => {
+      const messageId = String(message.id || '');
+      if (!messageId) return false;
+
       const senderEmail = String(message.user_email || '').trim().toLowerCase();
       const isOwnMessage = Boolean(currentEmail && senderEmail && senderEmail === currentEmail);
-      return !isOwnMessage && isNewerChatMessage(message, previousMessages);
+      if (isOwnMessage) return false;
+
+      if (notifiedChatMessageIdsRef.current.has(messageId)) return false;
+      if (previousIds.has(messageId)) return false;
+
+      return isNewerChatMessage(message, previousMessages);
     });
+
+    incomingMessages.forEach((message) => {
+      if (message.id) notifiedChatMessageIdsRef.current.add(message.id);
+    });
+
+    // Keep only recent ids so the in-memory protection does not grow forever.
+    if (notifiedChatMessageIdsRef.current.size > 300) {
+      const latestIds = nextMessages.slice(-120).map((message) => message.id);
+      notifiedChatMessageIdsRef.current = new Set(latestIds);
+    }
 
     chatMessagesRef.current = nextMessages;
     setChatMessages(nextMessages);
@@ -1022,7 +1067,7 @@ return normalized;
 
       const pageIsHidden = typeof document !== 'undefined' && document.visibilityState !== 'visible';
 
-      if (activeTab !== 'chatLive' || pageIsHidden) {
+      if (activeTabRef.current !== 'chatLive' || pageIsHidden) {
         setUnreadChatCount((count) => count + incomingMessages.length);
       }
     }
@@ -1059,6 +1104,7 @@ return normalized;
 
       setChatInput('');
       clearSelectedChatImage();
+      loadChatMessages({ silent: true });
     } catch (e: any) {
       setChatError(e?.message || 'No se pudo enviar el mensaje.');
     } finally {
