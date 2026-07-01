@@ -59,7 +59,7 @@ const plans = [
   },
   {
     key: 'intensiveApril2026',
-    title: '$500 Curso Intensivo + 3 clases gratuitas de operaciones en vivo',
+    title: '$500 Curso Intensivo + 5 clases gratuitas de operaciones en vivo',
     description: 'Curso intensivo',
     buttonLabel: 'Inscribirme',
     subscriptionPriceKey: 'NEXT_PUBLIC_STRIPE_PRICE_INTENSIVE_ONE_TIME',
