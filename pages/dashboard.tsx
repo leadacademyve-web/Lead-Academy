@@ -513,7 +513,7 @@ function isChatAdminEmail(email?: string | null) {
   if (!normalized) return false;
 
   const envEmails = normalizeEmailList(process.env.NEXT_PUBLIC_CHAT_ADMIN_EMAILS || '');
-  const fallbackEmails = ['leadacademyve@gmail.com'];
+  const fallbackEmails = ['Lead@leadacademy.com.ve'];
   return [...envEmails, ...fallbackEmails].includes(normalized);
 }
 
@@ -1982,7 +1982,7 @@ return normalized;
                     }}
                   >
                     <div style={{ fontWeight: 700, marginBottom: 6 }}>Soporte</div>
-                    <div>Leadacademyve@gmail.com</div>
+                    <div>Lead@leadacademy.com.ve</div>
                     <div>+1 786 620 4377</div>
                   </div>
                 </>
@@ -2532,7 +2532,7 @@ return normalized;
               <h2 style={{ marginTop: 12 }}>Clases en Vivo</h2>
               <div className="support-list">
                 <div className="support-item"><strong>Acceso:</strong><br />Tener una suscripcion activa o inscribirte en el curso te dara acceso al portal.</div>
-                <div className="support-item"><strong>Email de soporte:</strong><br />Leadacademyve@gmail.com</div>
+                <div className="support-item"><strong>Email de soporte:</strong><br />Lead@leadacademy.com.ve</div>
                 <div className="support-item"><strong>WhatsApp:</strong><br />+1 786 620 4377</div>
               
               </div>
