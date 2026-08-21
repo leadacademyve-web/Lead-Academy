@@ -32,12 +32,12 @@ export async function getLiveAccessByEmail(email?: string | null): Promise<LiveA
     };
   }
 
-  const normalizedEmail = email.toLowerCase();
+  const normalizedEmail = email.trim().toLowerCase();
 
   const { data: classAccessRows, error: classAccessError } = await supabase
     .from('user_class_access')
     .select('id,plan_name,total_classes,classes_used,active,start_date,last_class_date,created_at')
-    .eq('email', normalizedEmail)
+    .ilike('email', normalizedEmail)
     .eq('active', true)
     .order('created_at', { ascending: true });
 
