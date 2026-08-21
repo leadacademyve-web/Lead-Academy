@@ -24,6 +24,14 @@ type ChatMessage = {
   created_at: string | null;
 };
 
+type LiveAudiencePresence = {
+  user_id: string;
+  user_email: string | null;
+  user_name: string | null;
+  is_watching: boolean;
+  last_seen: string;
+};
+
 type LibraryItem = {
   id: string;
   title: string;
@@ -513,7 +521,7 @@ function isChatAdminEmail(email?: string | null) {
   if (!normalized) return false;
 
   const envEmails = normalizeEmailList(process.env.NEXT_PUBLIC_CHAT_ADMIN_EMAILS || '');
-  const fallbackEmails = ['Lead@leadacademy.com.ve'];
+  const fallbackEmails = ['lead@leadacademy.com.ve'];
   return [...envEmails, ...fallbackEmails].includes(normalized);
 }
 
@@ -565,6 +573,11 @@ export default function DashboardPage() {
   const [savingCourseDate, setSavingCourseDate] = useState(false);
   const [courseDateMessage, setCourseDateMessage] = useState<string | null>(null);
   const [courseDateError, setCourseDateError] = useState<string | null>(null);
+  const [liveAudience, setLiveAudience] = useState<LiveAudiencePresence[]>([]);
+  const [liveAudienceLoading, setLiveAudienceLoading] = useState(false);
+  const [liveAudienceError, setLiveAudienceError] = useState<string | null>(null);
+  const [liveAudienceExpanded, setLiveAudienceExpanded] = useState(false);
+  const [liveAudiencePeak, setLiveAudiencePeak] = useState(0);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const emojiPanelRef = useRef<HTMLDivElement | null>(null);
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -575,6 +588,9 @@ export default function DashboardPage() {
   const notifiedChatMessageIdsRef = useRef<Set<string>>(new Set());
   const chatAudioContextRef = useRef<AudioContext | null>(null);
   const originalDocumentTitleRef = useRef<string>('');
+  const liveVideoIframeRef = useRef<HTMLIFrameElement | null>(null);
+  const liveWatchingRef = useRef(false);
+  const livePresenceUserIdRef = useRef<string>('');
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
@@ -1163,6 +1179,70 @@ return normalized;
   }
 
 
+  async function publishLivePresence(isWatching = liveWatchingRef.current) {
+    if (!accessActive || !userEmail) return;
+
+    try {
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if (!user) return;
+
+      livePresenceUserIdRef.current = user.id;
+      liveWatchingRef.current = Boolean(isWatching && selectedVideo?.is_live);
+
+      await supabase.from('live_audience_presence').upsert(
+        {
+          user_id: user.id,
+          user_email: user.email || userEmail || null,
+          user_name: userName || getDisplayName(user),
+          is_watching: liveWatchingRef.current,
+          last_seen: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
+    } catch {
+      // Presence is auxiliary and must never interrupt the portal.
+    }
+  }
+
+  async function loadLiveAudience() {
+    if (!isChatAdmin) return;
+
+    setLiveAudienceLoading(true);
+    setLiveAudienceError(null);
+
+    const cutoff = new Date(Date.now() - 45_000).toISOString();
+    const { data, error } = await supabase
+      .from('live_audience_presence')
+      .select('user_id,user_email,user_name,is_watching,last_seen')
+      .gte('last_seen', cutoff)
+      .order('last_seen', { ascending: false });
+
+    if (error) {
+      setLiveAudienceError('No se pudo cargar la audiencia en vivo.');
+      setLiveAudienceLoading(false);
+      return;
+    }
+
+    const rows = (data || []) as LiveAudiencePresence[];
+    setLiveAudience(rows);
+    const watchingNow = rows.filter((row) => row.is_watching).length;
+    setLiveAudiencePeak((peak) => Math.max(peak, watchingNow));
+    setLiveAudienceLoading(false);
+  }
+
+  function subscribeToVimeoPlaybackEvents() {
+    const iframe = liveVideoIframeRef.current;
+    if (!iframe?.contentWindow || !selectedVideo?.is_live) return;
+
+    ['play', 'pause', 'ended'].forEach((eventName) => {
+      iframe.contentWindow?.postMessage(
+        { method: 'addEventListener', value: eventName },
+        '*'
+      );
+    });
+  }
+
   async function loadCourseDateSetting() {
     if (!isChatAdmin || loadingCourseDate) return;
 
@@ -1215,6 +1295,70 @@ return normalized;
     setSavingCourseDate(false);
   }
 
+
+  useEffect(() => {
+    if (!accessActive || !userEmail) return;
+
+    publishLivePresence(false);
+    const heartbeat = window.setInterval(() => {
+      publishLivePresence(liveWatchingRef.current);
+    }, 15000);
+
+    function handleVisibility() {
+      if (document.visibilityState === 'hidden') {
+        liveWatchingRef.current = false;
+        publishLivePresence(false);
+      } else {
+        publishLivePresence(liveWatchingRef.current);
+      }
+    }
+
+    function handleBeforeUnload() {
+      liveWatchingRef.current = false;
+      publishLivePresence(false);
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.clearInterval(heartbeat);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      liveWatchingRef.current = false;
+      publishLivePresence(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessActive, userEmail, userName, selectedVideoId]);
+
+  useEffect(() => {
+    function handleVimeoMessage(event: MessageEvent) {
+      if (!selectedVideo?.is_live) return;
+      if (typeof event.data !== 'object' || !event.data) return;
+
+      const eventName = String((event.data as any).event || '');
+      if (eventName === 'play') {
+        liveWatchingRef.current = true;
+        publishLivePresence(true);
+      } else if (eventName === 'pause' || eventName === 'ended') {
+        liveWatchingRef.current = false;
+        publishLivePresence(false);
+      }
+    }
+
+    window.addEventListener('message', handleVimeoMessage);
+    return () => window.removeEventListener('message', handleVimeoMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVideoId, accessActive, userEmail]);
+
+  useEffect(() => {
+    if (!isChatAdmin || !accessActive) return;
+
+    loadLiveAudience();
+    const interval = window.setInterval(loadLiveAudience, 10000);
+    return () => window.clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isChatAdmin, accessActive]);
 
   useEffect(() => {
     if (!accessActive) return;
@@ -1650,6 +1794,8 @@ return normalized;
   transform: 'translate(-50%, -50%)',
 }}>
                     <iframe
+                      ref={liveVideoIframeRef}
+                      onLoad={subscribeToVimeoPlaybackEvents}
                       src={`${selectedVideo!.video_url}${selectedVideo!.video_url.includes('?') ? '&' : '?'}quality=1080&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
                       title={selectedVideo?.title || 'Clase'}
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
@@ -2112,6 +2258,54 @@ return normalized;
                     </div>
 
                     {isChatAdmin ? (
+                      <>
+                      <div
+                        style={{
+                          marginTop: 14,
+                          padding: 12,
+                          borderRadius: 16,
+                          border: '1px solid rgba(56,189,248,0.28)',
+                          background: 'linear-gradient(180deg, rgba(14,165,233,0.12) 0%, rgba(255,255,255,0.025) 100%)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                          <div>
+                            <div className="eyebrow" style={{ marginBottom: 6 }}>👁 Audiencia en vivo · Solo administrador</div>
+                            <div style={{ fontSize: 12, lineHeight: 1.7 }}>
+                              🟢 <strong>Conectados ahora:</strong> {liveAudience.length}<br />
+                              ▶️ <strong>Viendo transmisión:</strong> {liveAudience.filter((row) => row.is_watching).length}<br />
+                              📈 <strong>Máximo simultáneo:</strong> {liveAudiencePeak}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() => setLiveAudienceExpanded((value) => !value)}
+                            style={{ padding: '7px 9px', fontSize: 11, whiteSpace: 'nowrap' }}
+                          >
+                            {liveAudienceExpanded ? 'Ocultar' : 'Ver usuarios'}
+                          </button>
+                        </div>
+                        {liveAudienceLoading && !liveAudience.length ? (
+                          <div className="helper" style={{ marginTop: 8, fontSize: 11 }}>Actualizando audiencia...</div>
+                        ) : null}
+                        {liveAudienceError ? (
+                          <div style={{ marginTop: 8, fontSize: 11, color: '#fca5a5' }}>{liveAudienceError}</div>
+                        ) : null}
+                        {liveAudienceExpanded ? (
+                          <div style={{ marginTop: 10, display: 'grid', gap: 6, maxHeight: 160, overflowY: 'auto' }}>
+                            {liveAudience.length ? liveAudience.map((row) => (
+                              <div key={row.user_id} style={{ padding: '7px 8px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', fontSize: 11 }}>
+                                <strong>{row.user_name || row.user_email || 'Usuario'}</strong>
+                                <span style={{ marginLeft: 6, opacity: 0.75 }}>{row.is_watching ? '▶️ viendo' : '🟢 conectado'}</span>
+                              </div>
+                            )) : (
+                              <div className="helper" style={{ fontSize: 11 }}>No hay usuarios conectados en este momento.</div>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+
                       <div
                         style={{
                           marginTop: 14,
@@ -2159,6 +2353,7 @@ return normalized;
                           <p className="error" style={{ marginTop: 8, marginBottom: 0, fontSize: 11 }}>{courseDateError}</p>
                         ) : null}
                       </div>
+                      </>
                     ) : null}
                   </div>
 
