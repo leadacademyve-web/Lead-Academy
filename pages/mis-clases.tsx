@@ -143,7 +143,7 @@ export default function MisClasesPage() {
             <div style={styles.card}>
               <div style={styles.eyebrow}>SEGURIDAD</div>
               <p style={styles.muted}>
-                El estado se guarda en Supabase con fecha y hora del servidor. Cerrar el navegador, cambiar de equipo
+                El estado se guarda en la base de datos con fecha y hora del servidor. Cerrar el navegador, cambiar de equipo
                 o modificar la hora local no altera el historial de pausa/reanudación.
               </p>
             </div>
