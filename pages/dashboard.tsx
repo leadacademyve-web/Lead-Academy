@@ -598,8 +598,9 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
   const isChatAdmin = useMemo(() => isChatAdminEmail(userEmail), [userEmail]);
 
-  async function loadPauseStatus(userId: string) {
-    setPauseStatusLoading(true);
+  async function loadPauseStatus(userId: string, showLoading = false) {
+    if (showLoading) setPauseStatusLoading(true);
+
     const { data, error } = await supabase
       .from('class_pause_state')
       .select('is_paused')
@@ -607,15 +608,18 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       .maybeSingle();
 
     if (error) {
-      // Fail closed for students: if pause status cannot be verified,
-      // do not expose the LIVE until the check succeeds.
-      setClassesPaused(true);
-      setPauseStatusLoading(false);
+      // En la carga inicial fallamos de forma segura.
+      // En refrescos silenciosos conservamos el último estado conocido
+      // para evitar que el LIVE parpadee por una consulta lenta o temporal.
+      if (showLoading) {
+        setClassesPaused(true);
+        setPauseStatusLoading(false);
+      }
       return;
     }
 
     setClassesPaused(Boolean(data?.is_paused));
-    setPauseStatusLoading(false);
+    if (showLoading) setPauseStatusLoading(false);
   }
 
   const selectedVideo = useMemo(
@@ -776,7 +780,7 @@ return normalized;
 
         const email = user.email || '';
         const access = await getLiveAccessByEmail(email);
-        await loadPauseStatus(user.id);
+        await loadPauseStatus(user.id, true);
 
         if (!mounted) return;
 
