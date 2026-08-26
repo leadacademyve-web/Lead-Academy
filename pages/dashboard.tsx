@@ -2097,6 +2097,35 @@ return normalized;
                     </p>
                   ) : null}
 
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: isChatAdmin ? '1fr 1fr' : '1fr',
+                      gap: 10,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ width: '100%' }}
+                      onClick={() => router.push('/mis-clases')}
+                    >
+                      Mis clases
+                    </button>
+
+                    {isChatAdmin ? (
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ width: '100%' }}
+                        onClick={() => router.push('/gestion-operativa')}
+                      >
+                        Gestión Operativa
+                      </button>
+                    ) : null}
+                  </div>
+
                   {lastClassWarning ? (
                     <div
                       style={{
