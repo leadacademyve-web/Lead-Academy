@@ -536,6 +536,8 @@ export default function DashboardPage() {
   const [classesRemaining, setClassesRemaining] = useState<number | null>(null);
   const [accessStartAt, setAccessStartAt] = useState<string | null>(null);
   const [lastClassWarning, setLastClassWarning] = useState(false);
+  const [classesPaused, setClassesPaused] = useState(false);
+  const [pauseStatusLoading, setPauseStatusLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [videos, setVideos] = useState<ClassVideo[]>([]);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
@@ -595,6 +597,26 @@ export default function DashboardPage() {
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
   const isChatAdmin = useMemo(() => isChatAdminEmail(userEmail), [userEmail]);
+
+  async function loadPauseStatus(userId: string) {
+    setPauseStatusLoading(true);
+    const { data, error } = await supabase
+      .from('class_pause_state')
+      .select('is_paused')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      // Fail closed for students: if pause status cannot be verified,
+      // do not expose the LIVE until the check succeeds.
+      setClassesPaused(true);
+      setPauseStatusLoading(false);
+      return;
+    }
+
+    setClassesPaused(Boolean(data?.is_paused));
+    setPauseStatusLoading(false);
+  }
 
   const selectedVideo = useMemo(
     () => videos.find((video) => video.id === selectedVideoId) || null,
@@ -754,6 +776,7 @@ return normalized;
 
         const email = user.email || '';
         const access = await getLiveAccessByEmail(email);
+        await loadPauseStatus(user.id);
 
         if (!mounted) return;
 
@@ -808,6 +831,25 @@ return normalized;
   useEffect(() => {
     setVideoUnavailable(false);
   }, [selectedVideoId]);
+
+  useEffect(() => {
+    if (!userEmail) return;
+
+    let cancelled = false;
+
+    async function refreshPauseStatus() {
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+      if (!user || cancelled) return;
+      await loadPauseStatus(user.id);
+    }
+
+    const interval = window.setInterval(refreshPauseStatus, 10000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [userEmail]);
 
   useEffect(() => {
     if (activeTab !== 'biblioteca') return;
@@ -1652,7 +1694,12 @@ return normalized;
     );
   }
 
-  const hasPlayableVideo = !!selectedVideo?.video_url && !videoUnavailable;
+  const liveAccessBlocked =
+    Boolean(selectedVideo?.is_live) &&
+    !isChatAdmin &&
+    (pauseStatusLoading || classesPaused);
+
+  const hasPlayableVideo = !!selectedVideo?.video_url && !videoUnavailable && !liveAccessBlocked;
   const showIframe = hasPlayableVideo && isEmbedUrl(selectedVideo.video_url);
   const totalClassesForCurrentPlan = totalClassesForPlan(accessPlan);
   const classesUsed =
@@ -1781,6 +1828,22 @@ return normalized;
                         borderRadius: 18,
                       }}
                     />
+                  </div>
+                ) : liveAccessBlocked ? (
+                  <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
+                    <div style={{ maxWidth: 720 }}>
+                      <div className="eyebrow" style={{ marginBottom: 12 }}>Clases pausadas</div>
+                      <h2 style={{ marginTop: 0, marginBottom: 12, fontSize: 42 }}>LIVE bloqueado mientras tus clases estén pausadas</h2>
+                      <p className="helper" style={{ fontSize: 18, lineHeight: 1.6, margin: '0 auto 18px' }}>
+                        Para entrar a una clase en vivo debes reactivar primero tus clases desde “Mis clases”.
+                      </p>
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => router.push('/mis-clases')}
+                      >
+                        Ir a Mis clases
+                      </button>
+                    </div>
                   </div>
                 ) : showIframe ? (
                   <div style={{
@@ -1994,6 +2057,11 @@ return normalized;
                           <button
                             key={video.id}
                             onClick={() => {
+                              if (video.is_live && !isChatAdmin && (pauseStatusLoading || classesPaused)) {
+                                setActiveLibraryVideo(null);
+                                setSelectedVideoId(video.id);
+                                return;
+                              }
                               setActiveLibraryVideo(null);
                               setSelectedVideoId(video.id);
                             }}
