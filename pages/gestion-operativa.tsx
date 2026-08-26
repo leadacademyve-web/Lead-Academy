@@ -29,7 +29,7 @@ export default function GestionOperativaPage() {
   const [search, setSearch] = useState('');
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [activeLiveSession, setActiveLiveSession] = useState<{ session_id: string; started_at: string } | null>(null);
+  const [activeLiveSession, setActiveLiveSession] = useState<{ session_id: string; session_started_at: string } | null>(null);
   const [liveWorking, setLiveWorking] = useState(false);
   const [liveModal, setLiveModal] = useState<'start' | 'end' | null>(null);
 
@@ -213,7 +213,7 @@ export default function GestionOperativaPage() {
             </h2>
             <p style={styles.muted}>
               {activeLiveSession
-                ? `Iniciada: ${formatLiveTime(activeLiveSession.started_at)}`
+                ? `Iniciada: ${formatLiveTime(activeLiveSession.session_started_at)}`
                 : 'Inicia la sesión administrativa cuando comience la clase. La transmisión de video continúa controlándose desde OBS.'}
             </p>
           </div>
