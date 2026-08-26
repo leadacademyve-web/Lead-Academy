@@ -90,27 +90,39 @@ export default function GestionOperativaPage() {
     await load();
   }
 
-  async function adjust(row: StudentRow, delta: number) {
-    const reason = window.prompt(
-      delta > 0
-        ? `Motivo para agregar ${delta} clase(s) a ${row.full_name}:`
-        : `Motivo para quitar ${Math.abs(delta)} clase(s) a ${row.full_name}:`
-    );
+  async function changeCounters(
+    row: StudentRow,
+    operation: 'add_package' | 'remove_package' | 'consume' | 'refund'
+  ) {
+    const labels = {
+      add_package: 'Agregar 1 clase al paquete',
+      remove_package: 'Quitar 1 clase del paquete',
+      consume: 'Marcar 1 clase como consumida',
+      refund: 'Devolver 1 clase consumida',
+    };
+
+    const reason = window.prompt(`${labels[operation]} — ${row.full_name}\n\nMotivo administrativo:`);
     if (!reason?.trim()) return;
 
     setWorkingId(row.user_id);
     setMessage(null);
-    const { data, error } = await supabase.rpc('admin_adjust_class_balance', {
+
+    const { data, error } = await supabase.rpc('admin_change_class_counters', {
       p_user_id: row.user_id,
-      p_delta: delta,
+      p_operation: operation,
+      p_amount: 1,
       p_reason: reason.trim(),
     });
-    setWorkingId(null);
 
+    setWorkingId(null);
     if (error) return setMessage(error.message);
+
     const result = Array.isArray(data) ? data[0] : data;
     if (result) {
-      setMessage(`Saldo actualizado: ${result.before_remaining} → ${result.after_remaining}`);
+      setMessage(
+        `${labels[operation]} completado. ` +
+        `${result.classes_used}/${result.total_classes} usadas · ${result.remaining_classes} restantes.`
+      );
     }
     await load();
   }
@@ -204,8 +216,10 @@ export default function GestionOperativaPage() {
                     <td style={styles.td}>{online && row.is_watching ? '🔴 Viendo' : '—'}</td>
                     <td style={styles.td}>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        <button disabled={busy} style={styles.action} onClick={() => adjust(row, +1)}>+1 clase</button>
-                        <button disabled={busy || row.remaining_classes <= 0} style={styles.action} onClick={() => adjust(row, -1)}>−1 clase</button>
+                        <button disabled={busy} style={styles.action} onClick={() => changeCounters(row, 'add_package')}>＋ Paquete</button>
+                        <button disabled={busy || row.total_classes <= row.classes_used} style={styles.action} onClick={() => changeCounters(row, 'remove_package')}>− Paquete</button>
+                        <button disabled={busy || row.remaining_classes <= 0} style={styles.action} onClick={() => changeCounters(row, 'consume')}>✓ Consumir</button>
+                        <button disabled={busy || row.classes_used <= 0} style={styles.action} onClick={() => changeCounters(row, 'refund')}>↩ Devolver</button>
                         {row.is_paused ? (
                           <button disabled={busy} style={styles.actionPrimary} onClick={() => setPause(row, false)}>▶ Reactivar</button>
                         ) : (
