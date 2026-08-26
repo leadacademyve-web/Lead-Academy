@@ -29,6 +29,9 @@ export default function GestionOperativaPage() {
   const [search, setSearch] = useState('');
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [activeLiveSession, setActiveLiveSession] = useState<{ session_id: string; started_at: string } | null>(null);
+  const [liveWorking, setLiveWorking] = useState(false);
+  const [liveModal, setLiveModal] = useState<'start' | 'end' | null>(null);
 
   async function load() {
     const { data: authData } = await supabase.auth.getUser();
@@ -45,6 +48,11 @@ export default function GestionOperativaPage() {
     }
 
     setAuthorized(true);
+
+    const { data: liveData } = await supabase.rpc('get_active_live_class');
+    const liveRow = Array.isArray(liveData) ? liveData[0] : liveData;
+    setActiveLiveSession(liveRow?.session_id ? liveRow : null);
+
     const { data, error } = await supabase.rpc('admin_operational_students');
     if (error) {
       setMessage(error.message);
@@ -127,6 +135,40 @@ export default function GestionOperativaPage() {
     await load();
   }
 
+  async function startLiveClass() {
+    if (liveWorking) return;
+    setLiveWorking(true);
+    setMessage(null);
+    const { error } = await supabase.rpc('admin_start_live_class');
+    setLiveWorking(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setLiveModal(null);
+    await load();
+  }
+
+  async function endLiveClass() {
+    if (liveWorking) return;
+    setLiveWorking(true);
+    setMessage(null);
+    const { error } = await supabase.rpc('admin_end_live_class');
+    setLiveWorking(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setLiveModal(null);
+    await load();
+  }
+
+  function formatLiveTime(value: string) {
+    return new Date(value).toLocaleString([], {
+      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit'
+    });
+  }
+
   if (loading) {
     return <main style={styles.page}><div style={styles.card}>Cargando Gestión Operativa...</div></main>;
   }
@@ -156,6 +198,35 @@ export default function GestionOperativaPage() {
           <p style={styles.muted}>Clases, pausas, saldos y presencia en vivo.</p>
         </div>
         <button style={styles.buttonSecondary} onClick={() => router.push('/dashboard')}>Volver al Dashboard</button>
+      </div>
+
+      <div style={{
+        ...styles.card,
+        border: activeLiveSession ? '1px solid rgba(239,68,68,.42)' : '1px solid rgba(255,255,255,.10)',
+        background: activeLiveSession ? 'linear-gradient(180deg, rgba(127,29,29,.24), rgba(7,18,39,.82))' : styles.card.background,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+          <div>
+            <div style={styles.eyebrow}>CLASE LIVE</div>
+            <h2 style={{ margin: '6px 0 6px' }}>
+              {activeLiveSession ? '🔴 CLASE EN CURSO' : 'Sin clase activa'}
+            </h2>
+            <p style={styles.muted}>
+              {activeLiveSession
+                ? `Iniciada: ${formatLiveTime(activeLiveSession.started_at)}`
+                : 'Inicia la sesión administrativa cuando comience la clase. La transmisión de video continúa controlándose desde OBS.'}
+            </p>
+          </div>
+          {activeLiveSession ? (
+            <button style={styles.liveEndButton} disabled={liveWorking} onClick={() => setLiveModal('end')}>
+              ■ Finalizar clase
+            </button>
+          ) : (
+            <button style={styles.liveStartButton} disabled={liveWorking} onClick={() => setLiveModal('start')}>
+              ▶ Iniciar clase
+            </button>
+          )}
+        </div>
       </div>
 
       <div style={styles.stats}>
@@ -243,6 +314,43 @@ export default function GestionOperativaPage() {
           Esta fase no modifica todavía el mecanismo actual que descuenta clases al publicar videos.
         </p>
       </div>
+      {liveModal ? (
+        <div
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !liveWorking) setLiveModal(null);
+          }}
+          style={styles.modalBackdrop}
+        >
+          <div role="dialog" aria-modal="true" style={styles.modalCard}>
+            <div style={styles.eyebrow}>CLASE LIVE</div>
+            <h2 style={{ margin: '8px 0 10px' }}>
+              {liveModal === 'start' ? '¿Iniciar la clase?' : '¿Finalizar la clase?'}
+            </h2>
+            <p style={styles.muted}>
+              {liveModal === 'start'
+                ? 'Desde este momento la clase quedará oficialmente abierta para el control de asistencia.'
+                : 'Al finalizar, ningún estudiante podrá registrar una nueva asistencia para esta sesión.'}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
+              <button style={styles.buttonSecondary} disabled={liveWorking} onClick={() => setLiveModal(null)}>
+                Cancelar
+              </button>
+              <button
+                style={liveModal === 'start' ? styles.liveStartButton : styles.liveEndButton}
+                disabled={liveWorking}
+                onClick={liveModal === 'start' ? startLiveClass : endLiveClass}
+              >
+                {liveWorking
+                  ? 'Procesando...'
+                  : liveModal === 'start'
+                    ? 'Sí, iniciar clase'
+                    : 'Sí, finalizar clase'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
     </main>
   );
 }
@@ -312,4 +420,8 @@ const styles: Record<string, any> = {
   button: { padding: '10px 14px', borderRadius: 12, border: 0, background: '#2563eb', color: '#fff', fontWeight: 800, cursor: 'pointer' },
   buttonSecondary: { padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(255,255,255,.05)', color: '#fff', fontWeight: 800, cursor: 'pointer' },
   notice: { padding: '10px 12px', borderRadius: 12, marginBottom: 12, background: 'rgba(59,130,246,.12)', border: '1px solid rgba(59,130,246,.28)' },
+  liveStartButton: { padding: '12px 18px', borderRadius: 12, border: '1px solid rgba(34,197,94,.40)', background: 'rgba(34,197,94,.18)', color: '#dcfce7', fontWeight: 900, cursor: 'pointer' },
+  liveEndButton: { padding: '12px 18px', borderRadius: 12, border: '1px solid rgba(239,68,68,.45)', background: 'rgba(239,68,68,.18)', color: '#fee2e2', fontWeight: 900, cursor: 'pointer' },
+  modalBackdrop: { position: 'fixed', inset: 0, zIndex: 9999, display: 'grid', placeItems: 'center', padding: 20, background: 'rgba(0,0,0,.72)', backdropFilter: 'blur(8px)' },
+  modalCard: { width: 'min(560px, 94vw)', borderRadius: 22, padding: 26, background: '#0f172a', border: '1px solid rgba(255,255,255,.14)', boxShadow: '0 30px 90px rgba(0,0,0,.55)' },
 };
