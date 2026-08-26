@@ -538,6 +538,10 @@ export default function DashboardPage() {
   const [lastClassWarning, setLastClassWarning] = useState(false);
   const [classesPaused, setClassesPaused] = useState(false);
   const [pauseStatusLoading, setPauseStatusLoading] = useState(true);
+  const [liveAttendanceConfirmed, setLiveAttendanceConfirmed] = useState(false);
+  const [liveAttendanceLoading, setLiveAttendanceLoading] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [attendanceError, setAttendanceError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [videos, setVideos] = useState<ClassVideo[]>([]);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
@@ -620,6 +624,46 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
     setClassesPaused(Boolean(data?.is_paused));
     if (showLoading) setPauseStatusLoading(false);
+  }
+
+  async function loadLiveAttendance(liveClassId: string) {
+    if (!liveClassId || isChatAdmin) {
+      setLiveAttendanceConfirmed(Boolean(isChatAdmin));
+      return;
+    }
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('live_class_attendance')
+      .select('confirmed_at')
+      .eq('user_id', user.id)
+      .eq('live_class_id', liveClassId)
+      .maybeSingle();
+    setLiveAttendanceConfirmed(!error && Boolean(data?.confirmed_at));
+  }
+
+  async function confirmLiveAttendance() {
+    if (!selectedVideo?.is_live || classesPaused || pauseStatusLoading || liveAttendanceLoading) return;
+    setLiveAttendanceLoading(true);
+    setAttendanceError(null);
+    const { error } = await supabase.rpc('confirm_live_class_attendance', {
+      p_live_class_id: String(selectedVideo.id),
+      p_user_name: userName || null,
+    });
+    if (error) {
+      setLiveAttendanceLoading(false);
+      if (String(error.message || '').includes('CLASSES_PAUSED')) {
+        setClassesPaused(true);
+        setShowAttendanceModal(false);
+        return;
+      }
+      setAttendanceError('No pudimos confirmar tu asistencia. Intenta nuevamente.');
+      return;
+    }
+    setLiveAttendanceConfirmed(true);
+    setShowAttendanceModal(false);
+    setLiveAttendanceLoading(false);
   }
 
   const selectedVideo = useMemo(
@@ -835,6 +879,22 @@ return normalized;
   useEffect(() => {
     setVideoUnavailable(false);
   }, [selectedVideoId]);
+
+  useEffect(() => {
+    setShowAttendanceModal(false);
+    setAttendanceError(null);
+    if (!selectedVideo?.is_live) {
+      setLiveAttendanceConfirmed(false);
+      return;
+    }
+    if (isChatAdmin) {
+      setLiveAttendanceConfirmed(true);
+      return;
+    }
+    setLiveAttendanceConfirmed(false);
+    loadLiveAttendance(String(selectedVideo.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVideoId, isChatAdmin]);
 
   useEffect(() => {
     if (!userEmail) return;
@@ -1703,7 +1763,17 @@ return normalized;
     !isChatAdmin &&
     (pauseStatusLoading || classesPaused);
 
-  const hasPlayableVideo = !!selectedVideo?.video_url && !videoUnavailable && !liveAccessBlocked;
+  const liveAttendanceRequired =
+    Boolean(selectedVideo?.is_live) &&
+    !isChatAdmin &&
+    !liveAccessBlocked &&
+    !liveAttendanceConfirmed;
+
+  const hasPlayableVideo =
+    !!selectedVideo?.video_url &&
+    !videoUnavailable &&
+    !liveAccessBlocked &&
+    !liveAttendanceRequired;
   const showIframe = hasPlayableVideo && isEmbedUrl(selectedVideo.video_url);
   const totalClassesForCurrentPlan = totalClassesForPlan(accessPlan);
   const classesUsed =
@@ -1846,6 +1916,19 @@ return normalized;
                         onClick={() => router.push('/mis-clases')}
                       >
                         Ir a Mis clases
+                      </button>
+                    </div>
+                  </div>
+                ) : liveAttendanceRequired ? (
+                  <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
+                    <div style={{ maxWidth: 720 }}>
+                      <div className="eyebrow" style={{ marginBottom: 12 }}>Clase en vivo</div>
+                      <h2 style={{ marginTop: 0, marginBottom: 12, fontSize: 42 }}>Confirma tu asistencia para entrar</h2>
+                      <p className="helper" style={{ fontSize: 18, lineHeight: 1.6, margin: '0 auto 18px' }}>
+                        La transmisión se habilitará después de confirmar tu asistencia a la clase de hoy.
+                      </p>
+                      <button className="btn btn-primary" onClick={() => { setAttendanceError(null); setShowAttendanceModal(true); }}>
+                        Confirmar asistencia y entrar
                       </button>
                     </div>
                   </div>
@@ -2952,6 +3035,49 @@ return normalized;
           >
             ×
           </button>
+        </div>
+      ) : null}
+
+      {showAttendanceModal ? (
+        <div
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !liveAttendanceLoading) setShowAttendanceModal(false);
+          }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 10000,
+            background: 'rgba(0,0,0,.72)', backdropFilter: 'blur(8px)',
+            display: 'grid', placeItems: 'center', padding: 20,
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="attendance-title"
+            style={{
+              width: 'min(560px, 94vw)', borderRadius: 24,
+              border: '1px solid rgba(255,255,255,.14)',
+              background: '#111827', boxShadow: '0 30px 90px rgba(0,0,0,.55)', padding: 28,
+            }}
+          >
+            <div className="eyebrow" style={{ marginBottom: 10 }}>Clase en vivo</div>
+            <h2 id="attendance-title" style={{ margin: '0 0 12px', fontSize: 30 }}>Confirmar asistencia</h2>
+            <p className="helper" style={{ fontSize: 17, lineHeight: 1.6, margin: '0 0 18px' }}>
+              Al confirmar, esta clase quedará registrada como asistida aunque abandones la transmisión posteriormente.
+            </p>
+            {attendanceError ? (
+              <div style={{ marginBottom: 16, padding: 12, borderRadius: 12, background: 'rgba(220,38,38,.14)' }}>
+                {attendanceError}
+              </div>
+            ) : null}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn-secondary" disabled={liveAttendanceLoading}
+                onClick={() => setShowAttendanceModal(false)}>Cancelar</button>
+              <button type="button" className="btn btn-primary" disabled={liveAttendanceLoading}
+                onClick={confirmLiveAttendance}>
+                {liveAttendanceLoading ? 'Confirmando...' : 'Confirmar asistencia y entrar'}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
 
