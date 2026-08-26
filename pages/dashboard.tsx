@@ -539,6 +539,8 @@ export default function DashboardPage() {
   const [classesPaused, setClassesPaused] = useState(false);
   const [pauseStatusLoading, setPauseStatusLoading] = useState(true);
   const [liveAttendanceConfirmed, setLiveAttendanceConfirmed] = useState(false);
+  const [activeLiveSession, setActiveLiveSession] = useState<{ session_id: string; session_started_at: string } | null>(null);
+  const [liveSessionLoading, setLiveSessionLoading] = useState(true);
   const [liveAttendanceLoading, setLiveAttendanceLoading] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [attendanceError, setAttendanceError] = useState<string | null>(null);
@@ -626,41 +628,88 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     if (showLoading) setPauseStatusLoading(false);
   }
 
-  async function loadLiveAttendance(liveClassId: string) {
-    if (!liveClassId || isChatAdmin) {
+  async function loadActiveLiveSession(showLoading = false) {
+    if (showLoading) setLiveSessionLoading(true);
+
+    const { data, error } = await supabase.rpc('get_active_live_class');
+    if (error) {
+      if (showLoading) setLiveSessionLoading(false);
+      return;
+    }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    const nextSession = row?.session_id
+      ? { session_id: String(row.session_id), session_started_at: String(row.session_started_at || '') }
+      : null;
+
+    setActiveLiveSession((current) => {
+      if (current?.session_id === nextSession?.session_id) return current;
+      return nextSession;
+    });
+
+    if (showLoading) setLiveSessionLoading(false);
+  }
+
+  async function loadLiveAttendance(liveSessionId: string) {
+    if (!liveSessionId || isChatAdmin) {
       setLiveAttendanceConfirmed(Boolean(isChatAdmin));
       return;
     }
+
     const { data: authData } = await supabase.auth.getUser();
     const user = authData.user;
     if (!user) return;
+
     const { data, error } = await supabase
       .from('live_class_attendance')
       .select('confirmed_at')
       .eq('user_id', user.id)
-      .eq('live_class_id', liveClassId)
+      .eq('live_class_id', liveSessionId)
       .maybeSingle();
+
     setLiveAttendanceConfirmed(!error && Boolean(data?.confirmed_at));
   }
 
   async function confirmLiveAttendance() {
-    if (!selectedVideo?.is_live || classesPaused || pauseStatusLoading || liveAttendanceLoading) return;
+    if (
+      !selectedVideo?.is_live ||
+      !activeLiveSession?.session_id ||
+      classesPaused ||
+      pauseStatusLoading ||
+      liveAttendanceLoading
+    ) return;
+
     setLiveAttendanceLoading(true);
     setAttendanceError(null);
+
     const { error } = await supabase.rpc('confirm_live_class_attendance', {
-      p_live_class_id: String(selectedVideo.id),
+      p_live_class_id: activeLiveSession.session_id,
       p_user_name: userName || null,
     });
+
     if (error) {
       setLiveAttendanceLoading(false);
+
       if (String(error.message || '').includes('CLASSES_PAUSED')) {
         setClassesPaused(true);
         setShowAttendanceModal(false);
         return;
       }
+
+      if (
+        String(error.message || '').includes('NO_ACTIVE_LIVE_CLASS') ||
+        String(error.message || '').includes('LIVE_CLASS_NOT_ACTIVE')
+      ) {
+        setActiveLiveSession(null);
+        setShowAttendanceModal(false);
+        setAttendanceError(null);
+        return;
+      }
+
       setAttendanceError('No pudimos confirmar tu asistencia. Intenta nuevamente.');
       return;
     }
+
     setLiveAttendanceConfirmed(true);
     setShowAttendanceModal(false);
     setLiveAttendanceLoading(false);
@@ -883,18 +932,26 @@ return normalized;
   useEffect(() => {
     setShowAttendanceModal(false);
     setAttendanceError(null);
+
     if (!selectedVideo?.is_live) {
       setLiveAttendanceConfirmed(false);
       return;
     }
+
     if (isChatAdmin) {
       setLiveAttendanceConfirmed(true);
       return;
     }
+
+    if (!activeLiveSession?.session_id) {
+      setLiveAttendanceConfirmed(false);
+      return;
+    }
+
     setLiveAttendanceConfirmed(false);
-    loadLiveAttendance(String(selectedVideo.id));
+    loadLiveAttendance(activeLiveSession.session_id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVideoId, isChatAdmin]);
+  }, [selectedVideoId, isChatAdmin, activeLiveSession?.session_id]);
 
   useEffect(() => {
     if (!userEmail) return;
@@ -914,6 +971,26 @@ return normalized;
       window.clearInterval(interval);
     };
   }, [userEmail]);
+
+  useEffect(() => {
+    if (!userEmail || !accessActive) return;
+
+    let cancelled = false;
+
+    async function refreshLiveSession() {
+      if (cancelled) return;
+      await loadActiveLiveSession();
+    }
+
+    loadActiveLiveSession(true);
+    const interval = window.setInterval(refreshLiveSession, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userEmail, accessActive]);
 
   useEffect(() => {
     if (activeTab !== 'biblioteca') return;
@@ -1763,17 +1840,27 @@ return normalized;
     !isChatAdmin &&
     (pauseStatusLoading || classesPaused);
 
+  const liveSessionUnavailable =
+    Boolean(selectedVideo?.is_live) &&
+    !isChatAdmin &&
+    !liveAccessBlocked &&
+    !liveSessionLoading &&
+    !activeLiveSession;
+
   const liveAttendanceRequired =
     Boolean(selectedVideo?.is_live) &&
     !isChatAdmin &&
     !liveAccessBlocked &&
+    Boolean(activeLiveSession) &&
     !liveAttendanceConfirmed;
 
   const hasPlayableVideo =
     !!selectedVideo?.video_url &&
     !videoUnavailable &&
     !liveAccessBlocked &&
-    !liveAttendanceRequired;
+    !liveSessionUnavailable &&
+    !liveAttendanceRequired &&
+    (!selectedVideo?.is_live || isChatAdmin || liveAttendanceConfirmed);
   const showIframe = hasPlayableVideo && isEmbedUrl(selectedVideo.video_url);
   const totalClassesForCurrentPlan = totalClassesForPlan(accessPlan);
   const classesUsed =
@@ -1917,6 +2004,23 @@ return normalized;
                       >
                         Ir a Mis clases
                       </button>
+                    </div>
+                  </div>
+                ) : liveSessionLoading && selectedVideo?.is_live && !isChatAdmin ? (
+                  <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
+                    <div style={{ maxWidth: 720 }}>
+                      <div className="eyebrow" style={{ marginBottom: 12 }}>Clase en vivo</div>
+                      <h2 style={{ marginTop: 0, marginBottom: 12, fontSize: 42 }}>Verificando clase en vivo...</h2>
+                    </div>
+                  </div>
+                ) : liveSessionUnavailable ? (
+                  <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
+                    <div style={{ maxWidth: 720 }}>
+                      <div className="eyebrow" style={{ marginBottom: 12 }}>Clase en vivo</div>
+                      <h2 style={{ marginTop: 0, marginBottom: 12, fontSize: 42 }}>No hay una clase en vivo activa</h2>
+                      <p className="helper" style={{ fontSize: 18, lineHeight: 1.6, margin: '0 auto 18px' }}>
+                        Cuando la clase sea iniciada, la confirmación de asistencia aparecerá aquí automáticamente.
+                      </p>
                     </div>
                   </div>
                 ) : liveAttendanceRequired ? (
