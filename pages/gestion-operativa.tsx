@@ -25,6 +25,7 @@ type ReplaySession = {
 };
 
 type CounterOperation = 'add_package' | 'remove_package' | 'consume' | 'refund';
+type VideoPublishType = 'daily' | 'course' | 'special';
 
 type StudentModal = {
   row: StudentRow;
@@ -71,7 +72,9 @@ export default function GestionOperativaPage() {
   const [studentModal, setStudentModal] = useState<StudentModal | null>(null);
   const [reason, setReason] = useState('');
 
+  const [publishType, setPublishType] = useState<VideoPublishType>('daily');
   const [vimeoId, setVimeoId] = useState('');
+  const [videoTitle, setVideoTitle] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState('');
   const [sessionPickerOpen, setSessionPickerOpen] = useState(false);
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
@@ -190,41 +193,92 @@ export default function GestionOperativaPage() {
     await load();
   }
 
+  function selectPublishType(type: VideoPublishType) {
+    setPublishType(type);
+    setVimeoId('');
+    setVideoTitle('');
+    setSelectedSessionId('');
+    setPublishConfirmOpen(false);
+    setMessage(null);
+  }
+
   function requestPublish() {
-    const clean = vimeoId.trim();
-    if (!/^\d+$/.test(clean)) {
+    const cleanVimeo = vimeoId.trim();
+    const cleanTitle = videoTitle.trim();
+
+    if (!/^\d+$/.test(cleanVimeo)) {
       setMessage('Introduce solamente el número del video de Vimeo.');
       return;
     }
-    if (!selectedSessionId) {
+
+    if (publishType === 'daily' && !selectedSessionId) {
       setMessage('Selecciona la sesión LIVE a la que pertenece esta repetición.');
       return;
     }
+
+    if ((publishType === 'course' || publishType === 'special') && !cleanTitle) {
+      setMessage(publishType === 'course' ? 'Escribe el nombre del curso.' : 'Escribe el nombre del contenido gratuito.');
+      return;
+    }
+
     setMessage(null);
     setPublishConfirmOpen(true);
   }
 
-  async function publishReplay() {
-    if (!selectedSessionId || !/^\d+$/.test(vimeoId.trim())) return;
+  async function publishVideo() {
+    const cleanVimeo = vimeoId.trim();
+    const cleanTitle = videoTitle.trim();
+    if (!/^\d+$/.test(cleanVimeo)) return;
+
     setPublishing(true);
     setMessage(null);
 
-    const { error } = await supabase.rpc('admin_publish_live_replay', {
-      p_session_id: selectedSessionId,
-      p_vimeo_id: vimeoId.trim(),
-    });
+    let error: any = null;
+
+    if (publishType === 'daily') {
+      if (!selectedSessionId) {
+        setPublishing(false);
+        return;
+      }
+      const result = await supabase.rpc('admin_publish_live_replay', {
+        p_session_id: selectedSessionId,
+        p_vimeo_id: cleanVimeo,
+      });
+      error = result.error;
+    } else if (publishType === 'course') {
+      const result = await supabase.rpc('admin_publish_course_500', {
+        p_vimeo_id: cleanVimeo,
+        p_title: cleanTitle,
+      });
+      error = result.error;
+    } else {
+      const result = await supabase.rpc('admin_publish_special_video', {
+        p_vimeo_id: cleanVimeo,
+        p_title: cleanTitle,
+      });
+      error = result.error;
+    }
 
     setPublishing(false);
+
     if (error) {
       setPublishConfirmOpen(false);
       setMessage(error.message);
       return;
     }
 
+    const successMessage =
+      publishType === 'daily'
+        ? 'Repetición diaria publicada y asociada correctamente a la sesión LIVE.'
+        : publishType === 'course'
+          ? 'Curso intensivo publicado correctamente. Se aplicó el consumo configurado para INTENSIVE_TWO_DAY.'
+          : 'Contenido gratuito publicado correctamente. No se descontaron clases.';
+
     setPublishConfirmOpen(false);
     setVimeoId('');
+    setVideoTitle('');
     setSelectedSessionId('');
-    setMessage('Repetición publicada y asociada correctamente a la sesión LIVE.');
+    setMessage(successMessage);
     await load();
   }
 
@@ -266,7 +320,93 @@ export default function GestionOperativaPage() {
         <div style={styles.stat}><strong>{rows.length}</strong><span>Con acceso/clases</span></div>
       </div>
 
-      {/* REPETICIONES ARRIBA DE LOS ESTUDIANTES */}
+      {/* PUBLICACIÓN DE VIDEOS ARRIBA DE LOS ESTUDIANTES */}
+      <div style={styles.card}>
+        <div style={styles.eyebrow}>PUBLICAR VIDEO</div>
+        <h2 style={{ margin: '6px 0 8px' }}>Publicación de contenido</h2>
+        <p style={styles.muted}>Selecciona el tipo de video. El portal aplicará automáticamente las reglas correspondientes a cada publicación.</p>
+
+        <div style={styles.typeTabs}>
+          <button type="button" style={publishType === 'daily' ? styles.typeTabActive : styles.typeTab} onClick={() => selectPublishType('daily')}>
+            Clase diaria
+          </button>
+          <button type="button" style={publishType === 'course' ? styles.typeTabActive : styles.typeTab} onClick={() => selectPublishType('course')}>
+            Curso intensivo
+          </button>
+          <button type="button" style={publishType === 'special' ? styles.typeTabActive : styles.typeTab} onClick={() => selectPublishType('special')}>
+            Contenido gratuito
+          </button>
+        </div>
+
+        <div style={publishType === 'daily' ? styles.replayGrid : styles.publishGrid}>
+          {(publishType === 'course' || publishType === 'special') && (
+            <div>
+              <div style={styles.fieldLabel}>{publishType === 'course' ? 'Nombre del curso / clase' : 'Nombre personalizado'}</div>
+              <input
+                value={videoTitle}
+                onChange={(e) => setVideoTitle(e.target.value)}
+                placeholder={publishType === 'course' ? 'Ej. Día 2 - Curso Intensivo' : 'Ej. POST-FED del 18 de junio de 2026'}
+                style={{ ...styles.input, width: '100%', minWidth: 0, boxSizing: 'border-box' }}
+              />
+            </div>
+          )}
+
+          <div>
+            <div style={styles.fieldLabel}>ID de Vimeo</div>
+            <input
+              value={vimeoId}
+              onChange={(e) => setVimeoId(e.target.value.replace(/\D/g, ''))}
+              placeholder="Ej. 1217366012"
+              inputMode="numeric"
+              style={{ ...styles.input, width: '100%', minWidth: 0, boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {publishType === 'daily' && (
+            <div>
+              <div style={styles.fieldLabel}>Sesión LIVE</div>
+              <button type="button" style={styles.sessionButton} onClick={() => setSessionPickerOpen(true)}>
+                <span>{selectedSession ? `${formatSessionDate(selectedSession.started_at)} → ${formatSessionDate(selectedSession.ended_at)}` : 'Seleccionar sesión LIVE'}</span>
+                <span>▾</span>
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            style={{
+              ...styles.button,
+              alignSelf: 'end',
+              opacity:
+                !vimeoId ||
+                (publishType === 'daily' && !selectedSessionId) ||
+                ((publishType === 'course' || publishType === 'special') && !videoTitle.trim())
+                  ? .55
+                  : 1
+            }}
+            disabled={
+              publishing ||
+              !vimeoId ||
+              (publishType === 'daily' && !selectedSessionId) ||
+              ((publishType === 'course' || publishType === 'special') && !videoTitle.trim())
+            }
+            onClick={requestPublish}
+          >
+            {publishType === 'daily' ? 'Publicar repetición' : publishType === 'course' ? 'Publicar curso' : 'Publicar contenido'}
+          </button>
+        </div>
+
+        {publishType === 'daily' && (
+          <div style={styles.mutedSmall}>{pendingSessions.length} sesión(es) finalizada(s) pendiente(s) de repetición. Las sesiones ya asociadas no pueden seleccionarse nuevamente.</div>
+        )}
+        {publishType === 'course' && (
+          <div style={styles.mutedSmall}>Esta publicación corresponde a course_500 y descuenta según la configuración de INTENSIVE_TWO_DAY.</div>
+        )}
+        {publishType === 'special' && (
+          <div style={styles.mutedSmall}>Este contenido es gratuito: se publica como especial y no descuenta clases a ningún estudiante.</div>
+        )}
+      </div>
+
       <div style={styles.card}>
         <div style={styles.eyebrow}>REPETICIONES</div>
         <h2 style={{ margin: '6px 0 8px' }}>Publicar repetición de una sesión LIVE</h2>
@@ -399,19 +539,38 @@ export default function GestionOperativaPage() {
       )}
 
       {/* MODAL: CONFIRMAR PUBLICACIÓN */}
-      {publishConfirmOpen && selectedSession && (
+      {publishConfirmOpen && (publishType !== 'daily' || selectedSession) && (
         <div style={styles.modalBackdrop} onMouseDown={() => !publishing && setPublishConfirmOpen(false)}>
           <div style={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
             <div style={styles.eyebrow}>CONFIRMAR PUBLICACIÓN</div>
-            <h2 style={{ margin: '6px 0 8px' }}>Publicar repetición</h2>
+            <h2 style={{ margin: '6px 0 8px' }}>
+              {publishType === 'daily' ? 'Publicar repetición diaria' : publishType === 'course' ? 'Publicar curso intensivo' : 'Publicar contenido gratuito'}
+            </h2>
+
             <div style={styles.confirmBox}>
+              <div><span style={styles.mutedSmall}>Tipo</span><br /><strong>{publishType === 'daily' ? 'Clase diaria' : publishType === 'course' ? 'Curso intensivo' : 'Contenido gratuito'}</strong></div>
+              {(publishType === 'course' || publishType === 'special') && (
+                <div><span style={styles.mutedSmall}>Nombre</span><br /><strong>{videoTitle.trim()}</strong></div>
+              )}
               <div><span style={styles.mutedSmall}>Vimeo</span><br /><strong>{vimeoId}</strong></div>
-              <div><span style={styles.mutedSmall}>Sesión LIVE</span><br /><strong>{formatSessionDate(selectedSession.started_at)}</strong><br /><span style={styles.mutedSmall}>hasta {formatSessionDate(selectedSession.ended_at)}</span></div>
+              {publishType === 'daily' && selectedSession && (
+                <div><span style={styles.mutedSmall}>Sesión LIVE</span><br /><strong>{formatSessionDate(selectedSession.started_at)}</strong><br /><span style={styles.mutedSmall}>hasta {formatSessionDate(selectedSession.ended_at)}</span></div>
+              )}
             </div>
-            <p style={styles.muted}>Al publicar, esta repetición quedará asociada a esta sesión y se ejecutará el mecanismo de consumo de clases configurado para la sesión.</p>
+
+            <p style={styles.muted}>
+              {publishType === 'daily'
+                ? 'La repetición quedará asociada a esta sesión LIVE y se ejecutará el mecanismo de consumo validado para asistencia y pausas.'
+                : publishType === 'course'
+                  ? 'Esta publicación ejecutará el consumo configurado exclusivamente para los accesos INTENSIVE_TWO_DAY con saldo disponible.'
+                  : 'Esta publicación será contenido especial gratuito y no descontará clases a ningún estudiante.'}
+            </p>
+
             <div style={styles.modalActions}>
               <button disabled={publishing} style={styles.buttonSecondary} onClick={() => setPublishConfirmOpen(false)}>Cancelar</button>
-              <button disabled={publishing} style={styles.button} onClick={publishReplay}>{publishing ? 'Publicando...' : 'Publicar repetición'}</button>
+              <button disabled={publishing} style={styles.button} onClick={publishVideo}>
+                {publishing ? 'Publicando...' : 'Confirmar publicación'}
+              </button>
             </div>
           </div>
         </div>
@@ -433,6 +592,10 @@ const styles: Record<string, any> = {
   textarea: { width: '100%', minHeight: 110, resize: 'vertical', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(255,255,255,.05)', color: '#fff', outline: 'none', font: 'inherit' },
   fieldLabel: { fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,.72)', margin: '0 0 7px' },
   replayGrid: { display: 'grid', gridTemplateColumns: 'minmax(180px,.75fr) minmax(320px,1.75fr) auto', gap: 12, alignItems: 'end', marginTop: 18 },
+  publishGrid: { display: 'grid', gridTemplateColumns: 'minmax(260px,1.4fr) minmax(180px,.75fr) auto', gap: 12, alignItems: 'end', marginTop: 18 },
+  typeTabs: { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 18 },
+  typeTab: { padding: '9px 13px', borderRadius: 999, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(255,255,255,.04)', color: 'rgba(255,255,255,.72)', fontWeight: 800, cursor: 'pointer' },
+  typeTabActive: { padding: '9px 13px', borderRadius: 999, border: '1px solid rgba(59,130,246,.55)', background: 'rgba(37,99,235,.20)', color: '#fff', fontWeight: 900, cursor: 'pointer' },
   sessionButton: { width: '100%', minHeight: 43, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(255,255,255,.05)', color: '#fff', cursor: 'pointer', textAlign: 'left' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 980 },
   th: { textAlign: 'left', padding: '12px 10px', color: 'rgba(255,255,255,.55)', fontSize: 12, letterSpacing: .8 },
