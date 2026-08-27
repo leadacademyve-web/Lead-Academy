@@ -261,6 +261,7 @@ function formatNYTime() {
       timeZone: 'America/New_York',
       hour: 'numeric',
       minute: '2-digit',
+      second: '2-digit',
       hour12: true,
     }).format(new Date());
   } catch {
@@ -482,6 +483,7 @@ function normalizeEmailList(raw: string) {
 
 
 const INTENSIVE_COURSE_DATE_KEY = 'intensive_course_start_date';
+const TODAY_CLASS_TOPIC_KEY = 'today_class_topic';
 
 function dateInputFromSetting(value?: string | null) {
   if (!value) return '';
@@ -581,6 +583,7 @@ export default function DashboardPage() {
   const [chatZoomImageUrl, setChatZoomImageUrl] = useState<string | null>(null);
   const [activeLibraryVideo, setActiveLibraryVideo] = useState<LibraryItem | null>(null);
   const [nowText, setNowText] = useState('');
+  const [todayClassTopic, setTodayClassTopic] = useState('Tema pendiente de publicación');
   const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', email: '' });
   const [selectedCountryCode, setSelectedCountryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [phoneLocal, setPhoneLocal] = useState('');
@@ -883,9 +886,16 @@ return normalized;
     setNowText(formatNYTime());
     const interval = window.setInterval(() => {
       setNowText(formatNYTime());
-    }, 30000);
+    }, 1000);
 
     return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    loadTodayClassTopic();
+    const interval = window.setInterval(loadTodayClassTopic, 30000);
+    return () => window.clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1463,6 +1473,19 @@ return normalized;
         '*'
       );
     });
+  }
+
+  async function loadTodayClassTopic() {
+    const { data, error } = await supabase
+      .from('portal_settings')
+      .select('value')
+      .eq('key', TODAY_CLASS_TOPIC_KEY)
+      .maybeSingle();
+
+    if (!error) {
+      const topic = String(data?.value || '').trim();
+      setTodayClassTopic(topic || 'Tema pendiente de publicación');
+    }
   }
 
   async function loadCourseDateSetting() {
@@ -2322,7 +2345,7 @@ return normalized;
                         cursor: 'pointer',
                       }}
                     >
-                      <PortalIcon name={tab.icon} size={18} />
+                      <PortalIcon name={tab.icon} size={22} />
                       <span style={{ whiteSpace: 'nowrap' }}>{tab.label}</span>
                     </button>
                   );
@@ -2349,11 +2372,11 @@ return normalized;
                       <PortalIcon name="calendar" size={25} />
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 10, letterSpacing: 1, fontWeight: 900, color: '#78aaff', marginBottom: 5 }}>PRÓXIMA CLASE</div>
-                      <div style={{ fontSize: 14, fontWeight: 900, lineHeight: 1.25 }}>
-                        {nextScheduledClass ? formatNextClassDateNY(nextScheduledClass.published_at) : 'Horario regular de clases'}
+                      <div style={{ fontSize: 10, letterSpacing: 1, fontWeight: 900, color: '#78aaff', marginBottom: 5 }}>CLASE DE HOY</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, lineHeight: 1.28 }}>
+                        {todayClassTopic}
                       </div>
-                      {!nextScheduledClass ? <div style={{ fontSize: 11, color: 'rgba(255,255,255,.66)', marginTop: 4 }}>Consulta el horario mostrado en la pantalla principal.</div> : null}
+                      <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.68)', marginTop: 5 }}>Clase diaria · 9:00 AM hora de New York</div>
                     </div>
                     <div style={{ textAlign: 'right', paddingLeft: 10, borderLeft: '1px solid rgba(255,255,255,.10)' }}>
                       <div style={{ fontSize: 9, letterSpacing: .8, fontWeight: 800, color: 'rgba(255,255,255,.58)' }}>HORA NY</div>
@@ -2367,6 +2390,20 @@ return normalized;
                     const selected = selectedVideoId === liveVideo.id;
                     return (
                       <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          if (!isChatAdmin && (pauseStatusLoading || classesPaused)) return;
+                          setActiveLibraryVideo(null);
+                          setSelectedVideoId(liveVideo.id);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter' && event.key !== ' ') return;
+                          event.preventDefault();
+                          if (!isChatAdmin && (pauseStatusLoading || classesPaused)) return;
+                          setActiveLibraryVideo(null);
+                          setSelectedVideoId(liveVideo.id);
+                        }}
                         style={{
                           padding: '14px 15px',
                           marginBottom: 12,
@@ -2374,6 +2411,7 @@ return normalized;
                           background: selected ? 'linear-gradient(135deg,rgba(0,113,72,.19),rgba(5,23,39,.90))' : 'linear-gradient(135deg,rgba(0,81,53,.14),rgba(5,23,39,.88))',
                           border: '1px solid rgba(17,218,139,.58)',
                           boxShadow: '0 12px 30px rgba(0,94,60,.10)',
+                          cursor: classesPaused && !isChatAdmin ? 'default' : 'pointer',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 11 }}>
@@ -2383,9 +2421,9 @@ return normalized;
                           </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '45px 1fr auto', gap: 11, alignItems: 'center' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr', gap: 11, alignItems: 'center' }}>
                           <div style={{ color: '#17e28f', display: 'grid', placeItems: 'center' }}>
-                            <PortalIcon name="live" size={31} />
+                            <PortalIcon name="live" size={36} />
                           </div>
                           <div>
                             <div style={{ fontSize: 15, fontWeight: 900 }}>{labelForVideo(liveVideo)}</div>
@@ -2393,34 +2431,7 @@ return normalized;
                               {classesPaused && !isChatAdmin ? 'Tus clases están pausadas' : 'Únete ahora a la clase en vivo'}
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            disabled={Boolean(classesPaused && !isChatAdmin)}
-                            onClick={() => {
-                              if (!isChatAdmin && (pauseStatusLoading || classesPaused)) {
-                                setActiveLibraryVideo(null);
-                                setSelectedVideoId(liveVideo.id);
-                                return;
-                              }
-                              setActiveLibraryVideo(null);
-                              setSelectedVideoId(liveVideo.id);
-                            }}
-                            style={{
-                              minHeight: 40,
-                              padding: '0 14px',
-                              borderRadius: 9,
-                              border: '1px solid rgba(21,221,139,.45)',
-                              background: classesPaused && !isChatAdmin ? 'rgba(255,255,255,.06)' : 'linear-gradient(180deg,#16b86f,#079455)',
-                              color: '#fff',
-                              fontSize: 12,
-                              fontWeight: 900,
-                              cursor: classesPaused && !isChatAdmin ? 'not-allowed' : 'pointer',
-                              opacity: classesPaused && !isChatAdmin ? .55 : 1,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            Entrar a clase &nbsp; →
-                          </button>
+
                         </div>
                       </div>
                     );
@@ -2436,9 +2447,9 @@ return normalized;
                       marginBottom: 12,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 13px', borderBottom: '1px solid rgba(114,161,216,.14)' }}>
-                      <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: .8, color: 'rgba(255,255,255,.72)' }}>REPETICIONES RECIENTES</div>
-                      <div style={{ fontSize: 10, fontWeight: 800, color: '#6ca7ff' }}>Recientes →</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 15px', borderBottom: '1px solid rgba(114,161,216,.14)' }}>
+                      <div style={{ fontSize: 11.5, fontWeight: 900, letterSpacing: .9, color: 'rgba(255,255,255,.72)' }}>REPETICIONES RECIENTES</div>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: '#6ca7ff' }}>Recientes →</div>
                     </div>
 
                     {visibleLibraryVideos.filter((video) => !video.is_live).length ? (
@@ -2454,24 +2465,24 @@ return normalized;
                             }}
                             style={{
                               width: '100%',
-                              minHeight: 44,
-                              padding: '7px 11px',
+                              minHeight: 54,
+                              padding: '9px 13px',
                               border: 0,
                               borderBottom: '1px solid rgba(114,161,216,.12)',
                               background: selected ? 'rgba(34,94,190,.18)' : 'transparent',
                               color: '#fff',
                               display: 'grid',
-                              gridTemplateColumns: '29px 1fr auto',
+                              gridTemplateColumns: '38px 1fr auto',
                               gap: 8,
                               alignItems: 'center',
                               textAlign: 'left',
                               cursor: 'pointer',
                             }}
                           >
-                            <span style={{ width: 25, height: 25, borderRadius: '50%', display: 'grid', placeItems: 'center', color: '#629bff', background: 'rgba(47,91,161,.18)', border: '1px solid rgba(89,139,216,.24)' }}>
-                              <PortalIcon name="play" size={16} />
+                            <span style={{ width: 32, height: 32, borderRadius: '50%', display: 'grid', placeItems: 'center', color: '#629bff', background: 'rgba(47,91,161,.18)', border: '1px solid rgba(89,139,216,.24)' }}>
+                              <PortalIcon name="play" size={20} />
                             </span>
-                            <span style={{ minWidth: 0, fontSize: 11.5, lineHeight: 1.25, fontWeight: 750, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span style={{ minWidth: 0, fontSize: 12.5, lineHeight: 1.3, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {labelForVideo(video)}
                             </span>
                             <span style={{ color: 'rgba(255,255,255,.52)', fontSize: 14 }}>›</span>
