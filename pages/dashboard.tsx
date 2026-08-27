@@ -335,7 +335,7 @@ async function uploadChatImage(file: File) {
   const extension = extensionFromName || extensionFromType || 'png';
   const fileName = `chat-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
 
-  const { error: uploadError } = await .storage
+  const { error: uploadError } = await supabase.storage
     .from('Chat-Images')
     .upload(fileName, safeFile, {
       cacheControl: '3600',
@@ -347,7 +347,7 @@ async function uploadChatImage(file: File) {
     throw uploadError;
   }
 
-  const { data } = .storage.from('Chat-Images').getPublicUrl(fileName);
+  const { data } = supabase.storage.from('Chat-Images').getPublicUrl(fileName);
   return data.publicUrl;
 }
 
@@ -706,7 +706,9 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
         return;
       }
 
-      setAttendanceError('No pudimos confirmar tu asistencia. Intenta nuevamente.');
+      setAttendanceError(
+        `No pudimos confirmar tu asistencia. Error técnico: ${String(error.message || 'desconocido')}`
+      );
       return;
     }
 
@@ -2629,7 +2631,7 @@ return normalized;
                           {savingCourseDate ? 'Guardando fecha...' : 'Guardar fecha del curso'}
                         </button>
                         <p className="helper" style={{ marginTop: 8, marginBottom: 0, fontSize: 11, lineHeight: 1.45 }}>
-                          Esta fecha se guarda en la base de datos y será usada automáticamente por Stripe para activar el acceso del curso intensivo.
+                          Esta fecha se guarda en Supabase y será usada automáticamente por Stripe para activar el acceso del curso intensivo.
                         </p>
                         {loadingCourseDate ? (
                           <p className="helper" style={{ marginTop: 8, marginBottom: 0, fontSize: 11 }}>Cargando fecha actual...</p>
