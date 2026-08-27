@@ -525,6 +525,34 @@ function isChatAdminEmail(email?: string | null) {
   return [...envEmails, ...fallbackEmails].includes(normalized);
 }
 
+
+type PortalIconName = 'videos' | 'chat' | 'book' | 'calendar' | 'live' | 'play' | 'classes' | 'profile' | 'support' | 'arrow';
+
+function PortalIcon({ name, size = 20 }: { name: PortalIconName; size?: number }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  };
+
+  if (name === 'videos') return <svg {...common}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 8 5 3-5 3z"/></svg>;
+  if (name === 'chat') return <svg {...common}><path d="M21 12a8 8 0 0 1-8 8H6l-4 2 1.5-4A8 8 0 1 1 21 12z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>;
+  if (name === 'book') return <svg {...common}><path d="M4 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4z"/><path d="M20 4h-6a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h6z"/></svg>;
+  if (name === 'calendar') return <svg {...common}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01"/></svg>;
+  if (name === 'live') return <svg {...common}><circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"/></svg>;
+  if (name === 'play') return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4z"/></svg>;
+  if (name === 'classes') return <svg {...common}><path d="M3 10 12 5l9 5-9 5z"/><path d="M7 12v5c3 2 7 2 10 0v-5"/></svg>;
+  if (name === 'profile') return <svg {...common}><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>;
+  if (name === 'support') return <svg {...common}><path d="M4 13v-2a8 8 0 0 1 16 0v2"/><path d="M4 13H2v5h4v-5zM20 13h2v5h-4v-5z"/><path d="M18 19c-1 2-3 2-5 2"/></svg>;
+  return <svg {...common}><path d="M5 12h14M14 7l5 5-5 5"/></svg>;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -1919,7 +1947,7 @@ return normalized;
       <div
         className="dashboard-grid"
         style={{
-          gridTemplateColumns: accessActive ? 'minmax(0, 4fr) minmax(320px, 1fr)' : undefined,
+          gridTemplateColumns: accessActive ? 'minmax(0, 3.65fr) minmax(400px, 1fr)' : undefined,
           alignItems: 'stretch',
           gap: '14px',
           position: 'relative',
@@ -2199,61 +2227,103 @@ return normalized;
         >
           {accessActive ? (
             <>
+              {/* RESUMEN DE CLASES */}
               <div
                 style={{
-                  display: 'flex',
-                  gap: 16,
-                  marginBottom: 18,
-                  alignItems: 'flex-start',
-                  flexWrap: 'nowrap',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '16px 17px',
+                  marginBottom: 12,
+                  borderRadius: 18,
+                  background: 'linear-gradient(135deg, rgba(8,24,48,.94), rgba(5,15,32,.92))',
+                  border: '1px solid rgba(114,161,216,.22)',
+                  boxShadow: '0 14px 34px rgba(0,0,0,.18)',
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 850, color: 'rgba(255,255,255,.72)', marginBottom: 7 }}>
+                    <span style={{ width: 15, height: 15, borderRadius: '50%', border: '1px solid rgba(255,255,255,.35)', display: 'inline-grid', placeItems: 'center', fontSize: 9 }}>i</span>
+                    Tus clases
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: classesPaused ? '#f59e0b' : '#18df8b', boxShadow: classesPaused ? '0 0 12px rgba(245,158,11,.45)' : '0 0 12px rgba(24,223,139,.45)' }} />
+                    <span style={{ fontSize: 27, lineHeight: 1, fontWeight: 950, color: classesPaused ? '#fbbf24' : '#27e79a' }}>
+                      {classesPaused ? 'PAUSADO' : 'ACTIVO'}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'stretch', gap: 16 }}>
+                  <div style={{ width: 1, background: 'rgba(255,255,255,.12)' }} />
+                  <div style={{ minWidth: 92, textAlign: 'center' }}>
+                    <div style={{ fontSize: 34, lineHeight: 1, fontWeight: 950 }}>{classesRemaining ?? '—'}</div>
+                    <div style={{ fontSize: 11, fontWeight: 750, marginTop: 5, color: 'rgba(255,255,255,.75)' }}>clases restantes</div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => router.push('/mis-clases')}
+                  style={{
+                    gridColumn: '1 / -1',
+                    justifySelf: 'center',
+                    minWidth: 205,
+                    padding: '8px 14px',
+                    borderRadius: 999,
+                    fontSize: 12,
+                    fontWeight: 850,
+                    background: 'rgba(255,255,255,.055)',
+                  }}
+                >
+                  Ver detalles en Mis clases &nbsp; →
+                </button>
+              </div>
+
+              {/* TABS */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
+                  gap: 0,
+                  marginBottom: 12,
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                  border: '1px solid rgba(114,161,216,.25)',
+                  background: 'rgba(4,13,28,.76)',
                 }}
               >
                 {[
-                  { key: 'videos' as const, label: 'Videos' },
-                  { key: 'chatLive' as const, label: unreadChatCount > 0 ? `Chat Live (${unreadChatCount})` : 'Chat Live' },
-                  { key: 'biblioteca' as const, label: 'Biblioteca' },
+                  { key: 'videos' as const, label: 'VIDEOS', icon: 'videos' as const },
+                  { key: 'chatLive' as const, label: unreadChatCount > 0 ? `CHAT LIVE (${unreadChatCount})` : 'CHAT LIVE', icon: 'chat' as const },
+                  { key: 'biblioteca' as const, label: 'BIBLIOTECA', icon: 'book' as const },
                 ].map((tab) => {
                   const isActive = activeTab === tab.key;
-
                   return (
                     <button
                       key={tab.key}
                       type="button"
                       onClick={() => setActiveTab(tab.key)}
                       style={{
-                        background: 'transparent',
+                        minHeight: 48,
+                        padding: '0 8px',
                         border: 0,
-                        padding: 0,
-                        margin: 0,
+                        borderRight: tab.key !== 'biblioteca' ? '1px solid rgba(114,161,216,.18)' : 0,
+                        background: isActive ? 'linear-gradient(180deg,#246fe8,#185ac6)' : 'transparent',
+                        color: isActive ? '#fff' : 'rgba(255,255,255,.84)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 7,
+                        fontSize: 11,
+                        fontWeight: 900,
                         cursor: 'pointer',
-                        textAlign: 'left',
-                        color: 'inherit',
-                        minWidth: 0,
-                        flex: 1,
                       }}
                     >
-                      <div
-                        style={{
-                          height: 4,
-                          width: '100%',
-                          borderRadius: 999,
-                          marginBottom: 10,
-                          background: 'linear-gradient(90deg, #22c55e 0%, #f59e0b 50%, #3b82f6 100%)',
-                          boxShadow: isActive ? '0 0 18px rgba(59,130,246,0.22)' : 'none',
-                          opacity: isActive ? 1 : 0.4,
-                        }}
-                      />
-                      <div
-                        className="eyebrow"
-                        style={{
-                          marginBottom: 0,
-                          color: isActive ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.58)',
-                          transition: 'color 0.2s ease, opacity 0.2s ease',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {tab.label}
-                      </div>
+                      <PortalIcon name={tab.icon} size={18} />
+                      <span style={{ whiteSpace: 'nowrap' }}>{tab.label}</span>
                     </button>
                   );
                 })}
@@ -2261,270 +2331,286 @@ return normalized;
 
               {activeTab === 'videos' ? (
                 <>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr auto',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '14px 15px',
-                    marginBottom: 14,
-                    borderRadius: 18,
-                    background: 'linear-gradient(135deg, rgba(14,165,233,0.12), rgba(15,23,42,0.78))',
-                    border: '1px solid rgba(56,189,248,0.24)',
-                    boxShadow: '0 14px 34px rgba(0,0,0,0.18)',
-                  }}>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.25, textTransform: 'uppercase', color: classesPaused ? '#f59e0b' : '#34d399', marginBottom: 5 }}>
-                        {classesPaused ? 'PAUSADO' : 'ACTIVO'}
+                  {/* PRÓXIMA CLASE */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '48px 1fr auto',
+                      gap: 12,
+                      alignItems: 'center',
+                      padding: '14px 15px',
+                      marginBottom: 12,
+                      borderRadius: 16,
+                      background: 'linear-gradient(135deg, rgba(14,43,78,.86), rgba(7,24,49,.86))',
+                      border: '1px solid rgba(80,135,211,.30)',
+                    }}
+                  >
+                    <div style={{ width: 42, height: 42, borderRadius: 11, display: 'grid', placeItems: 'center', color: '#4f91ff', background: 'rgba(28,78,172,.20)', border: '1px solid rgba(55,116,226,.38)' }}>
+                      <PortalIcon name="calendar" size={25} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 10, letterSpacing: 1, fontWeight: 900, color: '#78aaff', marginBottom: 5 }}>PRÓXIMA CLASE</div>
+                      <div style={{ fontSize: 14, fontWeight: 900, lineHeight: 1.25 }}>
+                        {nextScheduledClass ? formatNextClassDateNY(nextScheduledClass.published_at) : 'Horario regular de clases'}
                       </div>
-                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.68)' }}>Tu acceso a Lead Academy</div>
+                      {!nextScheduledClass ? <div style={{ fontSize: 11, color: 'rgba(255,255,255,.66)', marginTop: 4 }}>Consulta el horario mostrado en la pantalla principal.</div> : null}
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 30, lineHeight: 1, fontWeight: 900 }}>{classesRemaining ?? '—'}</div>
-                      <div style={{ fontSize: 11, marginTop: 5, color: 'rgba(255,255,255,0.68)' }}>clases restantes</div>
+                    <div style={{ textAlign: 'right', paddingLeft: 10, borderLeft: '1px solid rgba(255,255,255,.10)' }}>
+                      <div style={{ fontSize: 9, letterSpacing: .8, fontWeight: 800, color: 'rgba(255,255,255,.58)' }}>HORA NY</div>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: '#65a1ff', marginTop: 4 }}>{nowText || '—'}</div>
                     </div>
                   </div>
 
-                  {nextScheduledClass ? (
-                    <div style={{ padding: '13px 14px', borderRadius: 16, marginBottom: 14, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(96,165,250,0.20)' }}>
-                      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.15, textTransform: 'uppercase', color: '#60a5fa', marginBottom: 5 }}>Próxima clase</div>
-                      <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.35 }}>{formatNextClassDateNY(nextScheduledClass.published_at)}</div>
+                  {/* LIVE DESTACADO */}
+                  {visibleLibraryVideos.find((video) => video.is_live) ? (() => {
+                    const liveVideo = visibleLibraryVideos.find((video) => video.is_live)!;
+                    const selected = selectedVideoId === liveVideo.id;
+                    return (
+                      <div
+                        style={{
+                          padding: '14px 15px',
+                          marginBottom: 12,
+                          borderRadius: 16,
+                          background: selected ? 'linear-gradient(135deg,rgba(0,113,72,.19),rgba(5,23,39,.90))' : 'linear-gradient(135deg,rgba(0,81,53,.14),rgba(5,23,39,.88))',
+                          border: '1px solid rgba(17,218,139,.58)',
+                          boxShadow: '0 12px 30px rgba(0,94,60,.10)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 11 }}>
+                          <div style={{ fontSize: 10, fontWeight: 850, color: 'rgba(255,255,255,.72)' }}>CLASE EN VIVO</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 900, color: '#22e596' }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22e596' }} /> EN VIVO
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '45px 1fr auto', gap: 11, alignItems: 'center' }}>
+                          <div style={{ color: '#17e28f', display: 'grid', placeItems: 'center' }}>
+                            <PortalIcon name="live" size={31} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 15, fontWeight: 900 }}>{labelForVideo(liveVideo)}</div>
+                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.66)', marginTop: 3 }}>
+                              {classesPaused && !isChatAdmin ? 'Tus clases están pausadas' : 'Únete ahora a la clase en vivo'}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={Boolean(classesPaused && !isChatAdmin)}
+                            onClick={() => {
+                              if (!isChatAdmin && (pauseStatusLoading || classesPaused)) {
+                                setActiveLibraryVideo(null);
+                                setSelectedVideoId(liveVideo.id);
+                                return;
+                              }
+                              setActiveLibraryVideo(null);
+                              setSelectedVideoId(liveVideo.id);
+                            }}
+                            style={{
+                              minHeight: 40,
+                              padding: '0 14px',
+                              borderRadius: 9,
+                              border: '1px solid rgba(21,221,139,.45)',
+                              background: classesPaused && !isChatAdmin ? 'rgba(255,255,255,.06)' : 'linear-gradient(180deg,#16b86f,#079455)',
+                              color: '#fff',
+                              fontSize: 12,
+                              fontWeight: 900,
+                              cursor: classesPaused && !isChatAdmin ? 'not-allowed' : 'pointer',
+                              opacity: classesPaused && !isChatAdmin ? .55 : 1,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            Entrar a clase &nbsp; →
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })() : null}
+
+                  {/* REPETICIONES RECIENTES */}
+                  <div
+                    style={{
+                      borderRadius: 16,
+                      border: '1px solid rgba(114,161,216,.20)',
+                      background: 'linear-gradient(180deg,rgba(7,20,40,.82),rgba(5,15,31,.80))',
+                      overflow: 'hidden',
+                      marginBottom: 12,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 13px', borderBottom: '1px solid rgba(114,161,216,.14)' }}>
+                      <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: .8, color: 'rgba(255,255,255,.72)' }}>REPETICIONES RECIENTES</div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: '#6ca7ff' }}>Recientes →</div>
                     </div>
-                  ) : null}
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
-                    <h2 style={{ margin: 0, fontSize: 20 }}>Clases disponibles</h2>
-                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,255,255,0.48)', textTransform: 'uppercase' }}>Recientes</span>
-                  </div>
-
-                  <div style={{ display: 'grid', gap: 10, marginBottom: 12, flex: 1, alignContent: 'start' }}>
-                    {visibleLibraryVideos.length ? (
-                      visibleLibraryVideos.map((video) => {
+                    {visibleLibraryVideos.filter((video) => !video.is_live).length ? (
+                      visibleLibraryVideos.filter((video) => !video.is_live).map((video) => {
                         const selected = selectedVideoId === video.id;
                         return (
                           <button
                             key={video.id}
+                            type="button"
                             onClick={() => {
-                              if (video.is_live && !isChatAdmin && (pauseStatusLoading || classesPaused)) {
-                                setActiveLibraryVideo(null);
-                                setSelectedVideoId(video.id);
-                                return;
-                              }
                               setActiveLibraryVideo(null);
                               setSelectedVideoId(video.id);
                             }}
                             style={{
+                              width: '100%',
+                              minHeight: 44,
+                              padding: '7px 11px',
+                              border: 0,
+                              borderBottom: '1px solid rgba(114,161,216,.12)',
+                              background: selected ? 'rgba(34,94,190,.18)' : 'transparent',
+                              color: '#fff',
+                              display: 'grid',
+                              gridTemplateColumns: '29px 1fr auto',
+                              gap: 8,
+                              alignItems: 'center',
                               textAlign: 'left',
-                              padding: '12px 13px',
-                              borderRadius: 14,
-                              border: selected ? '1px solid rgba(59,130,246,0.72)' : '1px solid rgba(255,255,255,0.08)',
-                              background: selected ? 'linear-gradient(135deg, rgba(37,99,235,0.20) 0%, rgba(15,23,42,0.82) 100%)' : 'rgba(255,255,255,0.035)',
-                              color: 'white',
                               cursor: 'pointer',
                             }}
                           >
-                            <div style={{ fontSize: 9, letterSpacing: 1.05, textTransform: 'uppercase', opacity: 0.62, marginBottom: 5 }}>
-                              {sublabelForVideo(video)}
-                            </div>
-                            <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.3 }}>{labelForVideo(video)}</div>
+                            <span style={{ width: 25, height: 25, borderRadius: '50%', display: 'grid', placeItems: 'center', color: '#629bff', background: 'rgba(47,91,161,.18)', border: '1px solid rgba(89,139,216,.24)' }}>
+                              <PortalIcon name="play" size={16} />
+                            </span>
+                            <span style={{ minWidth: 0, fontSize: 11.5, lineHeight: 1.25, fontWeight: 750, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {labelForVideo(video)}
+                            </span>
+                            <span style={{ color: 'rgba(255,255,255,.52)', fontSize: 14 }}>›</span>
                           </button>
                         );
                       })
                     ) : (
-                      <div className="support-item">Aún no hay clases cargadas.</div>
+                      <div style={{ padding: 13, fontSize: 12, color: 'rgba(255,255,255,.60)' }}>Aún no hay repeticiones publicadas.</div>
                     )}
+                  </div>
+
+                  {/* ACCESOS RÁPIDOS */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginBottom: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => router.push('/mis-clases')}
+                      style={{
+                        minHeight: 70,
+                        padding: '11px 12px',
+                        borderRadius: 13,
+                        border: '1px solid rgba(114,161,216,.23)',
+                        background: 'linear-gradient(180deg,rgba(14,33,61,.82),rgba(7,20,39,.82))',
+                        color: '#fff',
+                        display: 'grid',
+                        gridTemplateColumns: '39px 1fr',
+                        gap: 10,
+                        alignItems: 'center',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <span style={{ width: 36, height: 36, borderRadius: 10, display: 'grid', placeItems: 'center', color: '#4f91ff', background: 'rgba(36,81,167,.19)' }}><PortalIcon name="classes" size={23} /></span>
+                      <span><strong style={{ display: 'block', fontSize: 13 }}>Mis clases</strong><small style={{ display: 'block', color: 'rgba(255,255,255,.64)', fontSize: 10.5, lineHeight: 1.35, marginTop: 3 }}>Ver saldo, estado y próximas clases →</small></span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditingProfile((prev) => !prev);
+                        setProfileError(null);
+                        setProfileSuccess(null);
+                      }}
+                      style={{
+                        minHeight: 70,
+                        padding: '11px 12px',
+                        borderRadius: 13,
+                        border: '1px solid rgba(114,161,216,.23)',
+                        background: 'linear-gradient(180deg,rgba(14,33,61,.82),rgba(7,20,39,.82))',
+                        color: '#fff',
+                        display: 'grid',
+                        gridTemplateColumns: '39px 1fr',
+                        gap: 10,
+                        alignItems: 'center',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <span style={{ width: 36, height: 36, borderRadius: 10, display: 'grid', placeItems: 'center', color: '#4f91ff', background: 'rgba(36,81,167,.19)' }}><PortalIcon name="profile" size={23} /></span>
+                      <span><strong style={{ display: 'block', fontSize: 13 }}>Mi perfil</strong><small style={{ display: 'block', color: 'rgba(255,255,255,.64)', fontSize: 10.5, lineHeight: 1.35, marginTop: 3 }}>Editar información personal →</small></span>
+                    </button>
                   </div>
 
                   {isEditingProfile ? (
-                    <p className="helper" style={{ marginTop: 0, marginBottom: 12, fontSize: 12, lineHeight: 1.45 }}>
-                      Edita tu perfil y presiona "Guardar datos".
-                    </p>
-                  ) : null}
-
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: isChatAdmin ? '1fr 1fr' : '1fr',
-                      gap: 10,
-                      marginBottom: 12,
-                    }}
-                  >
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ width: '100%' }}
-                      onClick={() => router.push('/mis-clases')}
-                    >
-                      ◫ &nbsp; Mis clases
-                    </button>
-
-                    {isChatAdmin ? (
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ width: '100%' }}
-                        onClick={() => router.push('/gestion-operativa')}
-                      >
-                        ⚙ &nbsp; Gestión Operativa
-                      </button>
-                    ) : null}
-                  </div>
-
-                  {lastClassWarning ? (
                     <div
                       style={{
-                        padding: '12px 14px',
-                        borderRadius: 16,
-                        background: 'linear-gradient(180deg, rgba(245,158,11,0.16) 0%, rgba(120,53,15,0.18) 100%)',
-                        border: '1px solid rgba(245,158,11,0.40)',
-                        marginBottom: 12,
-                        boxShadow: '0 12px 28px rgba(0,0,0,0.16)',
+                        padding: '13px',
+                        borderRadius: 14,
+                        background: 'rgba(255,255,255,.035)',
+                        border: '1px solid rgba(114,161,216,.18)',
+                        marginBottom: 10,
                       }}
                     >
-                      <div className="eyebrow" style={{ marginBottom: 8 }}>Aviso de suscripción</div>
-                      <div style={{ fontSize: 15, lineHeight: 1.5, color: 'rgba(255,255,255,0.92)' }}>
-                        Estás entrando en tu última clase disponible. Para seguir accediendo al portal deberás renovar tu suscripción.
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                        <div className="eyebrow" style={{ marginBottom: 0, color: '#6ca7ff' }}>MI PERFIL</div>
+                        <button type="button" className="btn btn-secondary" style={{ padding: '5px 8px', fontSize: 10 }} onClick={() => setIsEditingProfile(false)}>Cerrar</button>
                       </div>
-                    </div>
-                  ) : null}
 
-                  <div
-                    style={{
-                      padding: '14px 14px 12px',
-                      borderRadius: 16,
-                      background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.025) 100%)',
-                      border: '1px solid rgba(255,255,255,0.07)',
-                      marginBottom: 12,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 10,
-                        marginBottom: isEditingProfile ? 8 : 0,
-                      }}
-                    >
-                      <div className="eyebrow" style={{ marginBottom: 0, color: '#fbbf24' }}>MI PERFIL</div>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
-                        onClick={() => {
-                          setIsEditingProfile((prev) => !prev);
-                          setProfileError(null);
-                          setProfileSuccess(null);
-                        }}
-                      >
-                        {isEditingProfile ? 'Ocultar perfil' : 'Modificar perfil'}
-                      </button>
-                    </div>
-
-                    {isEditingProfile ? (
                       <form onSubmit={updateProfile}>
-                        <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
+                        <label className="label" style={{ marginBottom: 8, fontSize: 11 }}>
                           Nombre completo
-                          <input
-                            className="input"
-                            value={profileForm.fullName}
-                            onChange={(e) => setProfileForm((prev) => ({ ...prev, fullName: e.target.value }))}
-                            autoComplete="name"
-                            required
-                          />
+                          <input className="input" value={profileForm.fullName} onChange={(e) => setProfileForm((prev) => ({ ...prev, fullName: e.target.value }))} autoComplete="name" required />
                         </label>
 
-                        <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
+                        <label className="label" style={{ marginBottom: 8, fontSize: 11 }}>
                           Número telefónico
-                          <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', gap: 10 }}>
-                            <select
-                              className="input"
-                              value={selectedCountryCode}
-                              onChange={(e) => setSelectedCountryCode(e.target.value)}
-                              aria-label="Código de país"
-                            >
-                              {COUNTRY_OPTIONS.map((option) => (
-                                <option key={`${option.code}-${option.label}`} value={option.code}>
-                                  {option.label}
-                                </option>
-                              ))}
+                          <div style={{ display: 'grid', gridTemplateColumns: '145px 1fr', gap: 7 }}>
+                            <select className="input" value={selectedCountryCode} onChange={(e) => setSelectedCountryCode(e.target.value)} aria-label="Código de país">
+                              {COUNTRY_OPTIONS.map((option) => <option key={`${option.code}-${option.label}`} value={option.code}>{option.label}</option>)}
                             </select>
-
-                            <input
-                              className="input"
-                              type="tel"
-                              value={phoneLocal}
-                              onChange={(e) => setPhoneLocal(e.target.value.replace(/[^\d]/g, ''))}
-                              autoComplete="tel-national"
-                              inputMode="numeric"
-                              placeholder={findCountryByCode(selectedCountryCode).placeholder}
-                            />
+                            <input className="input" type="tel" value={phoneLocal} onChange={(e) => setPhoneLocal(e.target.value.replace(/[^\d]/g, ''))} autoComplete="tel-national" inputMode="numeric" placeholder={findCountryByCode(selectedCountryCode).placeholder} />
                           </div>
-                          <p className="helper" style={{ marginTop: 8, marginBottom: 0 }}>
-                            Se guardará en formato internacional, por ejemplo: {selectedCountryCode}{findCountryByCode(selectedCountryCode).placeholder}
-                          </p>
                         </label>
 
-                        <label className="label" style={{ marginBottom: 10, fontSize: 13 }}>
+                        <label className="label" style={{ marginBottom: 8, fontSize: 11 }}>
                           Correo electrónico
-                          <input
-                            className="input"
-                            type="email"
-                            value={profileForm.email}
-                            onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
-                            autoComplete="email"
-                            required
-                          />
+                          <input className="input" type="email" value={profileForm.email} onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))} autoComplete="email" required />
                         </label>
 
-                        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                          <button className="btn btn-primary" type="submit" disabled={savingProfile} style={{ width: '100%' }}>
-                            {savingProfile ? 'Guardando...' : 'Guardar datos'}
-                          </button>
-                          <button
-                            className="btn btn-ghost"
-                            type="button"
-                            disabled={savingProfile}
-                            style={{ width: '100%' }}
-                            onClick={() => {
-                              setIsEditingProfile(false);
-                              setProfileError(null);
-                              setProfileSuccess(null);
-                            }}
-                          >
-                            Cancelar
-                          </button>
+                        <div style={{ display: 'flex', gap: 7, marginTop: 10 }}>
+                          <button className="btn btn-primary" type="submit" disabled={savingProfile} style={{ width: '100%', fontSize: 11 }}>{savingProfile ? 'Guardando...' : 'Guardar datos'}</button>
+                          <button className="btn btn-ghost" type="button" disabled={savingProfile} style={{ width: '100%', fontSize: 11 }} onClick={() => { setIsEditingProfile(false); setProfileError(null); setProfileSuccess(null); }}>Cancelar</button>
                         </div>
 
-                        <p className="helper" style={{ marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.45 }}>
-                          Si cambias tu correo, el sistema te pedirá confirmarlo por email antes de usarlo como acceso principal. No cambies mas de dos veces el mismo día y evita bloquear tu cuenta por seguridad.
-                        </p>
-
-                        {profileError && <p className="error" style={{ marginTop: 10, marginBottom: 0 }}>{profileError}</p>}
-                        {profileSuccess && <p className="success" style={{ marginTop: 10, marginBottom: 0 }}>{profileSuccess}</p>}
+                        {profileError && <p className="error" style={{ marginTop: 8, marginBottom: 0, fontSize: 10.5 }}>{profileError}</p>}
+                        {profileSuccess && <p className="success" style={{ marginTop: 8, marginBottom: 0, fontSize: 10.5 }}>{profileSuccess}</p>}
                       </form>
-                    ) : (
-                      <p className="helper" style={{ marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.45 }}>
-                        Aquí puedes corregir tu nombre, teléfono o correo electrónico cuando lo necesites.
-                      </p>
-                    )}
-                  </div>
+                    </div>
+                  ) : null}
 
+                  {lastClassWarning ? (
+                    <div style={{ padding: '10px 12px', borderRadius: 13, background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.32)', marginBottom: 10, fontSize: 11, lineHeight: 1.4 }}>
+                      <strong style={{ color: '#fbbf24' }}>Última clase disponible.</strong> Para seguir accediendo al portal deberás renovar tu suscripción.
+                    </div>
+                  ) : null}
+
+                  {/* SOPORTE / ADMIN */}
                   <div
                     style={{
                       marginTop: 'auto',
-                      padding: '12px 14px',
-                      borderRadius: 14,
-                      background: 'linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.025) 100%)',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      fontSize: 12,
-                      lineHeight: 1.45,
-                      opacity: 0.88,
+                      display: 'grid',
+                      gridTemplateColumns: isChatAdmin ? '1fr 1fr' : '1fr',
+                      gap: 8,
+                      padding: '10px 11px',
+                      borderRadius: 13,
+                      background: 'linear-gradient(180deg,rgba(10,27,50,.72),rgba(6,18,35,.72))',
+                      border: '1px solid rgba(114,161,216,.16)',
+                      fontSize: 10.5,
+                      color: 'rgba(255,255,255,.76)',
                     }}
                   >
-                    <div style={{ fontWeight: 800, marginBottom: 6, color: '#60a5fa' }}>Soporte</div>
-                    <div>Lead@leadacademy.com.ve</div>
-                    <div>+1 786 620 4377</div>
+                    <div style={{ display: 'flex', gap: 9, alignItems: 'center' }}>
+                      <span style={{ color: '#4f91ff', display: 'grid', placeItems: 'center' }}><PortalIcon name="support" size={21} /></span>
+                      <div><strong style={{ display: 'block', color: '#fff', marginBottom: 2 }}>Soporte</strong><div>Lead@leadacademy.com.ve</div><div>+1 786 620 4377</div></div>
+                    </div>
+                    {isChatAdmin ? (
+                      <button type="button" className="btn btn-secondary" style={{ width: '100%', padding: '7px 8px', fontSize: 10.5 }} onClick={() => router.push('/gestion-operativa')}>
+                        ⚙ Gestión Operativa
+                      </button>
+                    ) : null}
                   </div>
                 </>
               ) : activeTab === 'chatLive' ? (
@@ -3097,25 +3183,7 @@ return normalized;
                   </div>
                 </>
               )}
-
-              <div
-                className="state-pill state-active"
-                style={{ alignSelf: 'flex-end', marginTop: 12 }}
-              >
-                {classesRemaining !== null
-                  ? `Suscripción activa: ${classesRemaining} clases restantes`
-                  : 'Suscripción activa'}
-              </div>
-
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 10 }}>
-                <button className="btn btn-secondary" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => router.push('/')}>
-                  Inicio
-                </button>
-                <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} onClick={signOut}>
-                  Salir
-                </button>
-              </div>
-            </>
+</>
           ) : (
             <>
               <div className="eyebrow">Soporte</div>
