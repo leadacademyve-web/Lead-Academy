@@ -1190,30 +1190,49 @@ return normalized;
         audioContext.resume().catch(() => undefined);
       }
 
-      const now = audioContext.currentTime;
+      // Sonido #1: ping brillante de dos notas, diseñado para sobresalir
+      // claramente sobre el audio de la clase sin ser largo ni molesto.
+      const now = audioContext.currentTime + 0.01;
       const masterGain = audioContext.createGain();
+      const compressor = audioContext.createDynamicsCompressor();
+
+      compressor.threshold.setValueAtTime(-18, now);
+      compressor.knee.setValueAtTime(12, now);
+      compressor.ratio.setValueAtTime(5, now);
+      compressor.attack.setValueAtTime(0.003, now);
+      compressor.release.setValueAtTime(0.18, now);
+
       masterGain.gain.setValueAtTime(0.0001, now);
-      masterGain.gain.exponentialRampToValueAtTime(0.42, now + 0.02);
-      masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-      masterGain.connect(audioContext.destination);
+      masterGain.gain.exponentialRampToValueAtTime(0.95, now + 0.008);
+      masterGain.gain.setValueAtTime(0.95, now + 0.30);
+      masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.48);
+      masterGain.connect(compressor);
+      compressor.connect(audioContext.destination);
 
-      [0, 0.18].forEach((offset) => {
-        const oscillator = audioContext.createOscillator();
-        const gain = audioContext.createGain();
+      const notes = [
+        { offset: 0.00, duration: 0.16, frequencies: [880, 1760], level: 0.86 },
+        { offset: 0.13, duration: 0.25, frequencies: [1175, 2350], level: 0.92 },
+      ];
 
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(880, now + offset);
-        oscillator.frequency.exponentialRampToValueAtTime(1320, now + offset + 0.08);
+      notes.forEach(({ offset, duration, frequencies, level }) => {
+        frequencies.forEach((frequency, harmonicIndex) => {
+          const oscillator = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          const startAt = now + offset;
+          const endAt = startAt + duration;
 
-        gain.gain.setValueAtTime(0.0001, now + offset);
-        gain.gain.exponentialRampToValueAtTime(0.9, now + offset + 0.015);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.16);
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(frequency, startAt);
 
-        oscillator.connect(gain);
-        gain.connect(masterGain);
+          gain.gain.setValueAtTime(0.0001, startAt);
+          gain.gain.exponentialRampToValueAtTime(level / (harmonicIndex + 1), startAt + 0.006);
+          gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
 
-        oscillator.start(now + offset);
-        oscillator.stop(now + offset + 0.18);
+          oscillator.connect(gain);
+          gain.connect(masterGain);
+          oscillator.start(startAt);
+          oscillator.stop(endAt + 0.01);
+        });
       });
     } catch {
       // Some browsers block audio until the user clicks "Activar sonido".
