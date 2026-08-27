@@ -465,93 +465,6 @@ export default function GestionOperativaPage() {
         )}
       </div>
 
-      <div style={styles.card}>
-        <div style={styles.sectionTitle}>PUBLICAR</div>
-        <p style={styles.publishIntro}>Selecciona el tipo de video. El portal aplicará automáticamente las reglas correspondientes.</p>
-
-        <div style={styles.typeTabs}>
-          <button type="button" style={publishType === 'daily' ? styles.typeTabActive : styles.typeTab} onClick={() => selectPublishType('daily')}>
-            <span style={styles.tabIcon}>▣</span><span><strong>Clase diaria</strong><small style={styles.tabSub}>Desde una sesión LIVE</small></span>
-          </button>
-          <button type="button" style={publishType === 'course' ? styles.typeTabActive : styles.typeTab} onClick={() => selectPublishType('course')}>
-            <span style={styles.tabIcon}>◆</span><span><strong>Curso intensivo</strong><small style={styles.tabSub}>Solo para estudiantes del curso</small></span>
-          </button>
-          <button type="button" style={publishType === 'special' ? styles.typeTabActive : styles.typeTab} onClick={() => selectPublishType('special')}>
-            <span style={styles.tabIcon}>✦</span><span><strong>Contenido gratuito</strong><small style={styles.tabSub}>No descuenta a nadie</small></span>
-          </button>
-        </div>
-
-        <div style={publishType === 'daily' ? styles.replayGrid : styles.publishGrid}>
-          <div>
-            <div style={styles.fieldLabel}>ID de Vimeo</div>
-            <input
-              value={vimeoId}
-              onChange={(e) => setVimeoId(e.target.value.replace(/\D/g, ''))}
-              placeholder="Ej. 1217366012"
-              inputMode="numeric"
-              style={{ ...styles.input, width: '100%', minWidth: 0, boxSizing: 'border-box' }}
-            />
-            <div style={styles.fieldHelp}>Ingresa únicamente el número del video de Vimeo.</div>
-          </div>
-
-          {(publishType === 'course' || publishType === 'special') && (
-            <div>
-              <div style={styles.fieldLabel}>{publishType === 'course' ? 'Nombre del curso / clase' : 'Nombre personalizado'}</div>
-              <input
-                value={videoTitle}
-                onChange={(e) => setVideoTitle(e.target.value)}
-                placeholder={publishType === 'course' ? 'Ej. Día 2 - Curso Intensivo' : 'Ej. POST-FED del 18 de junio de 2026'}
-                style={{ ...styles.input, width: '100%', minWidth: 0, boxSizing: 'border-box' }}
-              />
-            </div>
-          )}
-
-          {publishType === 'daily' && (
-            <div>
-              <div style={styles.fieldLabel}>Sesión LIVE</div>
-              <button type="button" style={styles.sessionButton} onClick={() => setSessionPickerOpen(true)}>
-                <span>{selectedSession ? `${formatSessionDate(selectedSession.started_at)} → ${formatSessionDate(selectedSession.ended_at)}` : 'Seleccionar sesión LIVE'}</span>
-                <span>▾</span>
-              </button>
-              <div style={styles.fieldHelp}>Solo se muestran sesiones finalizadas sin repetición publicada.</div>
-            </div>
-          )}
-
-          <button
-            type="button"
-            style={{
-              ...styles.button,
-              alignSelf: 'end',
-              opacity:
-                !vimeoId ||
-                (publishType === 'daily' && !selectedSessionId) ||
-                ((publishType === 'course' || publishType === 'special') && !videoTitle.trim())
-                  ? .55
-                  : 1
-            }}
-            disabled={
-              publishing ||
-              !vimeoId ||
-              (publishType === 'daily' && !selectedSessionId) ||
-              ((publishType === 'course' || publishType === 'special') && !videoTitle.trim())
-            }
-            onClick={requestPublish}
-          >
-            ✈ Publicar
-          </button>
-        </div>
-
-        {publishType === 'daily' && (
-          <div style={styles.mutedSmall}>{pendingSessions.length} sesión(es) finalizada(s) pendiente(s) de repetición. Las sesiones ya asociadas no pueden seleccionarse nuevamente.</div>
-        )}
-        {publishType === 'course' && (
-          <div style={styles.mutedSmall}>Esta publicación corresponde a course_500 y descuenta según la configuración de INTENSIVE_TWO_DAY.</div>
-        )}
-        {publishType === 'special' && (
-          <div style={styles.mutedSmall}>Este contenido es gratuito: se publica como especial y no descuenta clases a ningún estudiante.</div>
-        )}
-      </div>
-
       <div style={styles.studentsCard}>
         <div style={styles.studentsHeader}>
           <div>
@@ -845,8 +758,8 @@ const styles: Record<string, any> = {
   typeIconAmber: { width: 50, height: 50, borderRadius: 13, display: 'grid', placeItems: 'center', color: '#ff9d20', background: 'rgba(111,62,0,.25)', border: '1px solid rgba(188,104,0,.43)', flex: '0 0 auto' },
   typeIconGreen: { width: 50, height: 50, borderRadius: 13, display: 'grid', placeItems: 'center', color: '#19e493', background: 'rgba(0,91,59,.24)', border: '1px solid rgba(0,174,110,.40)', flex: '0 0 auto' },
 
-  replayGrid: { display: 'grid', gridTemplateColumns: 'minmax(300px,.95fr) minmax(390px,1.25fr) 200px', gap: 20, alignItems: 'end', marginTop: 20 },
-  publishGrid: { display: 'grid', gridTemplateColumns: 'minmax(300px,.95fr) minmax(390px,1.25fr) 200px', gap: 20, alignItems: 'end', marginTop: 20 },
+  replayGrid: { display: 'grid', gridTemplateColumns: 'minmax(300px,.95fr) minmax(390px,1.25fr) 200px', gap: 20, alignItems: 'start', marginTop: 20 },
+  publishGrid: { display: 'grid', gridTemplateColumns: 'minmax(300px,.95fr) minmax(390px,1.25fr) 200px', gap: 20, alignItems: 'start', marginTop: 20 },
   fieldLabel: { fontSize: 15, fontWeight: 900, color: 'rgba(255,255,255,.96)', margin: '0 0 8px' },
   fieldHelp: { color: 'rgba(255,255,255,.72)', fontSize: 14, marginTop: 7, lineHeight: 1.35 },
   publishFoot: { color: 'rgba(255,255,255,.64)', fontSize: 13, marginTop: 10, lineHeight: 1.4 },
@@ -883,7 +796,8 @@ const styles: Record<string, any> = {
   broadcastIcon: { color: '#1aa7ff', display: 'grid', placeItems: 'center' },
 
   publishButton: {
-    minHeight: 54,
+    minHeight: 52,
+    marginTop: 31,
     width: 200,
     borderRadius: 10,
     border: 0,
