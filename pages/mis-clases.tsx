@@ -20,6 +20,7 @@ export default function MisClasesPage() {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [pauseModal, setPauseModal] = useState<boolean | null>(null);
 
   async function load() {
     const { data: authData } = await supabase.auth.getUser();
@@ -47,20 +48,6 @@ export default function MisClasesPage() {
   async function changePause(pause: boolean) {
     if (!control || working) return;
 
-    if (pause) {
-      const ok = window.confirm(
-        'Mientras tus clases estén pausadas, conservarás tu saldo. ' +
-        'Las clases realizadas durante la pausa no deberán darte acceso gratuito a sus repeticiones. ' +
-        '¿Deseas pausar tus clases?'
-      );
-      if (!ok) return;
-    } else {
-      const ok = window.confirm(
-        'Al reactivar, las próximas clases vuelven a ser cobrables según las reglas del portal. ¿Deseas reactivar?'
-      );
-      if (!ok) return;
-    }
-
     setWorking(true);
     setMessage(null);
     const { error } = await supabase.rpc('student_set_class_pause', { p_pause: pause });
@@ -71,6 +58,7 @@ export default function MisClasesPage() {
       return;
     }
 
+    setPauseModal(null);
     setMessage(pause ? 'Tus clases quedaron pausadas.' : 'Tus clases quedaron reactivadas.');
     await load();
   }
@@ -109,11 +97,11 @@ export default function MisClasesPage() {
                 </p>
 
                 {control.is_paused ? (
-                  <button disabled={working} style={styles.primary} onClick={() => changePause(false)}>
+                  <button disabled={working} style={styles.primary} onClick={() => setPauseModal(false)}>
                     {working ? 'Procesando...' : '▶ Reactivar mis clases'}
                   </button>
                 ) : (
-                  <button disabled={working} style={styles.warn} onClick={() => changePause(true)}>
+                  <button disabled={working} style={styles.warn} onClick={() => setPauseModal(true)}>
                     {working ? 'Procesando...' : '⏸ Pausar mis clases'}
                   </button>
                 )}
@@ -150,6 +138,32 @@ export default function MisClasesPage() {
           </>
         )}
       </div>
+
+      {pauseModal !== null && control ? (
+        <div style={styles.modalBackdrop} onMouseDown={() => !working && setPauseModal(null)}>
+          <div style={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
+            <div style={styles.eyebrow}>{pauseModal ? 'PAUSAR CLASES' : 'REACTIVAR CLASES'}</div>
+            <h2 style={{ margin: '6px 0 10px' }}>
+              {pauseModal ? 'Confirmar pausa' : 'Confirmar reactivación'}
+            </h2>
+            <p style={styles.muted}>
+              {pauseModal
+                ? 'Mientras tus clases estén pausadas, conservarás tu saldo. Las clases realizadas durante la pausa no te darán acceso gratuito a sus repeticiones.'
+                : 'Al reactivar, las próximas clases vuelven a ser cobrables según las reglas del portal.'}
+            </p>
+            <div style={styles.modalActions}>
+              <button disabled={working} style={styles.secondary} onClick={() => setPauseModal(null)}>Cancelar</button>
+              <button
+                disabled={working}
+                style={pauseModal ? styles.warn : styles.primary}
+                onClick={() => changePause(pauseModal)}
+              >
+                {working ? 'Procesando...' : pauseModal ? '⏸ Sí, pausar mis clases' : '▶ Sí, reactivar mis clases'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -176,4 +190,7 @@ const styles: Record<string, any> = {
   secondary: { padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(255,255,255,.05)', color: '#fff', fontWeight: 800, cursor: 'pointer' },
   notice: { border: '1px solid rgba(59,130,246,.28)', borderRadius: 14, padding: 14, background: 'rgba(59,130,246,.12)', marginBottom: 16 },
   error: { color: '#fecaca' },
+  modalBackdrop: { position: 'fixed', inset: 0, zIndex: 1000, display: 'grid', placeItems: 'center', padding: 20, background: 'rgba(2,6,23,.76)', backdropFilter: 'blur(7px)' },
+  modal: { width: 'min(560px, 100%)', border: '1px solid rgba(255,255,255,.14)', borderRadius: 22, padding: 24, background: '#071227', boxShadow: '0 28px 80px rgba(0,0,0,.55)' },
+  modalActions: { display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap', marginTop: 22 },
 };
