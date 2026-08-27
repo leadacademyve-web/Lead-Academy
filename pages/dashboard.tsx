@@ -508,7 +508,7 @@ function isChatAdminEmail(email?: string | null) {
 }
 
 
-type PortalIconName = 'videos' | 'chat' | 'book' | 'calendar' | 'live' | 'play' | 'classes' | 'profile' | 'support' | 'arrow' | 'download' | 'external' | 'image';
+type PortalIconName = 'videos' | 'chat' | 'book' | 'calendar' | 'live' | 'play' | 'classes' | 'profile' | 'support' | 'arrow' | 'download' | 'external' | 'image' | 'wifi' | 'pause';
 
 function PortalIcon({ name, size = 20 }: { name: PortalIconName; size?: number }) {
   const common = {
@@ -523,6 +523,8 @@ function PortalIcon({ name, size = 20 }: { name: PortalIconName; size?: number }
     'aria-hidden': true,
   };
 
+  if (name === 'wifi') return <svg {...common}><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.5 16.05a6 6 0 0 1 7 0"/><path d="M12 20h.01"/></svg>;
+  if (name === 'pause') return <svg {...common}><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>;
   if (name === 'videos') return <svg {...common}><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m10 8 5 3-5 3z"/></svg>;
   if (name === 'chat') return <svg {...common}><path d="M21 12a8 8 0 0 1-8 8H6l-4 2 1.5-4A8 8 0 1 1 21 12z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>;
   if (name === 'book') return <svg {...common}><path d="M4 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4z"/><path d="M20 4h-6a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h6z"/></svg>;
@@ -593,6 +595,7 @@ export default function DashboardPage() {
   const [isDragOverChat, setIsDragOverChat] = useState(false);
   const [liveAudience, setLiveAudience] = useState<LiveAudiencePresence[]>([]);
   const [liveAudiencePeak, setLiveAudiencePeak] = useState(0);
+  const [adminStudentStats, setAdminStudentStats] = useState({ total: 0, paused: 0 });
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const emojiPanelRef = useRef<HTMLDivElement | null>(null);
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -610,6 +613,24 @@ export default function DashboardPage() {
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
   const isChatAdmin = useMemo(() => isChatAdminEmail(userEmail), [userEmail]);
+
+  useEffect(() => {
+    if (!isChatAdmin) return;
+    let cancelled = false;
+    const loadAdminStudentStats = async () => {
+      const { data, error } = await supabase.rpc('admin_operational_students');
+      if (cancelled || error) return;
+      const rows = Array.isArray(data) ? data : [];
+      setAdminStudentStats({
+        total: rows.filter((row: any) => row?.access_active).length,
+        paused: rows.filter((row: any) => row?.access_active && row?.is_paused).length,
+      });
+    };
+    loadAdminStudentStats();
+    const timer = window.setInterval(loadAdminStudentStats, 30000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [isChatAdmin]);
+
 
   async function loadPauseStatus(userId: string, showLoading = false) {
     if (showLoading) setPauseStatusLoading(true);
@@ -2184,64 +2205,61 @@ return normalized;
         >
           {accessActive ? (
             <>
-              {/* RESUMEN DE CLASES */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr auto',
-                  alignItems: 'center',
-                  gap: 14,
-                  padding: '19px 19px',
-                  marginBottom: 14,
-                  borderRadius: 18,
-                  background: 'linear-gradient(135deg, rgba(8,24,48,.94), rgba(5,15,32,.92))',
-                  border: '1px solid rgba(114,161,216,.22)',
-                  boxShadow: '0 14px 34px rgba(0,0,0,.18)',
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 850, color: 'rgba(255,255,255,.72)', marginBottom: 7 }}>
-                    <span style={{ width: 15, height: 15, borderRadius: '50%', border: '1px solid rgba(255,255,255,.35)', display: 'inline-grid', placeItems: 'center', fontSize: 9 }}>i</span>
-                    Tus clases
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: classesPaused ? '#f59e0b' : '#18df8b', boxShadow: classesPaused ? '0 0 12px rgba(245,158,11,.45)' : '0 0 12px rgba(24,223,139,.45)' }} />
-                    <span style={{ fontSize: 31, lineHeight: 1, fontWeight: 950, color: classesPaused ? '#fbbf24' : '#27e79a' }}>
-                      {classesPaused ? 'PAUSADO' : 'ACTIVO'}
-                    </span>
-                  </div>
-                </div>
-
-                {isChatAdmin ? (
-                  <div style={{ display: 'flex', alignItems: 'stretch', gap: 16 }}>
-                    <div style={{ width: 1, background: 'rgba(255,255,255,.12)' }} />
-                    <div style={{ minWidth: 150, textAlign: 'center' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: 18, alignItems: 'baseline' }}>
-                        <span><strong style={{ fontSize: 30, color: '#27e79a' }}>{liveAudience.length}</strong><small style={{ display: 'block', fontSize: 10, color: 'rgba(255,255,255,.66)' }}>conectados</small></span>
-                        <span><strong style={{ fontSize: 30, color: '#65a1ff' }}>{liveAudience.filter((row) => row.is_watching).length}</strong><small style={{ display: 'block', fontSize: 10, color: 'rgba(255,255,255,.66)' }}>viendo LIVE</small></span>
+              {/* RESUMEN SUPERIOR */}
+              {isChatAdmin ? (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, minmax(0,1fr))',
+                    gap: 10,
+                    padding: 10,
+                    marginBottom: 14,
+                    borderRadius: 18,
+                    background: 'linear-gradient(135deg, rgba(8,24,48,.94), rgba(5,15,32,.92))',
+                    border: '1px solid rgba(114,161,216,.22)',
+                    boxShadow: '0 14px 34px rgba(0,0,0,.18)',
+                  }}
+                >
+                  {[
+                    { label: 'Estudiantes', value: adminStudentStats.total, icon: 'classes' as PortalIconName, color: '#b46cff', bg: 'rgba(125,65,190,.16)', border: 'rgba(180,108,255,.38)' },
+                    { label: 'Presentes LIVE', value: liveAudience.filter((row) => row.is_watching).length, icon: 'live' as PortalIconName, color: '#20e493', bg: 'rgba(0,132,84,.16)', border: 'rgba(32,228,147,.38)' },
+                    { label: 'Pausados', value: adminStudentStats.paused, icon: 'pause' as PortalIconName, color: '#ffae21', bg: 'rgba(165,99,0,.16)', border: 'rgba(255,174,33,.38)' },
+                    { label: 'Conectados ahora', value: liveAudience.length, icon: 'wifi' as PortalIconName, color: '#58a7ff', bg: 'rgba(27,104,205,.16)', border: 'rgba(88,167,255,.38)' },
+                  ].map((item) => (
+                    <div key={item.label} style={{ minWidth: 0, minHeight: 76, padding: '11px 12px', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 11, background: 'rgba(4,15,31,.62)', border: '1px solid rgba(114,161,216,.16)' }}>
+                      <span style={{ width: 48, height: 48, flex: '0 0 auto', borderRadius: 13, display: 'grid', placeItems: 'center', color: item.color, background: item.bg, border: `1px solid ${item.border}`, boxShadow: `0 0 22px ${item.bg}` }}>
+                        <PortalIcon name={item.icon} size={27} />
+                      </span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 27, lineHeight: 1, fontWeight: 950, color: '#fff' }}>{item.value}</div>
+                        <div style={{ marginTop: 6, fontSize: 11.5, lineHeight: 1.15, fontWeight: 850, color: 'rgba(255,255,255,.78)' }}>{item.label}</div>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'stretch', gap: 16 }}>
-                    <div style={{ width: 1, background: 'rgba(255,255,255,.12)' }} />
-                    <div style={{ minWidth: 104, textAlign: 'center' }}>
-                      <div style={{ fontSize: 39, lineHeight: 1, fontWeight: 950 }}>{classesRemaining ?? '—'}</div>
-                      <div style={{ fontSize: 12, fontWeight: 750, marginTop: 6, color: 'rgba(255,255,255,.75)' }}>clases restantes</div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 14, padding: '19px 19px', marginBottom: 14, borderRadius: 18,
+                    background: 'linear-gradient(135deg, rgba(8,24,48,.94), rgba(5,15,32,.92))', border: '1px solid rgba(114,161,216,.22)', boxShadow: '0 14px 34px rgba(0,0,0,.18)',
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 850, color: 'rgba(255,255,255,.72)', marginBottom: 7 }}>
+                      <span style={{ width: 15, height: 15, borderRadius: '50%', border: '1px solid rgba(255,255,255,.35)', display: 'inline-grid', placeItems: 'center', fontSize: 9 }}>i</span>Tus clases
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 9, height: 9, borderRadius: '50%', background: classesPaused ? '#f59e0b' : '#18df8b', boxShadow: classesPaused ? '0 0 12px rgba(245,158,11,.45)' : '0 0 12px rgba(24,223,139,.45)' }} />
+                      <span style={{ fontSize: 31, lineHeight: 1, fontWeight: 950, color: classesPaused ? '#fbbf24' : '#27e79a' }}>{classesPaused ? 'PAUSADO' : 'ACTIVO'}</span>
                     </div>
                   </div>
-                )}
-
-                {isChatAdmin ? (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', fontSize: 11.5, color: 'rgba(255,255,255,.72)' }}>
-                    📈 Máximo simultáneo: <strong style={{ color: '#fff' }}>{liveAudiencePeak}</strong>
+                  <div style={{ display: 'flex', alignItems: 'stretch', gap: 16 }}>
+                    <div style={{ width: 1, background: 'rgba(255,255,255,.12)' }} />
+                    <div style={{ minWidth: 104, textAlign: 'center' }}><div style={{ fontSize: 39, lineHeight: 1, fontWeight: 950 }}>{classesRemaining ?? '—'}</div><div style={{ fontSize: 12, fontWeight: 750, marginTop: 6, color: 'rgba(255,255,255,.75)' }}>clases restantes</div></div>
                   </div>
-                ) : (
-                  <button type="button" className="btn btn-secondary" onClick={() => router.push('/mis-clases')} style={{ gridColumn: '1 / -1', justifySelf: 'center', minWidth: 230, padding: '10px 16px', borderRadius: 999, fontSize: 13, fontWeight: 850, background: 'rgba(255,255,255,.055)' }}>
-                    Ver detalles en Mis clases &nbsp; →
-                  </button>
-                )}
-              </div>
+                  <button type="button" className="btn btn-secondary" onClick={() => router.push('/mis-clases')} style={{ gridColumn: '1 / -1', justifySelf: 'center', minWidth: 230, padding: '10px 16px', borderRadius: 999, fontSize: 13, fontWeight: 850, background: 'rgba(255,255,255,.055)' }}>Ver detalles en Mis clases &nbsp; →</button>
+                </div>
+              )}
 
               {/* TABS */}
               <div
@@ -2559,7 +2577,7 @@ return normalized;
                       <div><strong style={{ display: 'block', color: '#fff', marginBottom: 2 }}>Soporte</strong><div>Lead@leadacademy.com.ve</div><div>+1 786 620 4377</div></div>
                     </div>
                     {isChatAdmin ? (
-                      <button type="button" className="btn btn-secondary" style={{ width: '100%', padding: '7px 8px', fontSize: 10.5 }} onClick={() => router.push('/gestion-operativa')}>
+                      <button type="button" className="btn btn-secondary" style={{ width: '100%', minHeight: 44, padding: '10px 12px', fontSize: 14.5, fontWeight: 950, letterSpacing: '.1px', border: '1px solid rgba(77,145,255,.48)', background: 'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))', boxShadow: '0 8px 20px rgba(0,0,0,.14)' }} onClick={() => router.push('/gestion-operativa')}>
                         ⚙ Gestión Operativa
                       </button>
                     ) : null}
