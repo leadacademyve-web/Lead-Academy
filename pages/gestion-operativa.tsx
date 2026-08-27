@@ -2,6 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/src/lib/supabaseClient';
 
+type ReplaySession = {
+  session_id: string;
+  started_at: string;
+  ended_at: string;
+  has_replay: boolean;
+};
+
+type AdminAction = {
+  row: StudentRow;
+  kind: 'pause' | 'resume' | 'add_package' | 'remove_package' | 'consume' | 'refund';
+  label: string;
+};
+
 type StudentRow = {
   user_id: string;
   email: string;
@@ -32,6 +45,13 @@ export default function GestionOperativaPage() {
   const [activeLiveSession, setActiveLiveSession] = useState<{ session_id: string; session_started_at: string } | null>(null);
   const [liveWorking, setLiveWorking] = useState(false);
   const [liveModal, setLiveModal] = useState<'start' | 'end' | null>(null);
+  const [adminAction, setAdminAction] = useState<AdminAction | null>(null);
+  const [adminReason, setAdminReason] = useState('');
+  const [replaySessions, setReplaySessions] = useState<ReplaySession[]>([]);
+  const [vimeoId, setVimeoId] = useState('');
+  const [selectedSessionId, setSelectedSessionId] = useState('');
+  const [replayWorking, setReplayWorking] = useState(false);
+  const [replayConfirm, setReplayConfirm] = useState(false);
 
   async function load() {
     const { data: authData } = await supabase.auth.getUser();
@@ -52,6 +72,15 @@ export default function GestionOperativaPage() {
     const { data: liveData } = await supabase.rpc('get_active_live_class');
     const liveRow = Array.isArray(liveData) ? liveData[0] : liveData;
     setActiveLiveSession(liveRow?.session_id ? liveRow : null);
+
+    const { data: replayData, error: replayError } = await supabase.rpc('admin_replay_sessions');
+    if (!replayError) {
+      const sessions = (replayData || []) as ReplaySession[];
+      setReplaySessions(sessions);
+      setSelectedSessionId((current) =>
+        current && sessions.some((s) => s.session_id === current && !s.has_replay) ? current : ''
+      );
+    }
 
     const { data, error } = await supabase.rpc('admin_operational_students');
     if (error) {
@@ -78,27 +107,16 @@ export default function GestionOperativaPage() {
     );
   }, [rows, search]);
 
-  async function setPause(row: StudentRow, pause: boolean) {
-    const reason = window.prompt(
-      pause
-        ? `Motivo para pausar a ${row.full_name}:`
-        : `Motivo para reactivar a ${row.full_name}:`
-    );
-    if (!reason?.trim()) return;
-
-    setWorkingId(row.user_id);
-    setMessage(null);
-    const { error } = await supabase.rpc('admin_set_class_pause', {
-      p_user_id: row.user_id,
-      p_pause: pause,
-      p_reason: reason.trim(),
+  function openPauseAction(row: StudentRow, pause: boolean) {
+    setAdminReason('');
+    setAdminAction({
+      row,
+      kind: pause ? 'pause' : 'resume',
+      label: pause ? 'Pausar estudiante' : 'Reactivar estudiante',
     });
-    setWorkingId(null);
-    if (error) return setMessage(error.message);
-    await load();
   }
 
-  async function changeCounters(
+  function openCounterAction(
     row: StudentRow,
     operation: 'add_package' | 'remove_package' | 'consume' | 'refund'
   ) {
@@ -108,30 +126,62 @@ export default function GestionOperativaPage() {
       consume: 'Marcar 1 clase como consumida',
       refund: 'Devolver 1 clase consumida',
     };
+    setAdminReason('');
+    setAdminAction({ row, kind: operation, label: labels[operation] });
+  }
 
-    const reason = window.prompt(`${labels[operation]} — ${row.full_name}\n\nMotivo administrativo:`);
-    if (!reason?.trim()) return;
-
+  async function submitAdminAction() {
+    if (!adminAction || !adminReason.trim()) return;
+    const { row, kind, label } = adminAction;
     setWorkingId(row.user_id);
     setMessage(null);
 
-    const { data, error } = await supabase.rpc('admin_change_class_counters', {
-      p_user_id: row.user_id,
-      p_operation: operation,
-      p_amount: 1,
-      p_reason: reason.trim(),
-    });
-
-    setWorkingId(null);
-    if (error) return setMessage(error.message);
-
-    const result = Array.isArray(data) ? data[0] : data;
-    if (result) {
-      setMessage(
-        `${labels[operation]} completado. ` +
-        `${result.classes_used}/${result.total_classes} usadas · ${result.remaining_classes} restantes.`
-      );
+    if (kind === 'pause' || kind === 'resume') {
+      const { error } = await supabase.rpc('admin_set_class_pause', {
+        p_user_id: row.user_id,
+        p_pause: kind === 'pause',
+        p_reason: adminReason.trim(),
+      });
+      setWorkingId(null);
+      if (error) return setMessage(error.message);
+    } else {
+      const { data, error } = await supabase.rpc('admin_change_class_counters', {
+        p_user_id: row.user_id,
+        p_operation: kind,
+        p_amount: 1,
+        p_reason: adminReason.trim(),
+      });
+      setWorkingId(null);
+      if (error) return setMessage(error.message);
+      const result = Array.isArray(data) ? data[0] : data;
+      if (result) {
+        setMessage(`${label} completado. ${result.classes_used}/${result.total_classes} usadas · ${result.remaining_classes} restantes.`);
+      }
     }
+
+    setAdminAction(null);
+    setAdminReason('');
+    await load();
+  }
+
+  async function publishReplay() {
+    const cleanVimeoId = vimeoId.trim();
+    if (!/^\d+$/.test(cleanVimeoId) || !selectedSessionId || replayWorking) return;
+    setReplayWorking(true);
+    setMessage(null);
+    const { error } = await supabase.rpc('admin_publish_live_replay', {
+      p_live_session_id: selectedSessionId,
+      p_vimeo_id: cleanVimeoId,
+    });
+    setReplayWorking(false);
+    setReplayConfirm(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setVimeoId('');
+    setSelectedSessionId('');
+    setMessage('Repetición publicada correctamente y consumo de clases procesado.');
     await load();
   }
 
@@ -287,14 +337,14 @@ export default function GestionOperativaPage() {
                     <td style={styles.td}>{online && row.is_watching ? '🔴 Viendo' : '—'}</td>
                     <td style={styles.td}>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        <button disabled={busy} style={styles.action} onClick={() => changeCounters(row, 'add_package')}>＋ Paquete</button>
-                        <button disabled={busy || row.total_classes <= row.classes_used} style={styles.action} onClick={() => changeCounters(row, 'remove_package')}>− Paquete</button>
-                        <button disabled={busy || row.remaining_classes <= 0} style={styles.action} onClick={() => changeCounters(row, 'consume')}>✓ Consumir</button>
-                        <button disabled={busy || row.classes_used <= 0} style={styles.action} onClick={() => changeCounters(row, 'refund')}>↩ Devolver</button>
+                        <button disabled={busy} style={styles.action} onClick={() => openCounterAction(row, 'add_package')}>＋ Paquete</button>
+                        <button disabled={busy || row.total_classes <= row.classes_used} style={styles.action} onClick={() => openCounterAction(row, 'remove_package')}>− Paquete</button>
+                        <button disabled={busy || row.remaining_classes <= 0} style={styles.action} onClick={() => openCounterAction(row, 'consume')}>✓ Consumir</button>
+                        <button disabled={busy || row.classes_used <= 0} style={styles.action} onClick={() => openCounterAction(row, 'refund')}>↩ Devolver</button>
                         {row.is_paused ? (
-                          <button disabled={busy} style={styles.actionPrimary} onClick={() => setPause(row, false)}>▶ Reactivar</button>
+                          <button disabled={busy} style={styles.actionPrimary} onClick={() => openPauseAction(row, false)}>▶ Reactivar</button>
                         ) : (
-                          <button disabled={busy} style={styles.actionWarn} onClick={() => setPause(row, true)}>⏸ Pausar</button>
+                          <button disabled={busy} style={styles.actionWarn} onClick={() => openPauseAction(row, true)}>⏸ Pausar</button>
                         )}
                       </div>
                     </td>
@@ -307,13 +357,83 @@ export default function GestionOperativaPage() {
       </div>
 
       <div style={styles.card}>
-        <div style={styles.eyebrow}>SIGUIENTE ETAPA</div>
-        <h2 style={{ margin: '6px 0 8px' }}>Asistencia y repeticiones</h2>
+        <div style={styles.eyebrow}>REPETICIONES</div>
+        <h2 style={{ margin: '6px 0 8px' }}>Publicar repetición de una sesión LIVE</h2>
         <p style={styles.muted}>
-          La base de datos ya queda preparada para registrar sesiones LIVE, asistencia individual y derechos de repetición.
-          Esta fase no modifica todavía el mecanismo actual que descuenta clases al publicar videos.
+          Introduce el número de Vimeo y selecciona exactamente la sesión a la que pertenece. El portal asociará la repetición con esa sesión y aplicará automáticamente las reglas de asistencia y pausa.
         </p>
+        <div style={styles.replayGrid}>
+          <label style={styles.fieldLabel}>
+            <span>ID de Vimeo</span>
+            <input
+              value={vimeoId}
+              onChange={(e) => setVimeoId(e.target.value.replace(/\D/g, ''))}
+              placeholder="Ej. 1217366012"
+              inputMode="numeric"
+              style={{ ...styles.input, minWidth: 0, width: '100%' }}
+            />
+          </label>
+          <label style={styles.fieldLabel}>
+            <span>Sesión LIVE</span>
+            <select
+              value={selectedSessionId}
+              onChange={(e) => setSelectedSessionId(e.target.value)}
+              style={{ ...styles.input, minWidth: 0, width: '100%' }}
+            >
+              <option value="">Selecciona una sesión finalizada...</option>
+              {replaySessions.filter((s) => !s.has_replay).map((s) => (
+                <option key={s.session_id} value={s.session_id}>
+                  {formatLiveTime(s.started_at)} → {formatLiveTime(s.ended_at)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            style={styles.button}
+            disabled={replayWorking || !/^\d+$/.test(vimeoId.trim()) || !selectedSessionId}
+            onClick={() => setReplayConfirm(true)}
+          >
+            Publicar repetición
+          </button>
+        </div>
+        <div style={styles.mutedSmall}>
+          {replaySessions.filter((s) => !s.has_replay).length} sesión(es) finalizada(s) pendientes de repetición. Las sesiones ya asociadas no pueden seleccionarse nuevamente.
+        </div>
       </div>
+      {adminAction ? (
+        <div onMouseDown={(e) => { if (e.target === e.currentTarget && !workingId) setAdminAction(null); }} style={styles.modalBackdrop}>
+          <div role="dialog" aria-modal="true" style={styles.modalCard}>
+            <div style={styles.eyebrow}>ACCIÓN ADMINISTRATIVA</div>
+            <h2 style={{ margin: '8px 0 6px' }}>{adminAction.label}</h2>
+            <p style={styles.muted}>{adminAction.row.full_name} · {adminAction.row.email}</p>
+            <label style={{ ...styles.fieldLabel, marginTop: 18 }}>
+              <span>Motivo administrativo</span>
+              <textarea autoFocus value={adminReason} onChange={(e) => setAdminReason(e.target.value)} rows={4} style={{ ...styles.input, width: '100%', minWidth: 0, resize: 'vertical' }} />
+            </label>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
+              <button style={styles.buttonSecondary} disabled={!!workingId} onClick={() => setAdminAction(null)}>Cancelar</button>
+              <button style={styles.button} disabled={!!workingId || !adminReason.trim()} onClick={submitAdminAction}>{workingId ? 'Procesando...' : 'Confirmar'}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {replayConfirm ? (
+        <div onMouseDown={(e) => { if (e.target === e.currentTarget && !replayWorking) setReplayConfirm(false); }} style={styles.modalBackdrop}>
+          <div role="dialog" aria-modal="true" style={styles.modalCard}>
+            <div style={styles.eyebrow}>PUBLICAR REPETICIÓN</div>
+            <h2 style={{ margin: '8px 0 10px' }}>¿Confirmar publicación?</h2>
+            <p style={styles.muted}>Vimeo: <strong>{vimeoId}</strong></p>
+            <p style={styles.muted}>Sesión: <strong>{(() => { const x = replaySessions.find((s) => s.session_id === selectedSessionId); return x ? `${formatLiveTime(x.started_at)} → ${formatLiveTime(x.ended_at)}` : '—'; })()}</strong></p>
+            <div style={styles.warningBox}>Al confirmar, la repetición será publicada y el sistema procesará el consumo de clases correspondiente a esta sesión.</div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
+              <button style={styles.buttonSecondary} disabled={replayWorking} onClick={() => setReplayConfirm(false)}>Cancelar</button>
+              <button style={styles.button} disabled={replayWorking} onClick={publishReplay}>{replayWorking ? 'Publicando...' : 'Sí, publicar repetición'}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {liveModal ? (
         <div
           onMouseDown={(e) => {
@@ -424,4 +544,7 @@ const styles: Record<string, any> = {
   liveEndButton: { padding: '12px 18px', borderRadius: 12, border: '1px solid rgba(239,68,68,.45)', background: 'rgba(239,68,68,.18)', color: '#fee2e2', fontWeight: 900, cursor: 'pointer' },
   modalBackdrop: { position: 'fixed', inset: 0, zIndex: 9999, display: 'grid', placeItems: 'center', padding: 20, background: 'rgba(0,0,0,.72)', backdropFilter: 'blur(8px)' },
   modalCard: { width: 'min(560px, 94vw)', borderRadius: 22, padding: 26, background: '#0f172a', border: '1px solid rgba(255,255,255,.14)', boxShadow: '0 30px 90px rgba(0,0,0,.55)' },
+  replayGrid: { display: 'grid', gridTemplateColumns: 'minmax(180px,.65fr) minmax(320px,1.5fr) auto', gap: 12, alignItems: 'end', marginTop: 20 },
+  fieldLabel: { display: 'grid', gap: 8, fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,.72)' },
+  warningBox: { marginTop: 18, padding: '12px 14px', borderRadius: 12, background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.30)', color: '#fde68a', lineHeight: 1.5 },
 };
