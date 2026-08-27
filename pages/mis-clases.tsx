@@ -278,7 +278,7 @@ export default function MisClasesPage() {
               <button disabled={working} style={styles.secondary} onClick={() => setPauseModal(null)}>Cancelar</button>
               <button
                 disabled={working}
-                style={pauseModal ? styles.warn : styles.primary}
+                style={{ ...(pauseModal ? styles.warn : styles.primary), marginTop: 0 }}
                 onClick={() => changePause(pauseModal)}
               >
                 {pauseModal ? <Icon name="pause" size={18} /> : <Icon name="play" size={18} />}
@@ -373,6 +373,7 @@ const styles: Record<string, any> = {
 
   primary: {
     marginTop: 24,
+    height: 50,
     minHeight: 50,
     padding: '0 20px',
     borderRadius: 10,
@@ -386,9 +387,12 @@ const styles: Record<string, any> = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
+    lineHeight: 1,
+    boxSizing: 'border-box',
   },
   warn: {
     marginTop: 24,
+    height: 50,
     minHeight: 50,
     padding: '0 20px',
     borderRadius: 10,
@@ -402,6 +406,8 @@ const styles: Record<string, any> = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
+    lineHeight: 1,
+    boxSizing: 'border-box',
   },
 
   notice: {
@@ -456,15 +462,21 @@ const styles: Record<string, any> = {
   noteText: { color: 'rgba(255,255,255,.73)', fontSize: 16, lineHeight: 1.5 },
 
   secondary: {
-    minHeight: 46,
-    padding: '0 17px',
+    height: 50,
+    minHeight: 50,
+    padding: '0 20px',
     borderRadius: 10,
     border: '1px solid rgba(255,255,255,.16)',
     background: 'rgba(255,255,255,.05)',
     color: '#fff',
-    fontSize: 15,
-    fontWeight: 850,
+    fontSize: 16,
+    fontWeight: 900,
     cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: 1,
+    boxSizing: 'border-box',
   },
   error: { color: '#fecaca' },
   loadingCard: { maxWidth: 900, margin: '120px auto', border: '1px solid rgba(255,255,255,.12)', borderRadius: 18, padding: 24, background: '#081326' },
