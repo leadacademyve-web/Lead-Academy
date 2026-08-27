@@ -3138,62 +3138,60 @@ return normalized;
                 </div>
               ) : (
                 <>
-                  <h2 style={{ marginTop: 0, marginBottom: 18 }}>Biblioteca</h2>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.15, color: '#60a5fa', textTransform: 'uppercase', marginBottom: 4 }}>Recursos</div>
+                      <h2 style={{ margin: 0, fontSize: 24, lineHeight: 1.05 }}>Biblioteca</h2>
+                    </div>
+                    <div style={{ width: 42, height: 42, borderRadius: 13, display: 'grid', placeItems: 'center', color: '#60a5fa', background: 'rgba(37,99,235,.13)', border: '1px solid rgba(59,130,246,.28)' }}>
+                      <PortalIcon name="book" size={23} />
+                    </div>
+                  </div>
 
-                  <div style={{ display: 'grid', gap: 10, marginBottom: 12, flex: 1, alignContent: 'start' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, flex: 1, alignContent: 'start' }}>
                     {LIBRARY_ITEMS.map((item) => {
                       const selected = selectedLibraryItemId === item.id;
+                      const isExternal = item.kind === 'download' && item.url.startsWith('http');
+                      const kindLabel = item.kind === 'video' ? 'VIDEO' : isExternal ? 'LINK' : item.kind === 'download' ? 'DESCARGA' : 'IMAGEN';
+                      const actionIcon = item.kind === 'video' ? '▶' : isExternal ? '↗' : item.kind === 'download' ? '↓' : '→';
+                      const itemIcon = item.kind === 'video' ? 'play' : item.kind === 'download' ? 'book' : 'arrow';
                       return (
                         <button
                           key={item.id}
                           onClick={() => openLibraryItem(item)}
+                          title={item.description || item.title}
                           style={{
+                            minHeight: 104,
                             textAlign: 'left',
-                            padding: '14px 16px',
-                            borderRadius: 16,
-                            border: selected ? '1px solid rgba(59,130,246,0.72)' : '1px solid rgba(255,255,255,0.08)',
-                            background: selected ? 'linear-gradient(135deg, rgba(37,99,235,0.20) 0%, rgba(15,23,42,0.82) 100%)' : 'rgba(255,255,255,0.035)',
+                            padding: '13px 13px 12px',
+                            borderRadius: 15,
+                            border: selected ? '1px solid rgba(59,130,246,.88)' : '1px solid rgba(112,154,207,.20)',
+                            background: selected
+                              ? 'linear-gradient(145deg, rgba(37,99,235,.25) 0%, rgba(10,26,49,.96) 72%)'
+                              : 'linear-gradient(180deg, rgba(17,35,61,.78) 0%, rgba(10,24,44,.86) 100%)',
+                            boxShadow: selected ? '0 0 0 1px rgba(59,130,246,.10), inset 0 1px 0 rgba(255,255,255,.04)' : 'inset 0 1px 0 rgba(255,255,255,.025)',
                             color: 'white',
                             cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            gap: 10,
+                            overflow: 'hidden',
                           }}
                         >
-                          <div style={{ fontSize: 9, letterSpacing: 1.05, textTransform: 'uppercase', opacity: 0.62, marginBottom: 5 }}>
-                            {item.kind === 'download'
-  ? (item.url.startsWith('http') ? 'Link' : 'Descarga')
-  : item.kind === 'video'
-    ? 'Video'
-    : 'Biblioteca'}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{ width: 34, height: 34, borderRadius: 11, display: 'grid', placeItems: 'center', flex: '0 0 auto', color: selected ? '#93c5fd' : '#60a5fa', background: selected ? 'rgba(37,99,235,.24)' : 'rgba(37,99,235,.11)', border: '1px solid rgba(59,130,246,.24)' }}>
+                              <PortalIcon name={itemIcon as PortalIconName} size={18} />
+                            </div>
+                            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: .8, color: selected ? '#93c5fd' : 'rgba(203,220,241,.58)' }}>{kindLabel}</div>
                           </div>
-                          <div style={{ fontWeight: 700, fontSize: 18 }}>{item.title}</div>
+                          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.18, minWidth: 0 }}>{item.title}</div>
+                            <div style={{ fontSize: 17, lineHeight: 1, color: selected ? '#93c5fd' : 'rgba(203,220,241,.68)', flex: '0 0 auto' }}>{actionIcon}</div>
+                          </div>
                         </button>
                       );
                     })}
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: 'auto',
-                      padding: '12px 14px',
-                      borderRadius: 14,
-                      background: 'linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.025) 100%)',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      fontSize: 12,
-                      lineHeight: 1.45,
-                      opacity: 0.88,
-                    }}
-                  >
-                    <div style={{ fontWeight: 700, marginBottom: 6 }}>Contenido</div>
-                    <div>
-                      {selectedLibraryItem?.kind === 'download'
-                        ? selectedLibraryItem?.url?.startsWith('http')
-                          ? 'Este botón abrirá un link externo.'
-                          : 'Este botón descargará el archivo.'
-                        : selectedLibraryItem?.kind === 'video'
-                          ? 'Este botón reproducirá un video en la pantalla principal.'
-                          : selectedLibraryItem?.title
-                            ? `Mostrando: ${selectedLibraryItem.title}`
-                            : 'Selecciona un elemento de la biblioteca.'}
-                    </div>
                   </div>
                 </>
               )}
