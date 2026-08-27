@@ -1919,9 +1919,9 @@ return normalized;
       <div
         className="dashboard-grid"
         style={{
-          gridTemplateColumns: accessActive ? '83.5% 16.5%' : undefined,
+          gridTemplateColumns: accessActive ? 'minmax(0, 4fr) minmax(320px, 1fr)' : undefined,
           alignItems: 'stretch',
-          gap: '20px',
+          gap: '14px',
           position: 'relative',
           zIndex: 1,
         }}
@@ -2190,8 +2190,8 @@ return normalized;
             display: 'flex',
             flexDirection: 'column',
             overflowY: 'auto',
-            padding: 18,
-            background: 'linear-gradient(180deg, rgba(9,25,54,0.22) 0%, rgba(4,15,35,0.22) 100%)',
+            padding: 16,
+            background: 'linear-gradient(180deg, rgba(6,20,45,0.84) 0%, rgba(3,12,29,0.88) 100%)',
             boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(96,165,250,0.10)',
@@ -2261,7 +2261,41 @@ return normalized;
 
               {activeTab === 'videos' ? (
                 <>
-                  <h2 style={{ marginTop: 0, marginBottom: 18 }}>Clases disponibles</h2>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '14px 15px',
+                    marginBottom: 14,
+                    borderRadius: 18,
+                    background: 'linear-gradient(135deg, rgba(14,165,233,0.12), rgba(15,23,42,0.78))',
+                    border: '1px solid rgba(56,189,248,0.24)',
+                    boxShadow: '0 14px 34px rgba(0,0,0,0.18)',
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.25, textTransform: 'uppercase', color: classesPaused ? '#f59e0b' : '#34d399', marginBottom: 5 }}>
+                        {classesPaused ? 'PAUSADO' : 'ACTIVO'}
+                      </div>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.68)' }}>Tu acceso a Lead Academy</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 30, lineHeight: 1, fontWeight: 900 }}>{classesRemaining ?? '—'}</div>
+                      <div style={{ fontSize: 11, marginTop: 5, color: 'rgba(255,255,255,0.68)' }}>clases restantes</div>
+                    </div>
+                  </div>
+
+                  {nextScheduledClass ? (
+                    <div style={{ padding: '13px 14px', borderRadius: 16, marginBottom: 14, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(96,165,250,0.20)' }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.15, textTransform: 'uppercase', color: '#60a5fa', marginBottom: 5 }}>Próxima clase</div>
+                      <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.35 }}>{formatNextClassDateNY(nextScheduledClass.published_at)}</div>
+                    </div>
+                  ) : null}
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                    <h2 style={{ margin: 0, fontSize: 20 }}>Clases disponibles</h2>
+                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,255,255,0.48)', textTransform: 'uppercase' }}>Recientes</span>
+                  </div>
 
                   <div style={{ display: 'grid', gap: 10, marginBottom: 12, flex: 1, alignContent: 'start' }}>
                     {visibleLibraryVideos.length ? (
@@ -2281,18 +2315,18 @@ return normalized;
                             }}
                             style={{
                               textAlign: 'left',
-                              padding: '14px 16px',
-                              borderRadius: 16,
-                              border: selected ? '1px solid rgba(245, 158, 11, 0.72)' : '1px solid rgba(255,255,255,0.08)',
-                              background: selected ? 'linear-gradient(180deg, rgba(245,158,11,0.14) 0%, rgba(30,41,59,0.72) 100%)' : 'rgba(255,255,255,0.03)',
+                              padding: '12px 13px',
+                              borderRadius: 14,
+                              border: selected ? '1px solid rgba(59,130,246,0.72)' : '1px solid rgba(255,255,255,0.08)',
+                              background: selected ? 'linear-gradient(135deg, rgba(37,99,235,0.20) 0%, rgba(15,23,42,0.82) 100%)' : 'rgba(255,255,255,0.035)',
                               color: 'white',
                               cursor: 'pointer',
                             }}
                           >
-                            <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
+                            <div style={{ fontSize: 9, letterSpacing: 1.05, textTransform: 'uppercase', opacity: 0.62, marginBottom: 5 }}>
                               {sublabelForVideo(video)}
                             </div>
-                            <div style={{ fontWeight: 700, fontSize: 18 }}>{labelForVideo(video)}</div>
+                            <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.3 }}>{labelForVideo(video)}</div>
                           </button>
                         );
                       })
@@ -2321,7 +2355,7 @@ return normalized;
                       style={{ width: '100%' }}
                       onClick={() => router.push('/mis-clases')}
                     >
-                      Mis clases
+                      ◫ &nbsp; Mis clases
                     </button>
 
                     {isChatAdmin ? (
@@ -2331,7 +2365,7 @@ return normalized;
                         style={{ width: '100%' }}
                         onClick={() => router.push('/gestion-operativa')}
                       >
-                        Gestión Operativa
+                        ⚙ &nbsp; Gestión Operativa
                       </button>
                     ) : null}
                   </div>
@@ -2372,7 +2406,7 @@ return normalized;
                         marginBottom: isEditingProfile ? 8 : 0,
                       }}
                     >
-                      <div className="eyebrow" style={{ marginBottom: 0 }}>Mi perfil</div>
+                      <div className="eyebrow" style={{ marginBottom: 0, color: '#fbbf24' }}>MI PERFIL</div>
                       <button
                         type="button"
                         className="btn btn-secondary"
@@ -2488,7 +2522,7 @@ return normalized;
                       opacity: 0.88,
                     }}
                   >
-                    <div style={{ fontWeight: 700, marginBottom: 6 }}>Soporte</div>
+                    <div style={{ fontWeight: 800, marginBottom: 6, color: '#60a5fa' }}>Soporte</div>
                     <div>Lead@leadacademy.com.ve</div>
                     <div>+1 786 620 4377</div>
                   </div>
@@ -3017,13 +3051,13 @@ return normalized;
                             textAlign: 'left',
                             padding: '14px 16px',
                             borderRadius: 16,
-                            border: selected ? '1px solid rgba(245, 158, 11, 0.72)' : '1px solid rgba(255,255,255,0.08)',
-                            background: selected ? 'linear-gradient(180deg, rgba(245,158,11,0.14) 0%, rgba(30,41,59,0.72) 100%)' : 'rgba(255,255,255,0.03)',
+                            border: selected ? '1px solid rgba(59,130,246,0.72)' : '1px solid rgba(255,255,255,0.08)',
+                            background: selected ? 'linear-gradient(135deg, rgba(37,99,235,0.20) 0%, rgba(15,23,42,0.82) 100%)' : 'rgba(255,255,255,0.035)',
                             color: 'white',
                             cursor: 'pointer',
                           }}
                         >
-                          <div style={{ fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.75, marginBottom: 6 }}>
+                          <div style={{ fontSize: 9, letterSpacing: 1.05, textTransform: 'uppercase', opacity: 0.62, marginBottom: 5 }}>
                             {item.kind === 'download'
   ? (item.url.startsWith('http') ? 'Link' : 'Descarga')
   : item.kind === 'video'
