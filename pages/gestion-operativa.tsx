@@ -66,7 +66,7 @@ function initialsForName(value?: string | null) {
   return `${parts[0]?.[0] || ''}${parts[1]?.[0] || ''}`.toUpperCase();
 }
 
-function Icon({ name, size = 24 }: { name: 'wifi' | 'video' | 'pause' | 'cap' | 'calendar' | 'gift' | 'vimeo' | 'broadcast' | 'send' | 'search'; size?: number }) {
+function Icon({ name, size = 24 }: { name: 'wifi' | 'video' | 'pause' | 'cap' | 'calendar' | 'gift' | 'vimeo' | 'broadcast' | 'send' | 'search' | 'sparkles'; size?: number }) {
   const common = {
     width: size,
     height: size,
@@ -88,6 +88,7 @@ function Icon({ name, size = 24 }: { name: 'wifi' | 'video' | 'pause' | 'cap' | 
   if (name === 'vimeo') return <svg {...common}><path d="M4 8c2-2 4-3 5-2 1 .5 1 2 1 4 0 2 1 5 2 5s2-2 3-4c1-2 1-3 0-3s-2 1-3 2c1-4 4-6 6-5 3 1 2 5 0 8-2 4-5 8-7 8-3 0-4-6-5-9 0-2-1-2-2-1z"/></svg>;
   if (name === 'broadcast') return <svg {...common}><circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/><path d="M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"/></svg>;
   if (name === 'send') return <svg {...common}><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>;
+  if (name === 'sparkles') return <svg {...common}><path d="m12 3 1.35 3.65L17 8l-3.65 1.35L12 13l-1.35-3.65L7 8l3.65-1.35z"/><path d="m18.5 13 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/><path d="m5 14 .7 1.8 1.8.7-1.8.7L5 19l-.7-1.8-1.8-.7 1.8-.7z"/></svg>;
   return <svg {...common}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>;
 }
 
@@ -111,6 +112,11 @@ export default function GestionOperativaPage() {
   const [sessionPickerOpen, setSessionPickerOpen] = useState(false);
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [todayClassTopic, setTodayClassTopic] = useState('');
+  const [savedTodayClassTopic, setSavedTodayClassTopic] = useState('');
+  const [topicLoading, setTopicLoading] = useState(true);
+  const [topicSaving, setTopicSaving] = useState(false);
+  const [topicNotice, setTopicNotice] = useState<string | null>(null);
 
   async function load() {
     const { data: authData } = await supabase.auth.getUser();
@@ -128,9 +134,10 @@ export default function GestionOperativaPage() {
 
     setAuthorized(true);
 
-    const [studentsResult, replayResult] = await Promise.all([
+    const [studentsResult, replayResult, topicResult] = await Promise.all([
       supabase.rpc('admin_operational_students'),
       supabase.rpc('admin_replay_sessions'),
+      supabase.from('portal_settings').select('value').eq('key', 'today_class_topic').maybeSingle(),
     ]);
 
     if (studentsResult.error) {
@@ -146,6 +153,13 @@ export default function GestionOperativaPage() {
     } else {
       setReplaySessions((replayResult.data || []) as ReplaySession[]);
     }
+
+    if (!topicResult.error) {
+      const currentTopic = typeof topicResult.data?.value === 'string' ? topicResult.data.value : '';
+      setSavedTodayClassTopic(currentTopic);
+      setTodayClassTopic((current) => current || currentTopic);
+    }
+    setTopicLoading(false);
 
     setLoading(false);
   }
@@ -314,6 +328,32 @@ export default function GestionOperativaPage() {
     await load();
   }
 
+  async function saveTodayClassTopic() {
+    const cleanTopic = todayClassTopic.trim();
+    if (!cleanTopic) {
+      setTopicNotice('Escribe el contenido de la clase de hoy antes de guardar.');
+      return;
+    }
+
+    setTopicSaving(true);
+    setTopicNotice(null);
+
+    const { error } = await supabase
+      .from('portal_settings')
+      .upsert({ key: 'today_class_topic', value: cleanTopic }, { onConflict: 'key' });
+
+    setTopicSaving(false);
+
+    if (error) {
+      setTopicNotice(`No se pudo guardar: ${error.message}`);
+      return;
+    }
+
+    setTodayClassTopic(cleanTopic);
+    setSavedTodayClassTopic(cleanTopic);
+    setTopicNotice('Publicado. El contenido aparecerá en el dashboard de los estudiantes.');
+  }
+
   if (loading) {
     return <main style={styles.page}><div style={styles.card}>Cargando Gestión Operativa...</div></main>;
   }
@@ -362,6 +402,67 @@ export default function GestionOperativaPage() {
           <div style={styles.statIconPurple}><Icon name="cap" size={32} /></div>
           <div><strong style={styles.statNumber}>{rows.length}</strong><div style={styles.statLabel}>Con acceso/clases</div></div>
         </div>
+      </div>
+
+      {/* CONTENIDO DE LA CLASE DE HOY */}
+      <div style={styles.todayTopicCard}>
+        <div style={styles.todayTopicHeader}>
+          <div style={styles.todayTopicHeading}>
+            <span style={styles.todayTopicIcon}><Icon name="sparkles" size={31} /></span>
+            <div>
+              <div style={styles.todayTopicEyebrow}>CLASE DE HOY</div>
+              <h2 style={styles.todayTopicTitle}>Contenido decidido por el instructor</h2>
+              <p style={styles.todayTopicIntro}>Escribe el tema que verán los estudiantes en su dashboard. La clase diaria comienza a las <strong style={{ color: '#fff' }}>09:00 AM · hora de New York</strong>.</p>
+            </div>
+          </div>
+          <div style={styles.todayTopicStatus}>
+            <span style={styles.todayTopicStatusDot} />
+            {savedTodayClassTopic ? 'PUBLICADO' : 'SIN PUBLICAR'}
+          </div>
+        </div>
+
+        <div style={styles.todayTopicGrid}>
+          <div>
+            <div style={styles.fieldLabel}>Tema / contenido de hoy</div>
+            <div style={styles.todayTopicInputShell}>
+              <span style={styles.todayTopicInputIcon}><Icon name="sparkles" size={25} /></span>
+              <input
+                value={todayClassTopic}
+                onChange={(e) => {
+                  setTodayClassTopic(e.target.value);
+                  setTopicNotice(null);
+                }}
+                maxLength={140}
+                placeholder="Ej: Análisis de NVDA Earnings Reports"
+                style={styles.todayTopicInput}
+                disabled={topicLoading || topicSaving}
+              />
+              <span style={styles.todayTopicCounter}>{todayClassTopic.length}/140</span>
+            </div>
+            <div style={styles.fieldHelp}>Este texto se mostrará en la tarjeta “Clase de hoy” del portal de estudiantes.</div>
+          </div>
+
+          <button
+            type="button"
+            style={{
+              ...styles.todayTopicButton,
+              opacity: topicLoading || topicSaving || !todayClassTopic.trim() || todayClassTopic.trim() === savedTodayClassTopic ? .55 : 1,
+            }}
+            disabled={topicLoading || topicSaving || !todayClassTopic.trim() || todayClassTopic.trim() === savedTodayClassTopic}
+            onClick={saveTodayClassTopic}
+          >
+            <Icon name="send" size={23} />
+            {topicSaving ? 'Guardando...' : 'Guardar y publicar'}
+          </button>
+        </div>
+
+        <div style={styles.todayTopicPreview}>
+          <span style={styles.todayTopicPreviewLabel}>VISTA PREVIA</span>
+          <span style={styles.todayTopicPreviewText}>{todayClassTopic.trim() || 'Aquí aparecerá el tema de la clase de hoy.'}</span>
+          <span style={styles.todayTopicPreviewTime}>09:00 AM NY</span>
+        </div>
+
+        {topicNotice ? <div style={topicNotice.startsWith('Publicado') ? styles.todayTopicSuccess : styles.todayTopicError}>{topicNotice}</div> : null}
       </div>
 
       {/* PUBLICACIÓN DE VIDEOS ARRIBA DE LOS ESTUDIANTES */}
@@ -669,6 +770,37 @@ const styles: Record<string, any> = {
   statIconGreen: { width: 54, height: 54, borderRadius: 14, display: 'grid', placeItems: 'center', color: '#15e58e', background: 'rgba(0,121,75,.20)', border: '1px solid rgba(0,193,120,.45)' },
   statIconAmber: { width: 54, height: 54, borderRadius: 14, display: 'grid', placeItems: 'center', color: '#ffad12', background: 'rgba(151,88,0,.22)', border: '1px solid rgba(234,144,0,.50)' },
   statIconPurple: { width: 54, height: 54, borderRadius: 14, display: 'grid', placeItems: 'center', color: '#c47cff', background: 'rgba(94,42,139,.24)', border: '1px solid rgba(150,78,213,.42)' },
+
+  todayTopicCard: {
+    maxWidth: 1500,
+    margin: '0 auto 18px',
+    border: '1px solid rgba(46,137,255,.42)',
+    borderRadius: 19,
+    padding: '21px 24px 18px',
+    background: 'radial-gradient(circle at 0% 0%,rgba(23,112,232,.17),transparent 34%), linear-gradient(180deg,rgba(5,22,43,.96),rgba(4,15,31,.91))',
+    boxShadow: '0 22px 55px rgba(0,0,0,.22), 0 0 0 1px rgba(37,124,255,.05) inset',
+    backdropFilter: 'blur(12px)'
+  },
+  todayTopicHeader: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' },
+  todayTopicHeading: { display: 'flex', alignItems: 'flex-start', gap: 16, minWidth: 0, flex: 1 },
+  todayTopicIcon: { width: 56, height: 56, flex: '0 0 auto', borderRadius: 15, display: 'grid', placeItems: 'center', color: '#7bb8ff', background: 'linear-gradient(180deg,rgba(25,104,211,.28),rgba(14,62,132,.18))', border: '1px solid rgba(65,144,255,.48)', boxShadow: '0 10px 25px rgba(0,86,201,.13)' },
+  todayTopicEyebrow: { fontSize: 13, letterSpacing: 1.15, fontWeight: 950, color: '#46a4ff', marginBottom: 5 },
+  todayTopicTitle: { margin: 0, fontSize: 23, lineHeight: 1.15, fontWeight: 950, letterSpacing: '-.25px' },
+  todayTopicIntro: { color: 'rgba(255,255,255,.78)', fontSize: 14.5, margin: '7px 0 0', lineHeight: 1.45 },
+  todayTopicStatus: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 999, border: '1px solid rgba(28,214,139,.34)', background: 'rgba(0,123,78,.13)', color: '#a8f5d4', fontSize: 11.5, letterSpacing: .65, fontWeight: 900 },
+  todayTopicStatusDot: { width: 7, height: 7, borderRadius: '50%', background: '#20e493', boxShadow: '0 0 12px rgba(32,228,147,.65)' },
+  todayTopicGrid: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 220px', gap: 20, alignItems: 'start', marginTop: 18 },
+  todayTopicInputShell: { minHeight: 56, display: 'flex', alignItems: 'center', borderRadius: 12, border: '1px solid rgba(89,151,230,.45)', background: 'linear-gradient(180deg,rgba(12,31,57,.96),rgba(8,23,44,.94))', overflow: 'hidden', boxShadow: '0 0 0 1px rgba(34,113,220,.05) inset' },
+  todayTopicInputIcon: { width: 58, flex: '0 0 auto', display: 'grid', placeItems: 'center', color: '#5ca8ff' },
+  todayTopicInput: { flex: 1, minWidth: 0, height: 54, border: 0, outline: 'none', background: 'transparent', color: '#fff', fontSize: 17, fontWeight: 700, padding: '0 12px 0 0', fontFamily: 'inherit' },
+  todayTopicCounter: { flex: '0 0 auto', padding: '0 15px 0 10px', color: 'rgba(255,255,255,.47)', fontSize: 11.5, fontWeight: 700 },
+  todayTopicButton: { minHeight: 56, marginTop: 31, width: '100%', borderRadius: 11, border: 0, background: 'linear-gradient(180deg,#188cff,#0767e6)', color: '#fff', fontSize: 15.5, fontWeight: 950, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, boxShadow: '0 12px 28px rgba(0,93,218,.26)' },
+  todayTopicPreview: { marginTop: 14, minHeight: 43, padding: '9px 13px', borderRadius: 11, display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center', gap: 12, border: '1px solid rgba(118,163,213,.18)', background: 'rgba(3,13,28,.52)' },
+  todayTopicPreviewLabel: { color: '#62adff', fontSize: 10.5, letterSpacing: .9, fontWeight: 950 },
+  todayTopicPreviewText: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#fff', fontSize: 13.5, fontWeight: 800 },
+  todayTopicPreviewTime: { paddingLeft: 12, borderLeft: '1px solid rgba(255,255,255,.10)', color: 'rgba(255,255,255,.72)', fontSize: 12, fontWeight: 850 },
+  todayTopicSuccess: { marginTop: 11, padding: '9px 12px', borderRadius: 10, background: 'rgba(0,151,94,.13)', border: '1px solid rgba(31,213,139,.30)', color: '#baf7dc', fontSize: 13, fontWeight: 750 },
+  todayTopicError: { marginTop: 11, padding: '9px 12px', borderRadius: 10, background: 'rgba(190,45,65,.14)', border: '1px solid rgba(255,91,113,.30)', color: '#ffd1d7', fontSize: 13, fontWeight: 750 },
 
   publishCard: {
     maxWidth: 1500,
