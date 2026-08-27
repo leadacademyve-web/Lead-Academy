@@ -322,23 +322,34 @@ export default function GestionOperativaPage() {
 
       {/* PUBLICACIÓN DE VIDEOS ARRIBA DE LOS ESTUDIANTES */}
       <div style={styles.card}>
-        <div style={styles.eyebrow}>PUBLICAR VIDEO</div>
-        <h2 style={{ margin: '6px 0 8px' }}>Publicación de contenido</h2>
-        <p style={styles.muted}>Selecciona el tipo de video. El portal aplicará automáticamente las reglas correspondientes a cada publicación.</p>
+        <div style={styles.sectionTitle}>PUBLICAR</div>
+        <p style={styles.publishIntro}>Selecciona el tipo de video. El portal aplicará automáticamente las reglas correspondientes.</p>
 
         <div style={styles.typeTabs}>
           <button type="button" style={publishType === 'daily' ? styles.typeTabActive : styles.typeTab} onClick={() => selectPublishType('daily')}>
-            Clase diaria
+            <span style={styles.tabIcon}>▣</span><span><strong>Clase diaria</strong><small style={styles.tabSub}>Desde una sesión LIVE</small></span>
           </button>
           <button type="button" style={publishType === 'course' ? styles.typeTabActive : styles.typeTab} onClick={() => selectPublishType('course')}>
-            Curso intensivo
+            <span style={styles.tabIcon}>◆</span><span><strong>Curso intensivo</strong><small style={styles.tabSub}>Solo para estudiantes del curso</small></span>
           </button>
           <button type="button" style={publishType === 'special' ? styles.typeTabActive : styles.typeTab} onClick={() => selectPublishType('special')}>
-            Contenido gratuito
+            <span style={styles.tabIcon}>✦</span><span><strong>Contenido gratuito</strong><small style={styles.tabSub}>No descuenta a nadie</small></span>
           </button>
         </div>
 
         <div style={publishType === 'daily' ? styles.replayGrid : styles.publishGrid}>
+          <div>
+            <div style={styles.fieldLabel}>ID de Vimeo</div>
+            <input
+              value={vimeoId}
+              onChange={(e) => setVimeoId(e.target.value.replace(/\D/g, ''))}
+              placeholder="Ej. 1217366012"
+              inputMode="numeric"
+              style={{ ...styles.input, width: '100%', minWidth: 0, boxSizing: 'border-box' }}
+            />
+            <div style={styles.fieldHelp}>Ingresa únicamente el número del video de Vimeo.</div>
+          </div>
+
           {(publishType === 'course' || publishType === 'special') && (
             <div>
               <div style={styles.fieldLabel}>{publishType === 'course' ? 'Nombre del curso / clase' : 'Nombre personalizado'}</div>
@@ -351,17 +362,6 @@ export default function GestionOperativaPage() {
             </div>
           )}
 
-          <div>
-            <div style={styles.fieldLabel}>ID de Vimeo</div>
-            <input
-              value={vimeoId}
-              onChange={(e) => setVimeoId(e.target.value.replace(/\D/g, ''))}
-              placeholder="Ej. 1217366012"
-              inputMode="numeric"
-              style={{ ...styles.input, width: '100%', minWidth: 0, boxSizing: 'border-box' }}
-            />
-          </div>
-
           {publishType === 'daily' && (
             <div>
               <div style={styles.fieldLabel}>Sesión LIVE</div>
@@ -369,6 +369,7 @@ export default function GestionOperativaPage() {
                 <span>{selectedSession ? `${formatSessionDate(selectedSession.started_at)} → ${formatSessionDate(selectedSession.ended_at)}` : 'Seleccionar sesión LIVE'}</span>
                 <span>▾</span>
               </button>
+              <div style={styles.fieldHelp}>Solo se muestran sesiones finalizadas sin repetición publicada.</div>
             </div>
           )}
 
@@ -392,7 +393,7 @@ export default function GestionOperativaPage() {
             }
             onClick={requestPublish}
           >
-            {publishType === 'daily' ? 'Publicar repetición' : publishType === 'course' ? 'Publicar curso' : 'Publicar contenido'}
+            ✈ Publicar
           </button>
         </div>
 
@@ -405,43 +406,6 @@ export default function GestionOperativaPage() {
         {publishType === 'special' && (
           <div style={styles.mutedSmall}>Este contenido es gratuito: se publica como especial y no descuenta clases a ningún estudiante.</div>
         )}
-      </div>
-
-      <div style={styles.card}>
-        <div style={styles.eyebrow}>REPETICIONES</div>
-        <h2 style={{ margin: '6px 0 8px' }}>Publicar repetición de una sesión LIVE</h2>
-        <p style={styles.muted}>Introduce el número de Vimeo y selecciona exactamente la sesión LIVE correspondiente. El portal hará la asociación internamente.</p>
-
-        <div style={styles.replayGrid}>
-          <div>
-            <div style={styles.fieldLabel}>ID de Vimeo</div>
-            <input
-              value={vimeoId}
-              onChange={(e) => setVimeoId(e.target.value.replace(/\D/g, ''))}
-              placeholder="Ej. 1217366012"
-              inputMode="numeric"
-              style={{ ...styles.input, width: '100%', minWidth: 0, boxSizing: 'border-box' }}
-            />
-          </div>
-
-          <div>
-            <div style={styles.fieldLabel}>Sesión LIVE</div>
-            <button type="button" style={styles.sessionButton} onClick={() => setSessionPickerOpen(true)}>
-              <span>{selectedSession ? `${formatSessionDate(selectedSession.started_at)} → ${formatSessionDate(selectedSession.ended_at)}` : 'Seleccionar sesión LIVE'}</span>
-              <span>▾</span>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            style={{ ...styles.button, alignSelf: 'end', opacity: (!vimeoId || !selectedSessionId) ? .55 : 1 }}
-            disabled={!vimeoId || !selectedSessionId || publishing}
-            onClick={requestPublish}
-          >
-            Publicar repetición
-          </button>
-        </div>
-        <div style={styles.mutedSmall}>{pendingSessions.length} sesión(es) finalizada(s) pendiente(s) de repetición. Las sesiones ya asociadas no pueden seleccionarse nuevamente.</div>
       </div>
 
       <div style={styles.card}>
@@ -583,19 +547,24 @@ const styles: Record<string, any> = {
   page: { minHeight: '100vh', padding: '28px', color: '#fff', background: 'linear-gradient(180deg, rgba(2,6,23,.88), rgba(2,6,23,.95)), url("/trading-bg.jpg") center/cover fixed', fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' },
   header: { maxWidth: 1500, margin: '0 auto 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' },
   eyebrow: { fontSize: 12, letterSpacing: 1.4, fontWeight: 900, opacity: .68 },
-  muted: { color: 'rgba(255,255,255,.68)', margin: '8px 0 0', lineHeight: 1.5 },
-  mutedSmall: { color: 'rgba(255,255,255,.55)', fontSize: 12, marginTop: 4 },
+  muted: { color: 'rgba(255,255,255,.78)', margin: '8px 0 0', lineHeight: 1.55, fontSize: 15 },
+  mutedSmall: { color: 'rgba(255,255,255,.68)', fontSize: 13, marginTop: 5, lineHeight: 1.45 },
   stats: { maxWidth: 1500, margin: '0 auto 20px', display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 12 },
   stat: { border: '1px solid rgba(255,255,255,.10)', borderRadius: 18, padding: 18, background: 'rgba(15,23,42,.72)', display: 'grid', gap: 6 },
   card: { maxWidth: 1500, margin: '0 auto 20px', border: '1px solid rgba(255,255,255,.10)', borderRadius: 22, padding: 22, background: 'rgba(7,18,39,.78)', boxShadow: '0 18px 50px rgba(0,0,0,.25)', backdropFilter: 'blur(12px)' },
   input: { minWidth: 300, padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(255,255,255,.05)', color: '#fff', outline: 'none' },
   textarea: { width: '100%', minHeight: 110, resize: 'vertical', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(255,255,255,.05)', color: '#fff', outline: 'none', font: 'inherit' },
-  fieldLabel: { fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,.72)', margin: '0 0 7px' },
-  replayGrid: { display: 'grid', gridTemplateColumns: 'minmax(180px,.75fr) minmax(320px,1.75fr) auto', gap: 12, alignItems: 'end', marginTop: 18 },
-  publishGrid: { display: 'grid', gridTemplateColumns: 'minmax(260px,1.4fr) minmax(180px,.75fr) auto', gap: 12, alignItems: 'end', marginTop: 18 },
-  typeTabs: { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 18 },
-  typeTab: { padding: '9px 13px', borderRadius: 999, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(255,255,255,.04)', color: 'rgba(255,255,255,.72)', fontWeight: 800, cursor: 'pointer' },
-  typeTabActive: { padding: '9px 13px', borderRadius: 999, border: '1px solid rgba(59,130,246,.55)', background: 'rgba(37,99,235,.20)', color: '#fff', fontWeight: 900, cursor: 'pointer' },
+  fieldLabel: { fontSize: 14, fontWeight: 800, color: 'rgba(255,255,255,.92)', margin: '0 0 8px' },
+  fieldHelp: { color: 'rgba(255,255,255,.68)', fontSize: 13, marginTop: 7, lineHeight: 1.4 },
+  sectionTitle: { fontSize: 15, letterSpacing: 1.2, fontWeight: 900, color: '#3b82f6' },
+  publishIntro: { color: 'rgba(255,255,255,.92)', fontSize: 17, fontWeight: 700, margin: '10px 0 0', lineHeight: 1.45 },
+  replayGrid: { display: 'grid', gridTemplateColumns: 'minmax(260px,.9fr) minmax(360px,1.4fr) auto', gap: 16, alignItems: 'end', marginTop: 20 },
+  publishGrid: { display: 'grid', gridTemplateColumns: 'minmax(260px,.9fr) minmax(360px,1.4fr) auto', gap: 16, alignItems: 'end', marginTop: 20 },
+  typeTabs: { display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 14, marginTop: 18 },
+  typeTab: { minHeight: 82, padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(2,10,26,.38)', color: 'rgba(255,255,255,.86)', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left' },
+  typeTabActive: { minHeight: 82, padding: '14px 16px', borderRadius: 14, border: '2px solid #2563eb', background: 'linear-gradient(135deg,rgba(37,99,235,.20),rgba(15,23,42,.55))', color: '#fff', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left', boxShadow: '0 0 0 1px rgba(59,130,246,.12) inset' },
+  tabIcon: { width: 42, height: 42, borderRadius: 12, display: 'grid', placeItems: 'center', flex: '0 0 auto', fontSize: 22, background: 'rgba(37,99,235,.16)', border: '1px solid rgba(59,130,246,.30)' },
+  tabSub: { display: 'block', marginTop: 4, fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,.70)' },
   sessionButton: { width: '100%', minHeight: 43, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(255,255,255,.05)', color: '#fff', cursor: 'pointer', textAlign: 'left' },
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 980 },
   th: { textAlign: 'left', padding: '12px 10px', color: 'rgba(255,255,255,.55)', fontSize: 12, letterSpacing: .8 },
@@ -605,7 +574,7 @@ const styles: Record<string, any> = {
   action: { padding: '8px 10px', borderRadius: 10, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(255,255,255,.05)', color: '#fff', cursor: 'pointer' },
   actionPrimary: { padding: '8px 10px', borderRadius: 10, border: '1px solid rgba(34,197,94,.35)', background: 'rgba(34,197,94,.16)', color: '#dcfce7', cursor: 'pointer' },
   actionWarn: { padding: '8px 10px', borderRadius: 10, border: '1px solid rgba(245,158,11,.35)', background: 'rgba(245,158,11,.16)', color: '#fef3c7', cursor: 'pointer' },
-  button: { padding: '10px 14px', borderRadius: 12, border: 0, background: '#2563eb', color: '#fff', fontWeight: 800, cursor: 'pointer' },
+  button: { padding: '12px 20px', minHeight: 46, borderRadius: 10, border: 0, background: 'linear-gradient(180deg,#2583f8,#1264d9)', color: '#fff', fontSize: 15, fontWeight: 900, cursor: 'pointer', boxShadow: '0 8px 20px rgba(37,99,235,.18)' },
   buttonSecondary: { padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,.14)', background: 'rgba(255,255,255,.05)', color: '#fff', fontWeight: 800, cursor: 'pointer' },
   notice: { padding: '10px 12px', borderRadius: 12, marginBottom: 12, background: 'rgba(59,130,246,.12)', border: '1px solid rgba(59,130,246,.28)' },
   modalBackdrop: { position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, background: 'rgba(2,6,23,.78)', backdropFilter: 'blur(7px)' },
