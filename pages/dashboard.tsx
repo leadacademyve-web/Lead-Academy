@@ -653,21 +653,32 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   async function loadLiveAttendance(liveSessionId: string) {
     if (!liveSessionId || isChatAdmin) {
       setLiveAttendanceConfirmed(Boolean(isChatAdmin));
+      setLiveAttendanceLoading(false);
       return;
     }
 
-    const { data: authData } = await supabase.auth.getUser();
-    const user = authData.user;
-    if (!user) return;
+    setLiveAttendanceLoading(true);
 
-    const { data, error } = await supabase
-      .from('live_class_attendance')
-      .select('confirmed_at')
-      .eq('user_id', user.id)
-      .eq('live_class_id', liveSessionId)
-      .maybeSingle();
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData.user;
 
-    setLiveAttendanceConfirmed(!error && Boolean(data?.confirmed_at));
+      if (!user) {
+        setLiveAttendanceConfirmed(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('live_class_attendance')
+        .select('confirmed_at')
+        .eq('user_id', user.id)
+        .eq('live_class_id', liveSessionId)
+        .maybeSingle();
+
+      setLiveAttendanceConfirmed(!error && Boolean(data?.confirmed_at));
+    } finally {
+      setLiveAttendanceLoading(false);
+    }
   }
 
   async function confirmLiveAttendance() {
@@ -706,9 +717,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
         return;
       }
 
-      setAttendanceError(
-        `No pudimos confirmar tu asistencia. Error técnico: ${String(error.message || 'desconocido')}`
-      );
+      setAttendanceError('No pudimos confirmar tu asistencia. Intenta nuevamente.');
       return;
     }
 
@@ -1854,6 +1863,7 @@ return normalized;
     !isChatAdmin &&
     !liveAccessBlocked &&
     Boolean(activeLiveSession) &&
+    !liveAttendanceLoading &&
     !liveAttendanceConfirmed;
 
   const hasPlayableVideo =
@@ -1861,6 +1871,7 @@ return normalized;
     !videoUnavailable &&
     !liveAccessBlocked &&
     !liveSessionUnavailable &&
+    !liveAttendanceLoading &&
     !liveAttendanceRequired &&
     (!selectedVideo?.is_live || isChatAdmin || liveAttendanceConfirmed);
   const showIframe = hasPlayableVideo && isEmbedUrl(selectedVideo.video_url);
@@ -2022,6 +2033,16 @@ return normalized;
                       <h2 style={{ marginTop: 0, marginBottom: 12, fontSize: 42 }}>No hay una clase en vivo activa</h2>
                       <p className="helper" style={{ fontSize: 18, lineHeight: 1.6, margin: '0 auto 18px' }}>
                         Cuando la clase sea iniciada, la confirmación de asistencia aparecerá aquí automáticamente.
+                      </p>
+                    </div>
+                  </div>
+                ) : liveAttendanceLoading && selectedVideo?.is_live && !isChatAdmin && activeLiveSession ? (
+                  <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
+                    <div style={{ maxWidth: 720 }}>
+                      <div className="eyebrow" style={{ marginBottom: 12 }}>Clase en vivo</div>
+                      <h2 style={{ marginTop: 0, marginBottom: 12, fontSize: 42 }}>Verificando asistencia...</h2>
+                      <p className="helper" style={{ fontSize: 18, lineHeight: 1.6, margin: '0 auto' }}>
+                        Estamos validando tu acceso a esta sesión.
                       </p>
                     </div>
                   </div>
