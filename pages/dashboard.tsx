@@ -596,6 +596,9 @@ export default function DashboardPage() {
   const [liveAudience, setLiveAudience] = useState<LiveAudiencePresence[]>([]);
   const [liveAudiencePeak, setLiveAudiencePeak] = useState(0);
   const [adminStudentStats, setAdminStudentStats] = useState({ total: 0, paused: 0 });
+  const [adminLiveAction, setAdminLiveAction] = useState<'start' | 'end' | null>(null);
+  const [adminLiveWorking, setAdminLiveWorking] = useState(false);
+  const [adminLiveNotice, setAdminLiveNotice] = useState<string | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const emojiPanelRef = useRef<HTMLDivElement | null>(null);
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -676,6 +679,39 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     });
 
     if (showLoading) setLiveSessionLoading(false);
+  }
+
+  async function runAdminLiveAction() {
+    if (!isChatAdmin || !adminLiveAction || adminLiveWorking) return;
+    setAdminLiveWorking(true);
+    setAdminLiveNotice(null);
+
+    const rpcName = adminLiveAction === 'start' ? 'admin_start_live_class' : 'admin_end_live_class';
+    const { error } = await supabase.rpc(rpcName);
+
+    if (error) {
+      setAdminLiveNotice(error.message || 'No se pudo actualizar la sesión LIVE.');
+      setAdminLiveWorking(false);
+      return;
+    }
+
+    const completedAction = adminLiveAction;
+    setAdminLiveAction(null);
+    await loadActiveLiveSession();
+    setAdminLiveNotice(completedAction === 'start' ? 'Clase LIVE iniciada correctamente.' : 'Clase LIVE finalizada correctamente.');
+    setAdminLiveWorking(false);
+  }
+
+  function liveSessionElapsed() {
+    if (!activeLiveSession?.session_started_at) return '';
+    const started = new Date(activeLiveSession.session_started_at).getTime();
+    if (!Number.isFinite(started)) return '';
+    const elapsed = Math.max(0, Date.now() - started);
+    const totalSeconds = Math.floor(elapsed / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
   async function loadLiveAttendance(liveSessionId: string) {
@@ -2504,6 +2540,55 @@ return normalized;
                     </button>
                   </div>
 
+                  {isChatAdmin ? (
+                    <div style={{
+                      marginBottom: 10,
+                      padding: '12px 13px',
+                      borderRadius: 14,
+                      border: activeLiveSession ? '1px solid rgba(239,68,68,.38)' : '1px solid rgba(34,197,94,.30)',
+                      background: activeLiveSession
+                        ? 'linear-gradient(180deg,rgba(75,20,28,.40),rgba(10,23,42,.90))'
+                        : 'linear-gradient(180deg,rgba(10,48,43,.38),rgba(8,23,40,.90))',
+                      boxShadow: '0 10px 28px rgba(0,0,0,.16)',
+                    }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '46px 1fr auto', gap: 11, alignItems: 'center' }}>
+                        <span style={{
+                          width: 42, height: 42, borderRadius: 12, display: 'grid', placeItems: 'center',
+                          color: activeLiveSession ? '#ff6b72' : '#2ee69b',
+                          background: activeLiveSession ? 'rgba(239,68,68,.12)' : 'rgba(16,185,129,.12)',
+                          border: activeLiveSession ? '1px solid rgba(239,68,68,.28)' : '1px solid rgba(16,185,129,.28)',
+                        }}><PortalIcon name="live" size={27} /></span>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 9.5, fontWeight: 950, letterSpacing: '.7px', color: activeLiveSession ? '#ff8b91' : '#72efbd' }}>
+                            {activeLiveSession ? '● CLASE EN CURSO' : 'CONTROL DE CLASE LIVE'}
+                          </div>
+                          <strong style={{ display: 'block', marginTop: 2, fontSize: 15.5, color: '#fff' }}>
+                            {activeLiveSession ? `En vivo · ${liveSessionElapsed()}` : 'Lista para iniciar'}
+                          </strong>
+                          <small style={{ display: 'block', marginTop: 2, fontSize: 10.5, lineHeight: 1.35, color: 'rgba(255,255,255,.62)' }}>
+                            {activeLiveSession ? 'Finaliza cuando termine la clase para cerrar asistencia.' : 'Inicia la sesión para habilitar el registro de asistencia.'}
+                          </small>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={adminLiveWorking}
+                          onClick={() => { setAdminLiveNotice(null); setAdminLiveAction(activeLiveSession ? 'end' : 'start'); }}
+                          style={{
+                            minWidth: 132, minHeight: 44, padding: '9px 13px', borderRadius: 11,
+                            border: activeLiveSession ? '1px solid rgba(248,113,113,.55)' : '1px solid rgba(52,211,153,.48)',
+                            background: activeLiveSession ? 'linear-gradient(180deg,#b72b35,#8f1f29)' : 'linear-gradient(180deg,#0ebf79,#07945e)',
+                            color: '#fff', fontSize: 12.5, fontWeight: 950, cursor: adminLiveWorking ? 'wait' : 'pointer',
+                            boxShadow: activeLiveSession ? '0 7px 18px rgba(185,28,28,.22)' : '0 7px 18px rgba(5,150,105,.20)',
+                            opacity: adminLiveWorking ? .65 : 1,
+                          }}
+                        >
+                          {adminLiveWorking ? 'Procesando...' : activeLiveSession ? '■ Finalizar clase' : '▶ Iniciar clase'}
+                        </button>
+                      </div>
+                      {adminLiveNotice ? <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.08)', fontSize: 10.5, color: adminLiveNotice.includes('correctamente') ? '#75efbd' : '#ff9ca1' }}>{adminLiveNotice}</div> : null}
+                    </div>
+                  ) : null}
+
                   {isEditingProfile ? (
                     <div
                       style={{
@@ -3174,6 +3259,30 @@ return normalized;
               <button type="button" className="btn btn-primary" disabled={liveAttendanceLoading}
                 onClick={confirmLiveAttendance}>
                 {liveAttendanceLoading ? 'Confirmando...' : 'Confirmar asistencia y entrar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isChatAdmin && adminLiveAction ? (
+        <div
+          onMouseDown={(e) => { if (e.target === e.currentTarget && !adminLiveWorking) setAdminLiveAction(null); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10020, background: 'rgba(0,0,0,.72)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', padding: 20 }}
+        >
+          <div role="dialog" aria-modal="true" style={{ width: 'min(500px,94vw)', borderRadius: 22, border: '1px solid rgba(255,255,255,.14)', background: '#0b172a', boxShadow: '0 30px 90px rgba(0,0,0,.58)', padding: 24 }}>
+            <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: '.8px', color: adminLiveAction === 'start' ? '#5ee7ad' : '#ff858c', marginBottom: 8 }}>{adminLiveAction === 'start' ? 'INICIAR CLASE LIVE' : 'FINALIZAR CLASE LIVE'}</div>
+            <h2 style={{ margin: '0 0 9px', fontSize: 24 }}>{adminLiveAction === 'start' ? '¿Iniciar la clase ahora?' : '¿Finalizar la clase actual?'}</h2>
+            <p style={{ margin: 0, color: 'rgba(255,255,255,.68)', fontSize: 13.5, lineHeight: 1.55 }}>
+              {adminLiveAction === 'start'
+                ? 'Se creará una nueva sesión LIVE y quedará habilitado el registro de asistencia de los estudiantes.'
+                : 'La sesión quedará cerrada y disponible en Gestión Operativa para asociar la repetición de Vimeo.'}
+            </p>
+            {adminLiveNotice && !adminLiveNotice.includes('correctamente') ? <div style={{ marginTop: 12, padding: 10, borderRadius: 10, background: 'rgba(220,38,38,.12)', color: '#ffadb1', fontSize: 12 }}>{adminLiveNotice}</div> : null}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 20 }}>
+              <button type="button" disabled={adminLiveWorking} onClick={() => setAdminLiveAction(null)} className="btn btn-secondary" style={{ minHeight: 46, fontWeight: 900 }}>Cancelar</button>
+              <button type="button" disabled={adminLiveWorking} onClick={runAdminLiveAction} style={{ minHeight: 46, borderRadius: 11, border: adminLiveAction === 'start' ? '1px solid rgba(52,211,153,.5)' : '1px solid rgba(248,113,113,.5)', background: adminLiveAction === 'start' ? 'linear-gradient(180deg,#0ebf79,#07945e)' : 'linear-gradient(180deg,#b72b35,#8f1f29)', color: '#fff', fontWeight: 950, cursor: adminLiveWorking ? 'wait' : 'pointer', opacity: adminLiveWorking ? .65 : 1 }}>
+                {adminLiveWorking ? 'Procesando...' : adminLiveAction === 'start' ? '▶ Sí, iniciar clase' : '■ Sí, finalizar clase'}
               </button>
             </div>
           </div>
