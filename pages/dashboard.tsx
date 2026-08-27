@@ -528,7 +528,7 @@ function isChatAdminEmail(email?: string | null) {
 }
 
 
-type PortalIconName = 'videos' | 'chat' | 'book' | 'calendar' | 'live' | 'play' | 'classes' | 'profile' | 'support' | 'arrow';
+type PortalIconName = 'videos' | 'chat' | 'book' | 'calendar' | 'live' | 'play' | 'classes' | 'profile' | 'support' | 'arrow' | 'download' | 'external' | 'image';
 
 function PortalIcon({ name, size = 20 }: { name: PortalIconName; size?: number }) {
   const common = {
@@ -552,6 +552,9 @@ function PortalIcon({ name, size = 20 }: { name: PortalIconName; size?: number }
   if (name === 'classes') return <svg {...common}><path d="M3 10 12 5l9 5-9 5z"/><path d="M7 12v5c3 2 7 2 10 0v-5"/></svg>;
   if (name === 'profile') return <svg {...common}><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>;
   if (name === 'support') return <svg {...common}><path d="M4 13v-2a8 8 0 0 1 16 0v2"/><path d="M4 13H2v5h4v-5zM20 13h2v5h-4v-5z"/><path d="M18 19c-1 2-3 2-5 2"/></svg>;
+  if (name === 'download') return <svg {...common}><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>;
+  if (name === 'external') return <svg {...common}><path d="M14 5h5v5"/><path d="M10 14 19 5"/><path d="M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"/></svg>;
+  if (name === 'image') return <svg {...common}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-5-5L5 20"/></svg>;
   return <svg {...common}><path d="M5 12h14M14 7l5 5-5 5"/></svg>;
 }
 
@@ -3153,17 +3156,17 @@ return normalized;
                       const selected = selectedLibraryItemId === item.id;
                       const isExternal = item.kind === 'download' && item.url.startsWith('http');
                       const kindLabel = item.kind === 'video' ? 'VIDEO' : isExternal ? 'LINK' : item.kind === 'download' ? 'DESCARGA' : 'IMAGEN';
-                      const actionIcon = item.kind === 'video' ? '▶' : isExternal ? '↗' : item.kind === 'download' ? '↓' : '→';
-                      const itemIcon = item.kind === 'video' ? 'play' : item.kind === 'download' ? 'book' : 'arrow';
+                      const actionIcon: PortalIconName = item.kind === 'video' ? 'play' : isExternal ? 'external' : item.kind === 'download' ? 'download' : 'arrow';
+                      const itemIcon: PortalIconName = item.kind === 'video' ? 'play' : isExternal ? 'external' : item.kind === 'download' ? 'download' : 'image';
                       return (
                         <button
                           key={item.id}
                           onClick={() => openLibraryItem(item)}
                           title={item.description || item.title}
                           style={{
-                            minHeight: 104,
+                            minHeight: 112,
                             textAlign: 'left',
-                            padding: '13px 13px 12px',
+                            padding: '14px 14px 13px',
                             borderRadius: 15,
                             border: selected ? '1px solid rgba(59,130,246,.88)' : '1px solid rgba(112,154,207,.20)',
                             background: selected
@@ -3180,14 +3183,14 @@ return normalized;
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                            <div style={{ width: 34, height: 34, borderRadius: 11, display: 'grid', placeItems: 'center', flex: '0 0 auto', color: selected ? '#93c5fd' : '#60a5fa', background: selected ? 'rgba(37,99,235,.24)' : 'rgba(37,99,235,.11)', border: '1px solid rgba(59,130,246,.24)' }}>
-                              <PortalIcon name={itemIcon as PortalIconName} size={18} />
+                            <div style={{ width: 42, height: 42, borderRadius: 13, display: 'grid', placeItems: 'center', flex: '0 0 auto', color: selected ? '#bfdbfe' : '#60a5fa', background: selected ? 'rgba(37,99,235,.30)' : 'rgba(37,99,235,.14)', border: selected ? '1px solid rgba(96,165,250,.55)' : '1px solid rgba(59,130,246,.34)', boxShadow: selected ? '0 0 18px rgba(37,99,235,.22), inset 0 1px 0 rgba(255,255,255,.08)' : 'inset 0 1px 0 rgba(255,255,255,.05)' }}>
+                              <PortalIcon name={itemIcon} size={25} />
                             </div>
                             <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: .8, color: selected ? '#93c5fd' : 'rgba(203,220,241,.58)' }}>{kindLabel}</div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>
                             <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.18, minWidth: 0 }}>{item.title}</div>
-                            <div style={{ fontSize: 17, lineHeight: 1, color: selected ? '#93c5fd' : 'rgba(203,220,241,.68)', flex: '0 0 auto' }}>{actionIcon}</div>
+                            <div style={{ width: 30, height: 30, borderRadius: 9, display: 'grid', placeItems: 'center', color: selected ? '#bfdbfe' : 'rgba(203,220,241,.78)', background: selected ? 'rgba(37,99,235,.20)' : 'rgba(255,255,255,.035)', border: '1px solid rgba(112,154,207,.14)', flex: '0 0 auto' }}><PortalIcon name={actionIcon} size={19} /></div>
                           </div>
                         </button>
                       );
