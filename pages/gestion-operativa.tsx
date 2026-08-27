@@ -92,6 +92,19 @@ function Icon({ name, size = 24 }: { name: 'wifi' | 'video' | 'pause' | 'cap' | 
   return <svg {...common}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>;
 }
 
+const INTENSIVE_COURSE_DATE_KEY = 'intensive_course_start_date';
+
+function dateInputFromSetting(value?: string | null) {
+  if (!value) return '';
+  const raw = String(value).trim();
+  const directDate = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  return directDate?.[1] || raw.slice(0, 10);
+}
+
+function courseDateSettingValue(dateValue: string) {
+  return `${dateValue}T00:00:00-04:00`;
+}
+
 export default function GestionOperativaPage() {
   const router = useRouter();
   const [rows, setRows] = useState<StudentRow[]>([]);
@@ -117,6 +130,10 @@ export default function GestionOperativaPage() {
   const [topicLoading, setTopicLoading] = useState(true);
   const [topicSaving, setTopicSaving] = useState(false);
   const [topicNotice, setTopicNotice] = useState<string | null>(null);
+  const [courseDate, setCourseDate] = useState('');
+  const [courseDateLoading, setCourseDateLoading] = useState(true);
+  const [courseDateSaving, setCourseDateSaving] = useState(false);
+  const [courseDateNotice, setCourseDateNotice] = useState<string | null>(null);
 
   async function load() {
     const { data: authData } = await supabase.auth.getUser();
@@ -134,10 +151,11 @@ export default function GestionOperativaPage() {
 
     setAuthorized(true);
 
-    const [studentsResult, replayResult, topicResult] = await Promise.all([
+    const [studentsResult, replayResult, topicResult, courseDateResult] = await Promise.all([
       supabase.rpc('admin_operational_students'),
       supabase.rpc('admin_replay_sessions'),
       supabase.from('portal_settings').select('value').eq('key', 'today_class_topic').maybeSingle(),
+      supabase.from('portal_settings').select('value').eq('key', INTENSIVE_COURSE_DATE_KEY).maybeSingle(),
     ]);
 
     if (studentsResult.error) {
@@ -160,6 +178,9 @@ export default function GestionOperativaPage() {
       setTodayClassTopic((current) => current || currentTopic);
     }
     setTopicLoading(false);
+
+    if (!courseDateResult.error) setCourseDate(dateInputFromSetting(courseDateResult.data?.value));
+    setCourseDateLoading(false);
 
     setLoading(false);
   }
@@ -354,6 +375,19 @@ export default function GestionOperativaPage() {
     setTopicNotice('Publicado. El contenido aparecerá en el dashboard de los estudiantes.');
   }
 
+  async function saveCourseDateSetting() {
+    if (!courseDate.trim() || courseDateSaving) return;
+    setCourseDateSaving(true);
+    setCourseDateNotice(null);
+    const { error } = await supabase.from('portal_settings').upsert({
+      key: INTENSIVE_COURSE_DATE_KEY,
+      value: courseDateSettingValue(courseDate.trim()),
+      updated_at: new Date().toISOString(),
+    });
+    setCourseDateSaving(false);
+    setCourseDateNotice(error ? `No se pudo guardar: ${error.message}` : 'Fecha del próximo curso guardada correctamente.');
+  }
+
   if (loading) {
     return <main style={styles.page}><div style={styles.card}>Cargando Gestión Operativa...</div></main>;
   }
@@ -463,6 +497,34 @@ export default function GestionOperativaPage() {
         </div>
 
         {topicNotice ? <div style={topicNotice.startsWith('Publicado') ? styles.todayTopicSuccess : styles.todayTopicError}>{topicNotice}</div> : null}
+      </div>
+
+      {/* FECHA DEL PRÓXIMO CURSO INTENSIVO */}
+      <div style={{ ...styles.todayTopicCard, borderColor: 'rgba(245,158,11,.34)', background: 'radial-gradient(circle at 0% 0%,rgba(245,158,11,.12),transparent 34%), linear-gradient(180deg,rgba(24,20,12,.94),rgba(12,16,27,.92))' }}>
+        <div style={styles.todayTopicHeader}>
+          <div style={styles.todayTopicHeading}>
+            <span style={{ ...styles.todayTopicIcon, color: '#fbbf24', borderColor: 'rgba(245,158,11,.42)', background: 'rgba(245,158,11,.10)' }}><Icon name="calendar" size={31} /></span>
+            <div>
+              <div style={{ ...styles.todayTopicEyebrow, color: '#fbbf24' }}>CURSO INTENSIVO</div>
+              <h2 style={styles.todayTopicTitle}>Fecha del próximo curso</h2>
+              <p style={styles.todayTopicIntro}>Configura aquí la fecha oficial. Se guarda en Supabase y conserva la lógica existente para la activación del curso.</p>
+            </div>
+          </div>
+        </div>
+        <div style={{ ...styles.todayTopicGrid, marginTop: 18 }}>
+          <div>
+            <div style={styles.fieldLabel}>Fecha de inicio</div>
+            <div style={styles.inputShell}>
+              <span style={{ ...styles.inputIconVimeo, color: '#fbbf24' }}><Icon name="calendar" size={27} /></span>
+              <input type="date" value={courseDate} onChange={(e) => { setCourseDate(e.target.value); setCourseDateNotice(null); }} style={styles.inputInside} disabled={courseDateLoading || courseDateSaving} />
+            </div>
+            <div style={styles.fieldHelp}>Fecha del próximo curso intensivo.</div>
+          </div>
+          <button type="button" style={{ ...styles.todayTopicButton, opacity: courseDateLoading || courseDateSaving || !courseDate ? .55 : 1 }} disabled={courseDateLoading || courseDateSaving || !courseDate} onClick={saveCourseDateSetting}>
+            <Icon name="send" size={23} /> {courseDateSaving ? 'Guardando...' : 'Guardar fecha'}
+          </button>
+        </div>
+        {courseDateNotice ? <div style={courseDateNotice.startsWith('Fecha') ? styles.todayTopicSuccess : styles.todayTopicError}>{courseDateNotice}</div> : null}
       </div>
 
       {/* PUBLICACIÓN DE VIDEOS ARRIBA DE LOS ESTUDIANTES */}

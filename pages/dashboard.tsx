@@ -255,6 +255,20 @@ function getDisplayName(user: any) {
   return firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
 }
 
+function formatNYDate() {
+  try {
+    return new Intl.DateTimeFormat('es-ES', {
+      timeZone: 'America/New_York',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date());
+  } catch {
+    return '';
+  }
+}
+
 function formatNYTime() {
   try {
     return new Intl.DateTimeFormat('es-US', {
@@ -482,41 +496,7 @@ function normalizeEmailList(raw: string) {
 }
 
 
-const INTENSIVE_COURSE_DATE_KEY = 'intensive_course_start_date';
 const TODAY_CLASS_TOPIC_KEY = 'today_class_topic';
-
-function dateInputFromSetting(value?: string | null) {
-  if (!value) return '';
-  const raw = String(value).trim();
-  const directDate = raw.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (directDate?.[1]) return directDate[1];
-
-  const d = new Date(raw);
-  if (Number.isNaN(d.getTime())) return '';
-
-  try {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/New_York',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(d);
-
-    const year = parts.find((part) => part.type === 'year')?.value;
-    const month = parts.find((part) => part.type === 'month')?.value;
-    const day = parts.find((part) => part.type === 'day')?.value;
-
-    if (year && month && day) return `${year}-${month}-${day}`;
-  } catch {
-    // ignore Intl errors
-  }
-
-  return raw.slice(0, 10);
-}
-
-function courseDateSettingValue(dateValue: string) {
-  return `${dateValue}T00:00:00-04:00`;
-}
 
 function isChatAdminEmail(email?: string | null) {
   const normalized = String(email || '').trim().toLowerCase();
@@ -586,6 +566,7 @@ export default function DashboardPage() {
   const [chatZoomImageUrl, setChatZoomImageUrl] = useState<string | null>(null);
   const [activeLibraryVideo, setActiveLibraryVideo] = useState<LibraryItem | null>(null);
   const [nowText, setNowText] = useState('');
+  const [nyDateText, setNyDateText] = useState('');
   const [todayClassTopic, setTodayClassTopic] = useState('Tema pendiente de publicación');
   const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', email: '' });
   const [selectedCountryCode, setSelectedCountryCode] = useState(DEFAULT_COUNTRY_CODE);
@@ -610,15 +591,7 @@ export default function DashboardPage() {
   const [chatImageFile, setChatImageFile] = useState<File | null>(null);
   const [chatImagePreviewUrl, setChatImagePreviewUrl] = useState<string | null>(null);
   const [isDragOverChat, setIsDragOverChat] = useState(false);
-  const [courseDate, setCourseDate] = useState('');
-  const [loadingCourseDate, setLoadingCourseDate] = useState(false);
-  const [savingCourseDate, setSavingCourseDate] = useState(false);
-  const [courseDateMessage, setCourseDateMessage] = useState<string | null>(null);
-  const [courseDateError, setCourseDateError] = useState<string | null>(null);
   const [liveAudience, setLiveAudience] = useState<LiveAudiencePresence[]>([]);
-  const [liveAudienceLoading, setLiveAudienceLoading] = useState(false);
-  const [liveAudienceError, setLiveAudienceError] = useState<string | null>(null);
-  const [liveAudienceExpanded, setLiveAudienceExpanded] = useState(false);
   const [liveAudiencePeak, setLiveAudiencePeak] = useState(0);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const emojiPanelRef = useRef<HTMLDivElement | null>(null);
@@ -887,8 +860,10 @@ return normalized;
 
   useEffect(() => {
     setNowText(formatNYTime());
+    setNyDateText(formatNYDate());
     const interval = window.setInterval(() => {
       setNowText(formatNYTime());
+      setNyDateText(formatNYDate());
     }, 1000);
 
     return () => window.clearInterval(interval);
@@ -1462,8 +1437,6 @@ return normalized;
   async function loadLiveAudience() {
     if (!isChatAdmin) return;
 
-    setLiveAudienceLoading(true);
-    setLiveAudienceError(null);
 
     const cutoff = new Date(Date.now() - 45_000).toISOString();
     const { data, error } = await supabase
@@ -1473,8 +1446,6 @@ return normalized;
       .order('last_seen', { ascending: false });
 
     if (error) {
-      setLiveAudienceError('No se pudo cargar la audiencia en vivo.');
-      setLiveAudienceLoading(false);
       return;
     }
 
@@ -1482,7 +1453,6 @@ return normalized;
     setLiveAudience(rows);
     const watchingNow = rows.filter((row) => row.is_watching).length;
     setLiveAudiencePeak((peak) => Math.max(peak, watchingNow));
-    setLiveAudienceLoading(false);
   }
 
   function subscribeToVimeoPlaybackEvents() {
@@ -1509,59 +1479,6 @@ return normalized;
       setTodayClassTopic(topic || 'Tema pendiente de publicación');
     }
   }
-
-  async function loadCourseDateSetting() {
-    if (!isChatAdmin || loadingCourseDate) return;
-
-    setLoadingCourseDate(true);
-    setCourseDateError(null);
-
-    const { data, error } = await supabase
-      .from('portal_settings')
-      .select('value')
-      .eq('key', INTENSIVE_COURSE_DATE_KEY)
-      .maybeSingle();
-
-    if (error) {
-      setCourseDateError(`No se pudo cargar la fecha del curso. ${error.message || ''}`.trim());
-      setLoadingCourseDate(false);
-      return;
-    }
-
-    setCourseDate(dateInputFromSetting(data?.value));
-    setLoadingCourseDate(false);
-  }
-
-  async function saveCourseDateSetting() {
-    if (!isChatAdmin || savingCourseDate) return;
-
-    const normalizedDate = courseDate.trim();
-    if (!normalizedDate) {
-      setCourseDateError('Selecciona la fecha del próximo curso intensivo.');
-      setCourseDateMessage(null);
-      return;
-    }
-
-    setSavingCourseDate(true);
-    setCourseDateError(null);
-    setCourseDateMessage(null);
-
-    const { error } = await supabase.from('portal_settings').upsert({
-      key: INTENSIVE_COURSE_DATE_KEY,
-      value: courseDateSettingValue(normalizedDate),
-      updated_at: new Date().toISOString(),
-    });
-
-    if (error) {
-      setCourseDateError(`No se pudo guardar la fecha. ${error.message || ''}`.trim());
-      setSavingCourseDate(false);
-      return;
-    }
-
-    setCourseDateMessage('Fecha del curso intensivo guardada correctamente.');
-    setSavingCourseDate(false);
-  }
-
 
   useEffect(() => {
     if (!accessActive || !userEmail) return;
@@ -1712,12 +1629,6 @@ return normalized;
       document.title = originalTitle;
     };
   }, [unreadChatCount]);
-
-  useEffect(() => {
-    if (!isChatAdmin || activeTab !== 'chatLive') return;
-    loadCourseDateSetting();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isChatAdmin, activeTab]);
 
   useEffect(() => {
     if (activeTab !== 'chatLive') return;
@@ -2301,31 +2212,35 @@ return normalized;
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'stretch', gap: 16 }}>
-                  <div style={{ width: 1, background: 'rgba(255,255,255,.12)' }} />
-                  <div style={{ minWidth: 104, textAlign: 'center' }}>
-                    <div style={{ fontSize: 39, lineHeight: 1, fontWeight: 950 }}>{classesRemaining ?? '—'}</div>
-                    <div style={{ fontSize: 12, fontWeight: 750, marginTop: 6, color: 'rgba(255,255,255,.75)' }}>clases restantes</div>
+                {isChatAdmin ? (
+                  <div style={{ display: 'flex', alignItems: 'stretch', gap: 16 }}>
+                    <div style={{ width: 1, background: 'rgba(255,255,255,.12)' }} />
+                    <div style={{ minWidth: 150, textAlign: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 18, alignItems: 'baseline' }}>
+                        <span><strong style={{ fontSize: 30, color: '#27e79a' }}>{liveAudience.length}</strong><small style={{ display: 'block', fontSize: 10, color: 'rgba(255,255,255,.66)' }}>conectados</small></span>
+                        <span><strong style={{ fontSize: 30, color: '#65a1ff' }}>{liveAudience.filter((row) => row.is_watching).length}</strong><small style={{ display: 'block', fontSize: 10, color: 'rgba(255,255,255,.66)' }}>viendo LIVE</small></span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'stretch', gap: 16 }}>
+                    <div style={{ width: 1, background: 'rgba(255,255,255,.12)' }} />
+                    <div style={{ minWidth: 104, textAlign: 'center' }}>
+                      <div style={{ fontSize: 39, lineHeight: 1, fontWeight: 950 }}>{classesRemaining ?? '—'}</div>
+                      <div style={{ fontSize: 12, fontWeight: 750, marginTop: 6, color: 'rgba(255,255,255,.75)' }}>clases restantes</div>
+                    </div>
+                  </div>
+                )}
 
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => router.push('/mis-clases')}
-                  style={{
-                    gridColumn: '1 / -1',
-                    justifySelf: 'center',
-                    minWidth: 230,
-                    padding: '10px 16px',
-                    borderRadius: 999,
-                    fontSize: 13,
-                    fontWeight: 850,
-                    background: 'rgba(255,255,255,.055)',
-                  }}
-                >
-                  Ver detalles en Mis clases &nbsp; →
-                </button>
+                {isChatAdmin ? (
+                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', fontSize: 11.5, color: 'rgba(255,255,255,.72)' }}>
+                    📈 Máximo simultáneo: <strong style={{ color: '#fff' }}>{liveAudiencePeak}</strong>
+                  </div>
+                ) : (
+                  <button type="button" className="btn btn-secondary" onClick={() => router.push('/mis-clases')} style={{ gridColumn: '1 / -1', justifySelf: 'center', minWidth: 230, padding: '10px 16px', borderRadius: 999, fontSize: 13, fontWeight: 850, background: 'rgba(255,255,255,.055)' }}>
+                    Ver detalles en Mis clases &nbsp; →
+                  </button>
+                )}
               </div>
 
               {/* TABS */}
@@ -2404,6 +2319,7 @@ return normalized;
                     <div style={{ textAlign: 'right', paddingLeft: 10, borderLeft: '1px solid rgba(255,255,255,.10)' }}>
                       <div style={{ fontSize: 10, letterSpacing: .8, fontWeight: 800, color: 'rgba(255,255,255,.58)' }}>HORA NY</div>
                       <div style={{ fontSize: 20, fontWeight: 900, color: '#65a1ff', marginTop: 5 }}>{nowText || '—'}</div>
+                      <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,.62)', marginTop: 4, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>{nyDateText || '—'}</div>
                     </div>
                   </div>
 
@@ -2724,104 +2640,6 @@ return normalized;
                       </div>
                     </div>
 
-                    {isChatAdmin ? (
-                      <>
-                      <div
-                        style={{
-                          marginTop: 14,
-                          padding: 12,
-                          borderRadius: 16,
-                          border: '1px solid rgba(56,189,248,0.28)',
-                          background: 'linear-gradient(180deg, rgba(14,165,233,0.12) 0%, rgba(255,255,255,0.025) 100%)',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-                          <div>
-                            <div className="eyebrow" style={{ marginBottom: 6 }}>👁 Audiencia en vivo · Solo administrador</div>
-                            <div style={{ fontSize: 12, lineHeight: 1.7 }}>
-                              🟢 <strong>Conectados ahora:</strong> {liveAudience.length}<br />
-                              ▶️ <strong>Viendo transmisión:</strong> {liveAudience.filter((row) => row.is_watching).length}<br />
-                              📈 <strong>Máximo simultáneo:</strong> {liveAudiencePeak}
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            className="btn btn-ghost"
-                            onClick={() => setLiveAudienceExpanded((value) => !value)}
-                            style={{ padding: '7px 9px', fontSize: 11, whiteSpace: 'nowrap' }}
-                          >
-                            {liveAudienceExpanded ? 'Ocultar' : 'Ver usuarios'}
-                          </button>
-                        </div>
-                        {liveAudienceLoading && !liveAudience.length ? (
-                          <div className="helper" style={{ marginTop: 8, fontSize: 11 }}>Actualizando audiencia...</div>
-                        ) : null}
-                        {liveAudienceError ? (
-                          <div style={{ marginTop: 8, fontSize: 11, color: '#fca5a5' }}>{liveAudienceError}</div>
-                        ) : null}
-                        {liveAudienceExpanded ? (
-                          <div style={{ marginTop: 10, display: 'grid', gap: 6, maxHeight: 160, overflowY: 'auto' }}>
-                            {liveAudience.length ? liveAudience.map((row) => (
-                              <div key={row.user_id} style={{ padding: '7px 8px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', fontSize: 11 }}>
-                                <strong>{row.user_name || row.user_email || 'Usuario'}</strong>
-                                <span style={{ marginLeft: 6, opacity: 0.75 }}>{row.is_watching ? '▶️ viendo' : '🟢 conectado'}</span>
-                              </div>
-                            )) : (
-                              <div className="helper" style={{ fontSize: 11 }}>No hay usuarios conectados en este momento.</div>
-                            )}
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div
-                        style={{
-                          marginTop: 14,
-                          padding: 12,
-                          borderRadius: 16,
-                          border: '1px solid rgba(245,158,11,0.22)',
-                          background: 'linear-gradient(180deg, rgba(245,158,11,0.10) 0%, rgba(255,255,255,0.025) 100%)',
-                        }}
-                      >
-                        <div className="eyebrow" style={{ marginBottom: 8 }}>Configuración admin</div>
-                        <label className="label" style={{ marginBottom: 10, fontSize: 12 }}>
-                          Fecha del próximo curso intensivo
-                          <input
-                            className="input"
-                            type="date"
-                            value={courseDate}
-                            onChange={(e) => {
-                              setCourseDate(e.target.value);
-                              setCourseDateMessage(null);
-                              setCourseDateError(null);
-                            }}
-                            disabled={loadingCourseDate || savingCourseDate}
-                            style={{ marginTop: 8 }}
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={saveCourseDateSetting}
-                          disabled={loadingCourseDate || savingCourseDate || !courseDate}
-                          style={{ width: '100%', padding: '8px 12px', fontSize: 12 }}
-                        >
-                          {savingCourseDate ? 'Guardando fecha...' : 'Guardar fecha del curso'}
-                        </button>
-                        <p className="helper" style={{ marginTop: 8, marginBottom: 0, fontSize: 11, lineHeight: 1.45 }}>
-                          Esta fecha se guarda en Supabase y será usada automáticamente por Stripe para activar el acceso del curso intensivo.
-                        </p>
-                        {loadingCourseDate ? (
-                          <p className="helper" style={{ marginTop: 8, marginBottom: 0, fontSize: 11 }}>Cargando fecha actual...</p>
-                        ) : null}
-                        {courseDateMessage ? (
-                          <p className="success" style={{ marginTop: 8, marginBottom: 0, fontSize: 11 }}>{courseDateMessage}</p>
-                        ) : null}
-                        {courseDateError ? (
-                          <p className="error" style={{ marginTop: 8, marginBottom: 0, fontSize: 11 }}>{courseDateError}</p>
-                        ) : null}
-                      </div>
-                      </>
-                    ) : null}
                   </div>
 
                   <div
