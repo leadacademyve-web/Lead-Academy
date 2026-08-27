@@ -2213,7 +2213,7 @@ return normalized;
                     gridTemplateColumns: 'repeat(4, minmax(0,1fr))',
                     gap: 10,
                     padding: 10,
-                    marginBottom: 14,
+                    marginBottom: 18,
                     borderRadius: 18,
                     background: 'linear-gradient(135deg, rgba(8,24,48,.94), rgba(5,15,32,.92))',
                     border: '1px solid rgba(114,161,216,.22)',
@@ -2226,14 +2226,14 @@ return normalized;
                     { label: 'Pausados', value: adminStudentStats.paused, icon: 'pause' as PortalIconName, color: '#ffae21', bg: 'rgba(165,99,0,.16)', border: 'rgba(255,174,33,.38)' },
                     { label: 'Conectados ahora', value: liveAudience.length, icon: 'wifi' as PortalIconName, color: '#58a7ff', bg: 'rgba(27,104,205,.16)', border: 'rgba(88,167,255,.38)' },
                   ].map((item) => (
-                    <div key={item.label} style={{ minWidth: 0, minHeight: 76, padding: '11px 12px', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 11, background: 'rgba(4,15,31,.62)', border: '1px solid rgba(114,161,216,.16)' }}>
-                      <span style={{ width: 48, height: 48, flex: '0 0 auto', borderRadius: 13, display: 'grid', placeItems: 'center', color: item.color, background: item.bg, border: `1px solid ${item.border}`, boxShadow: `0 0 22px ${item.bg}` }}>
-                        <PortalIcon name={item.icon} size={27} />
-                      </span>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 27, lineHeight: 1, fontWeight: 950, color: '#fff' }}>{item.value}</div>
-                        <div style={{ marginTop: 6, fontSize: 11.5, lineHeight: 1.15, fontWeight: 850, color: 'rgba(255,255,255,.78)' }}>{item.label}</div>
+                    <div key={item.label} style={{ minWidth: 0, minHeight: 98, padding: '10px 7px 9px', borderRadius: 14, display: 'grid', gridTemplateRows: '56px auto', alignItems: 'center', justifyItems: 'center', background: 'rgba(4,15,31,.62)', border: '1px solid rgba(114,161,216,.16)', overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', minWidth: 0 }}>
+                        <span style={{ width: 48, height: 48, flex: '0 0 auto', borderRadius: 13, display: 'grid', placeItems: 'center', color: item.color, background: item.bg, border: `1px solid ${item.border}`, boxShadow: `0 0 22px ${item.bg}` }}>
+                          <PortalIcon name={item.icon} size={27} />
+                        </span>
+                        <div style={{ fontSize: 27, lineHeight: 1, fontWeight: 950, color: '#fff', minWidth: 20, textAlign: 'center' }}>{item.value}</div>
                       </div>
+                      <div style={{ width: '100%', paddingTop: 4, fontSize: 10.5, lineHeight: 1.12, fontWeight: 850, color: 'rgba(255,255,255,.82)', textAlign: 'center', whiteSpace: 'normal', overflowWrap: 'normal', wordBreak: 'normal' }}>{item.label}</div>
                     </div>
                   ))}
                 </div>
