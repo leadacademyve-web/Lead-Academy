@@ -2447,6 +2447,15 @@ return normalized;
                       <div style={{ fontSize: 12, fontWeight: 800, color: '#6ca7ff' }}>Recientes →</div>
                     </div>
 
+                    <div
+                      style={{
+                        maxHeight: 248,
+                        overflowY: 'auto',
+                        overscrollBehavior: 'contain',
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: 'rgba(80,145,235,.55) rgba(4,14,29,.30)',
+                      }}
+                    >
                     {visibleLibraryVideos.filter((video) => !video.is_live).length ? (
                       visibleLibraryVideos.filter((video) => !video.is_live).map((video) => {
                         const selected = selectedVideoId === video.id;
@@ -2487,6 +2496,7 @@ return normalized;
                     ) : (
                       <div style={{ padding: 13, fontSize: 12, color: 'rgba(255,255,255,.60)' }}>Aún no hay repeticiones publicadas.</div>
                     )}
+                    </div>
                   </div>
 
                   {/* ACCESOS RÁPIDOS */}
