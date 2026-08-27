@@ -1931,6 +1931,7 @@ return normalized;
     totalClassesForCurrentPlan !== null && classesRemaining !== null
       ? Math.max(totalClassesForCurrentPlan - classesRemaining, 0)
       : null;
+  const isLiveClassActive = Boolean(activeLiveSession) && !classesPaused;
 
   return (
     <main
@@ -2241,7 +2242,7 @@ return normalized;
             display: 'flex',
             flexDirection: 'column',
             overflowY: 'auto',
-            padding: 16,
+            padding: 18,
             background: 'linear-gradient(180deg, rgba(6,20,45,0.84) 0%, rgba(3,12,29,0.88) 100%)',
             boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
             backdropFilter: 'blur(10px)',
@@ -2257,8 +2258,8 @@ return normalized;
                   gridTemplateColumns: '1fr auto',
                   alignItems: 'center',
                   gap: 14,
-                  padding: '16px 17px',
-                  marginBottom: 12,
+                  padding: '19px 19px',
+                  marginBottom: 14,
                   borderRadius: 18,
                   background: 'linear-gradient(135deg, rgba(8,24,48,.94), rgba(5,15,32,.92))',
                   border: '1px solid rgba(114,161,216,.22)',
@@ -2266,13 +2267,13 @@ return normalized;
                 }}
               >
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 850, color: 'rgba(255,255,255,.72)', marginBottom: 7 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 850, color: 'rgba(255,255,255,.72)', marginBottom: 7 }}>
                     <span style={{ width: 15, height: 15, borderRadius: '50%', border: '1px solid rgba(255,255,255,.35)', display: 'inline-grid', placeItems: 'center', fontSize: 9 }}>i</span>
                     Tus clases
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ width: 9, height: 9, borderRadius: '50%', background: classesPaused ? '#f59e0b' : '#18df8b', boxShadow: classesPaused ? '0 0 12px rgba(245,158,11,.45)' : '0 0 12px rgba(24,223,139,.45)' }} />
-                    <span style={{ fontSize: 27, lineHeight: 1, fontWeight: 950, color: classesPaused ? '#fbbf24' : '#27e79a' }}>
+                    <span style={{ fontSize: 31, lineHeight: 1, fontWeight: 950, color: classesPaused ? '#fbbf24' : '#27e79a' }}>
                       {classesPaused ? 'PAUSADO' : 'ACTIVO'}
                     </span>
                   </div>
@@ -2280,9 +2281,9 @@ return normalized;
 
                 <div style={{ display: 'flex', alignItems: 'stretch', gap: 16 }}>
                   <div style={{ width: 1, background: 'rgba(255,255,255,.12)' }} />
-                  <div style={{ minWidth: 92, textAlign: 'center' }}>
-                    <div style={{ fontSize: 34, lineHeight: 1, fontWeight: 950 }}>{classesRemaining ?? '—'}</div>
-                    <div style={{ fontSize: 11, fontWeight: 750, marginTop: 5, color: 'rgba(255,255,255,.75)' }}>clases restantes</div>
+                  <div style={{ minWidth: 104, textAlign: 'center' }}>
+                    <div style={{ fontSize: 39, lineHeight: 1, fontWeight: 950 }}>{classesRemaining ?? '—'}</div>
+                    <div style={{ fontSize: 12, fontWeight: 750, marginTop: 6, color: 'rgba(255,255,255,.75)' }}>clases restantes</div>
                   </div>
                 </div>
 
@@ -2293,10 +2294,10 @@ return normalized;
                   style={{
                     gridColumn: '1 / -1',
                     justifySelf: 'center',
-                    minWidth: 205,
-                    padding: '8px 14px',
+                    minWidth: 230,
+                    padding: '10px 16px',
                     borderRadius: 999,
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: 850,
                     background: 'rgba(255,255,255,.055)',
                   }}
@@ -2311,8 +2312,8 @@ return normalized;
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, minmax(0,1fr))',
                   gap: 0,
-                  marginBottom: 12,
-                  borderRadius: 12,
+                  marginBottom: 14,
+                  borderRadius: 14,
                   overflow: 'hidden',
                   border: '1px solid rgba(114,161,216,.25)',
                   background: 'rgba(4,13,28,.76)',
@@ -2330,8 +2331,8 @@ return normalized;
                       type="button"
                       onClick={() => setActiveTab(tab.key)}
                       style={{
-                        minHeight: 48,
-                        padding: '0 8px',
+                        minHeight: 56,
+                        padding: '0 10px',
                         border: 0,
                         borderRight: tab.key !== 'biblioteca' ? '1px solid rgba(114,161,216,.18)' : 0,
                         background: isActive ? 'linear-gradient(180deg,#246fe8,#185ac6)' : 'transparent',
@@ -2339,13 +2340,13 @@ return normalized;
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: 7,
-                        fontSize: 11,
+                        gap: 9,
+                        fontSize: 12.5,
                         fontWeight: 900,
                         cursor: 'pointer',
                       }}
                     >
-                      <PortalIcon name={tab.icon} size={22} />
+                      <PortalIcon name={tab.icon} size={25} />
                       <span style={{ whiteSpace: 'nowrap' }}>{tab.label}</span>
                     </button>
                   );
@@ -2358,29 +2359,29 @@ return normalized;
                   <div
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '48px 1fr auto',
+                      gridTemplateColumns: '56px 1fr auto',
                       gap: 12,
                       alignItems: 'center',
-                      padding: '14px 15px',
-                      marginBottom: 12,
+                      padding: '17px 17px',
+                      marginBottom: 14,
                       borderRadius: 16,
                       background: 'linear-gradient(135deg, rgba(14,43,78,.86), rgba(7,24,49,.86))',
                       border: '1px solid rgba(80,135,211,.30)',
                     }}
                   >
-                    <div style={{ width: 42, height: 42, borderRadius: 11, display: 'grid', placeItems: 'center', color: '#4f91ff', background: 'rgba(28,78,172,.20)', border: '1px solid rgba(55,116,226,.38)' }}>
-                      <PortalIcon name="calendar" size={25} />
+                    <div style={{ width: 48, height: 48, borderRadius: 13, display: 'grid', placeItems: 'center', color: '#4f91ff', background: 'rgba(28,78,172,.20)', border: '1px solid rgba(55,116,226,.38)' }}>
+                      <PortalIcon name="calendar" size={29} />
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 10, letterSpacing: 1, fontWeight: 900, color: '#78aaff', marginBottom: 5 }}>CLASE DE HOY</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, lineHeight: 1.28 }}>
+                      <div style={{ fontSize: 11, letterSpacing: 1, fontWeight: 900, color: '#78aaff', marginBottom: 6 }}>CLASE DE HOY</div>
+                      <div style={{ fontSize: 17, fontWeight: 900, lineHeight: 1.28 }}>
                         {todayClassTopic}
                       </div>
-                      <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.68)', marginTop: 5 }}>Clase diaria · 9:00 AM hora de New York</div>
+                      <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.68)', marginTop: 6 }}>Clase diaria · 9:00 AM hora de New York</div>
                     </div>
                     <div style={{ textAlign: 'right', paddingLeft: 10, borderLeft: '1px solid rgba(255,255,255,.10)' }}>
-                      <div style={{ fontSize: 9, letterSpacing: .8, fontWeight: 800, color: 'rgba(255,255,255,.58)' }}>HORA NY</div>
-                      <div style={{ fontSize: 16, fontWeight: 900, color: '#65a1ff', marginTop: 4 }}>{nowText || '—'}</div>
+                      <div style={{ fontSize: 10, letterSpacing: .8, fontWeight: 800, color: 'rgba(255,255,255,.58)' }}>HORA NY</div>
+                      <div style={{ fontSize: 20, fontWeight: 900, color: '#65a1ff', marginTop: 5 }}>{nowText || '—'}</div>
                     </div>
                   </div>
 
@@ -2405,30 +2406,32 @@ return normalized;
                           setSelectedVideoId(liveVideo.id);
                         }}
                         style={{
-                          padding: '14px 15px',
-                          marginBottom: 12,
+                          padding: '17px 17px',
+                          marginBottom: 14,
                           borderRadius: 16,
-                          background: selected ? 'linear-gradient(135deg,rgba(0,113,72,.19),rgba(5,23,39,.90))' : 'linear-gradient(135deg,rgba(0,81,53,.14),rgba(5,23,39,.88))',
-                          border: '1px solid rgba(17,218,139,.58)',
-                          boxShadow: '0 12px 30px rgba(0,94,60,.10)',
+                          background: isLiveClassActive
+                            ? (selected ? 'linear-gradient(135deg,rgba(0,113,72,.24),rgba(5,23,39,.92))' : 'linear-gradient(135deg,rgba(0,81,53,.18),rgba(5,23,39,.90))')
+                            : 'linear-gradient(135deg,rgba(70,78,92,.18),rgba(18,24,34,.90))',
+                          border: isLiveClassActive ? '1px solid rgba(17,218,139,.68)' : '1px solid rgba(148,163,184,.25)',
+                          boxShadow: isLiveClassActive ? '0 12px 30px rgba(0,94,60,.13)' : '0 12px 30px rgba(0,0,0,.10)',
                           cursor: classesPaused && !isChatAdmin ? 'default' : 'pointer',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 11 }}>
-                          <div style={{ fontSize: 10, fontWeight: 850, color: 'rgba(255,255,255,.72)' }}>CLASE EN VIVO</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 900, color: '#22e596' }}>
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22e596' }} /> EN VIVO
+                          <div style={{ fontSize: 11, fontWeight: 850, color: 'rgba(255,255,255,.72)' }}>CLASE EN VIVO</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 900, color: isLiveClassActive ? '#22e596' : 'rgba(203,213,225,.72)' }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: isLiveClassActive ? '#22e596' : '#94a3b8' }} /> {isLiveClassActive ? 'EN VIVO' : 'INACTIVA'}
                           </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr', gap: 11, alignItems: 'center' }}>
-                          <div style={{ color: '#17e28f', display: 'grid', placeItems: 'center' }}>
-                            <PortalIcon name="live" size={36} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr', gap: 11, alignItems: 'center' }}>
+                          <div style={{ color: isLiveClassActive ? '#17e28f' : '#94a3b8', display: 'grid', placeItems: 'center' }}>
+                            <PortalIcon name="live" size={42} />
                           </div>
                           <div>
-                            <div style={{ fontSize: 15, fontWeight: 900 }}>{labelForVideo(liveVideo)}</div>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.66)', marginTop: 3 }}>
-                              {classesPaused && !isChatAdmin ? 'Tus clases están pausadas' : 'Únete ahora a la clase en vivo'}
+                            <div style={{ fontSize: 17, fontWeight: 900 }}>{labelForVideo(liveVideo)}</div>
+                            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.66)', marginTop: 3 }}>
+                              {classesPaused && !isChatAdmin ? 'Tus clases están pausadas' : isLiveClassActive ? 'Clase activa en este momento' : 'No hay una clase activa en este momento'}
                             </div>
                           </div>
 
@@ -2447,9 +2450,9 @@ return normalized;
                       marginBottom: 12,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '14px 15px', borderBottom: '1px solid rgba(114,161,216,.14)' }}>
-                      <div style={{ fontSize: 11.5, fontWeight: 900, letterSpacing: .9, color: 'rgba(255,255,255,.72)' }}>REPETICIONES RECIENTES</div>
-                      <div style={{ fontSize: 11, fontWeight: 800, color: '#6ca7ff' }}>Recientes →</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '16px 17px', borderBottom: '1px solid rgba(114,161,216,.14)' }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 900, letterSpacing: .9, color: 'rgba(255,255,255,.72)' }}>REPETICIONES RECIENTES</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: '#6ca7ff' }}>Recientes →</div>
                     </div>
 
                     {visibleLibraryVideos.filter((video) => !video.is_live).length ? (
@@ -2465,24 +2468,24 @@ return normalized;
                             }}
                             style={{
                               width: '100%',
-                              minHeight: 54,
-                              padding: '9px 13px',
+                              minHeight: 62,
+                              padding: '10px 15px',
                               border: 0,
                               borderBottom: '1px solid rgba(114,161,216,.12)',
                               background: selected ? 'rgba(34,94,190,.18)' : 'transparent',
                               color: '#fff',
                               display: 'grid',
-                              gridTemplateColumns: '38px 1fr auto',
+                              gridTemplateColumns: '44px 1fr auto',
                               gap: 8,
                               alignItems: 'center',
                               textAlign: 'left',
                               cursor: 'pointer',
                             }}
                           >
-                            <span style={{ width: 32, height: 32, borderRadius: '50%', display: 'grid', placeItems: 'center', color: '#629bff', background: 'rgba(47,91,161,.18)', border: '1px solid rgba(89,139,216,.24)' }}>
-                              <PortalIcon name="play" size={20} />
+                            <span style={{ width: 38, height: 38, borderRadius: '50%', display: 'grid', placeItems: 'center', color: '#629bff', background: 'rgba(47,91,161,.18)', border: '1px solid rgba(89,139,216,.24)' }}>
+                              <PortalIcon name="play" size={24} />
                             </span>
-                            <span style={{ minWidth: 0, fontSize: 12.5, lineHeight: 1.3, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span style={{ minWidth: 0, fontSize: 14, lineHeight: 1.3, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {labelForVideo(video)}
                             </span>
                             <span style={{ color: 'rgba(255,255,255,.52)', fontSize: 14 }}>›</span>
@@ -2500,22 +2503,22 @@ return normalized;
                       type="button"
                       onClick={() => router.push('/mis-clases')}
                       style={{
-                        minHeight: 70,
-                        padding: '11px 12px',
+                        minHeight: 82,
+                        padding: '13px 14px',
                         borderRadius: 13,
                         border: '1px solid rgba(114,161,216,.23)',
                         background: 'linear-gradient(180deg,rgba(14,33,61,.82),rgba(7,20,39,.82))',
                         color: '#fff',
                         display: 'grid',
-                        gridTemplateColumns: '39px 1fr',
+                        gridTemplateColumns: '46px 1fr',
                         gap: 10,
                         alignItems: 'center',
                         textAlign: 'left',
                         cursor: 'pointer',
                       }}
                     >
-                      <span style={{ width: 36, height: 36, borderRadius: 10, display: 'grid', placeItems: 'center', color: '#4f91ff', background: 'rgba(36,81,167,.19)' }}><PortalIcon name="classes" size={23} /></span>
-                      <span><strong style={{ display: 'block', fontSize: 13 }}>Mis clases</strong><small style={{ display: 'block', color: 'rgba(255,255,255,.64)', fontSize: 10.5, lineHeight: 1.35, marginTop: 3 }}>Ver saldo, estado y próximas clases →</small></span>
+                      <span style={{ width: 42, height: 42, borderRadius: 11, display: 'grid', placeItems: 'center', color: '#4f91ff', background: 'rgba(36,81,167,.19)' }}><PortalIcon name="classes" size={27} /></span>
+                      <span><strong style={{ display: 'block', fontSize: 15 }}>Mis clases</strong><small style={{ display: 'block', color: 'rgba(255,255,255,.64)', fontSize: 11.5, lineHeight: 1.4, marginTop: 3 }}>Ver saldo, estado y próximas clases →</small></span>
                     </button>
 
                     <button
@@ -2526,22 +2529,22 @@ return normalized;
                         setProfileSuccess(null);
                       }}
                       style={{
-                        minHeight: 70,
-                        padding: '11px 12px',
+                        minHeight: 82,
+                        padding: '13px 14px',
                         borderRadius: 13,
                         border: '1px solid rgba(114,161,216,.23)',
                         background: 'linear-gradient(180deg,rgba(14,33,61,.82),rgba(7,20,39,.82))',
                         color: '#fff',
                         display: 'grid',
-                        gridTemplateColumns: '39px 1fr',
+                        gridTemplateColumns: '46px 1fr',
                         gap: 10,
                         alignItems: 'center',
                         textAlign: 'left',
                         cursor: 'pointer',
                       }}
                     >
-                      <span style={{ width: 36, height: 36, borderRadius: 10, display: 'grid', placeItems: 'center', color: '#4f91ff', background: 'rgba(36,81,167,.19)' }}><PortalIcon name="profile" size={23} /></span>
-                      <span><strong style={{ display: 'block', fontSize: 13 }}>Mi perfil</strong><small style={{ display: 'block', color: 'rgba(255,255,255,.64)', fontSize: 10.5, lineHeight: 1.35, marginTop: 3 }}>Editar información personal →</small></span>
+                      <span style={{ width: 42, height: 42, borderRadius: 11, display: 'grid', placeItems: 'center', color: '#4f91ff', background: 'rgba(36,81,167,.19)' }}><PortalIcon name="profile" size={27} /></span>
+                      <span><strong style={{ display: 'block', fontSize: 15 }}>Mi perfil</strong><small style={{ display: 'block', color: 'rgba(255,255,255,.64)', fontSize: 11.5, lineHeight: 1.4, marginTop: 3 }}>Editar información personal →</small></span>
                     </button>
                   </div>
 
