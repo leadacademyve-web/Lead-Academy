@@ -27,6 +27,9 @@ type ReplaySession = {
 type CounterOperation = 'add_package' | 'remove_package' | 'consume' | 'refund';
 type VideoPublishType = 'daily' | 'course' | 'special';
 
+type TradeJournalMode = 'REAL' | 'EDUCATIONAL';
+type TradeStrategyAdminRow = { id: string; name: string; active: boolean; sort_order: number; };
+
 type StudentModal = {
   row: StudentRow;
   kind: 'pause' | 'counter';
@@ -135,6 +138,13 @@ export default function GestionOperativaPage() {
   const [courseDateSaving, setCourseDateSaving] = useState(false);
   const [courseDateNotice, setCourseDateNotice] = useState<string | null>(null);
 
+  const [tradeMode, setTradeMode] = useState<TradeJournalMode>('REAL');
+  const [educationalWinRate, setEducationalWinRate] = useState('86');
+  const [tradeStrategies, setTradeStrategies] = useState<TradeStrategyAdminRow[]>([]);
+  const [newStrategyName, setNewStrategyName] = useState('');
+  const [tradingAdminBusy, setTradingAdminBusy] = useState(false);
+  const [tradingAdminNotice, setTradingAdminNotice] = useState<string | null>(null);
+
   async function load() {
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) {
@@ -151,11 +161,14 @@ export default function GestionOperativaPage() {
 
     setAuthorized(true);
 
-    const [studentsResult, replayResult, topicResult, courseDateResult] = await Promise.all([
+    const [studentsResult, replayResult, topicResult, courseDateResult, strategiesResult, tradeModeResult, winRateResult] = await Promise.all([
       supabase.rpc('admin_operational_students'),
       supabase.rpc('admin_replay_sessions'),
       supabase.from('portal_settings').select('value').eq('key', 'today_class_topic').maybeSingle(),
       supabase.from('portal_settings').select('value').eq('key', INTENSIVE_COURSE_DATE_KEY).maybeSingle(),
+      supabase.from('trade_strategies').select('id,name,active,sort_order').order('sort_order', { ascending: true }).order('created_at', { ascending: true }),
+      supabase.from('portal_settings').select('value').eq('key', 'trade_journal_mode').maybeSingle(),
+      supabase.from('portal_settings').select('value').eq('key', 'educational_trade_win_rate').maybeSingle(),
     ]);
 
     if (studentsResult.error) {
@@ -181,6 +194,10 @@ export default function GestionOperativaPage() {
 
     if (!courseDateResult.error) setCourseDate(dateInputFromSetting(courseDateResult.data?.value));
     setCourseDateLoading(false);
+
+    if (!strategiesResult.error) setTradeStrategies((strategiesResult.data || []) as TradeStrategyAdminRow[]);
+    if (!tradeModeResult.error) setTradeMode(String(tradeModeResult.data?.value || '').toUpperCase() === 'EDUCATIONAL' ? 'EDUCATIONAL' : 'REAL');
+    if (!winRateResult.error && winRateResult.data?.value != null) setEducationalWinRate(String(winRateResult.data.value));
 
     setLoading(false);
   }
@@ -388,6 +405,91 @@ export default function GestionOperativaPage() {
     setCourseDateNotice(error ? `No se pudo guardar: ${error.message}` : 'Fecha del próximo curso guardada correctamente.');
   }
 
+  async function saveTradeMode(nextMode: TradeJournalMode) {
+    if (tradingAdminBusy) return;
+    setTradingAdminBusy(true);
+    setTradingAdminNotice(null);
+    const { error } = await supabase.from('portal_settings').upsert({
+      key: 'trade_journal_mode', value: nextMode, updated_at: new Date().toISOString(),
+    }, { onConflict: 'key' });
+    if (error) {
+      setTradingAdminNotice(`No se pudo cambiar el modo: ${error.message}`);
+      setTradingAdminBusy(false);
+      return;
+    }
+    setTradeMode(nextMode);
+    if (nextMode === 'EDUCATIONAL') {
+      await regenerateEducationalTrades(true);
+      return;
+    }
+    setTradingAdminNotice('Modo REAL activado. El Dashboard mostrará únicamente los trades cargados manualmente.');
+    setTradingAdminBusy(false);
+  }
+
+  async function regenerateEducationalTrades(alreadyBusy = false) {
+    const winRate = Number(String(educationalWinRate).replace(',', '.'));
+    if (!Number.isFinite(winRate) || winRate < 0 || winRate > 100) {
+      setTradingAdminNotice('El Win Rate debe estar entre 0% y 100%.');
+      if (alreadyBusy) setTradingAdminBusy(false);
+      return;
+    }
+    if (!alreadyBusy) setTradingAdminBusy(true);
+    setTradingAdminNotice(null);
+    const { data, error } = await supabase.rpc('admin_regenerate_educational_trades', { p_win_rate: winRate });
+    if (error) {
+      setTradingAdminNotice(`No se pudieron generar los trades: ${error.message}`);
+      setTradingAdminBusy(false);
+      return;
+    }
+    setTradeMode('EDUCATIONAL');
+    setTradingAdminNotice(`Escenario EDUCACIONAL regenerado: 1,000 trades ficticios con ${winRate.toFixed(1)}% de Win Rate objetivo.`);
+    setTradingAdminBusy(false);
+    await load();
+  }
+
+  async function addTradeStrategy() {
+    const name = newStrategyName.trim();
+    if (!name || tradingAdminBusy) return;
+    setTradingAdminBusy(true); setTradingAdminNotice(null);
+    const nextSort = tradeStrategies.length ? Math.max(...tradeStrategies.map((row) => Number(row.sort_order || 0))) + 1 : 1;
+    const { error } = await supabase.from('trade_strategies').insert({ name, active: true, sort_order: nextSort });
+    setTradingAdminBusy(false);
+    if (error) return setTradingAdminNotice(`No se pudo agregar la estrategia: ${error.message}`);
+    setNewStrategyName('');
+    setTradingAdminNotice('Estrategia agregada y publicada.');
+    await load();
+  }
+
+  async function renameTradeStrategy(row: TradeStrategyAdminRow, name: string) {
+    const clean = name.trim();
+    if (!clean || clean === row.name) return;
+    setTradingAdminBusy(true); setTradingAdminNotice(null);
+    const { error } = await supabase.from('trade_strategies').update({ name: clean, updated_at: new Date().toISOString() }).eq('id', row.id);
+    setTradingAdminBusy(false);
+    if (error) return setTradingAdminNotice(`No se pudo editar: ${error.message}`);
+    setTradingAdminNotice('Estrategia actualizada. Los nuevos desplegables usarán el nuevo nombre.');
+    await load();
+  }
+
+  async function toggleTradeStrategy(row: TradeStrategyAdminRow) {
+    setTradingAdminBusy(true); setTradingAdminNotice(null);
+    const { error } = await supabase.from('trade_strategies').update({ active: !row.active, updated_at: new Date().toISOString() }).eq('id', row.id);
+    setTradingAdminBusy(false);
+    if (error) return setTradingAdminNotice(`No se pudo cambiar la publicación: ${error.message}`);
+    setTradingAdminNotice(row.active ? 'Estrategia ocultada de los desplegables.' : 'Estrategia publicada en los desplegables.');
+    await load();
+  }
+
+  async function deleteTradeStrategy(row: TradeStrategyAdminRow) {
+    if (!window.confirm(`¿Eliminar la estrategia “${row.name}”? Los trades históricos conservarán el texto de la estrategia.`)) return;
+    setTradingAdminBusy(true); setTradingAdminNotice(null);
+    const { error } = await supabase.from('trade_strategies').delete().eq('id', row.id);
+    setTradingAdminBusy(false);
+    if (error) return setTradingAdminNotice(`No se pudo eliminar: ${error.message}`);
+    setTradingAdminNotice('Estrategia eliminada.');
+    await load();
+  }
+
   if (loading) {
     return <main style={styles.page}><div style={styles.card}>Cargando Gestión Operativa...</div></main>;
   }
@@ -438,9 +540,11 @@ export default function GestionOperativaPage() {
         </div>
       </div>
 
+      {/* MÓDULOS OPERATIVOS 2 × 2 — solo reorganización visual */}
+      <div style={{maxWidth:1980,margin:'0 auto 18px',display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:14,alignItems:'stretch'}}>
       {/* CONTENIDO DE LA CLASE DE HOY */}
-      <div style={styles.todayTopicCard}>
-        <div style={styles.todayTopicHeader}>
+      <div style={{...styles.todayTopicCard,maxWidth:'none',margin:0,height:'100%'}}>
+        <div style={{...styles.todayTopicHeader,minHeight:104}}>
           <div style={styles.todayTopicHeading}>
             <span style={styles.todayTopicIcon}><Icon name="sparkles" size={31} /></span>
             <div>
@@ -499,40 +603,14 @@ export default function GestionOperativaPage() {
         {topicNotice ? <div style={topicNotice.startsWith('Publicado') ? styles.todayTopicSuccess : styles.todayTopicError}>{topicNotice}</div> : null}
       </div>
 
-      {/* FECHA DEL PRÓXIMO CURSO INTENSIVO */}
-      <div style={{ ...styles.todayTopicCard, borderColor: 'rgba(245,158,11,.34)', background: 'radial-gradient(circle at 0% 0%,rgba(245,158,11,.12),transparent 34%), linear-gradient(180deg,rgba(24,20,12,.94),rgba(12,16,27,.92))' }}>
-        <div style={styles.todayTopicHeader}>
-          <div style={styles.todayTopicHeading}>
-            <span style={{ ...styles.todayTopicIcon, color: '#fbbf24', borderColor: 'rgba(245,158,11,.42)', background: 'rgba(245,158,11,.10)' }}><Icon name="calendar" size={31} /></span>
-            <div>
-              <div style={{ ...styles.todayTopicEyebrow, color: '#fbbf24' }}>CURSO INTENSIVO</div>
-              <h2 style={styles.todayTopicTitle}>Fecha del próximo curso</h2>
-              <p style={styles.todayTopicIntro}>Configura aquí la fecha oficial. Se guarda en Supabase y conserva la lógica existente para la activación del curso.</p>
-            </div>
-          </div>
-        </div>
-        <div style={{ ...styles.todayTopicGrid, marginTop: 18 }}>
-          <div>
-            <div style={styles.fieldLabel}>Fecha de inicio</div>
-            <div style={styles.inputShell}>
-              <span style={{ ...styles.inputIconVimeo, color: '#fbbf24' }}><Icon name="calendar" size={27} /></span>
-              <input type="date" value={courseDate} onChange={(e) => { setCourseDate(e.target.value); setCourseDateNotice(null); }} style={styles.inputInside} disabled={courseDateLoading || courseDateSaving} />
-            </div>
-            <div style={styles.fieldHelp}>Fecha del próximo curso intensivo.</div>
-          </div>
-          <button type="button" style={{ ...styles.todayTopicButton, opacity: courseDateLoading || courseDateSaving || !courseDate ? .55 : 1 }} disabled={courseDateLoading || courseDateSaving || !courseDate} onClick={saveCourseDateSetting}>
-            <Icon name="send" size={23} /> {courseDateSaving ? 'Guardando...' : 'Guardar fecha'}
-          </button>
-        </div>
-        {courseDateNotice ? <div style={courseDateNotice.startsWith('Fecha') ? styles.todayTopicSuccess : styles.todayTopicError}>{courseDateNotice}</div> : null}
-      </div>
-
       {/* PUBLICACIÓN DE VIDEOS ARRIBA DE LOS ESTUDIANTES */}
-      <div style={styles.publishCard}>
-        <div style={styles.sectionTitle}>PUBLICAR</div>
-        <p style={styles.publishIntro}>Selecciona el tipo de video. El portal aplicará automáticamente las reglas correspondientes.</p>
+      <div style={{...styles.publishCard,maxWidth:'none',margin:0,height:'100%'}}>
+        <div style={{minHeight:76}}>
+          <div style={styles.sectionTitle}>PUBLICAR</div>
+          <p style={styles.publishIntro}>Selecciona el tipo de video. El portal aplicará automáticamente las reglas correspondientes.</p>
+        </div>
 
-        <div style={styles.typeTabs}>
+        <div style={{...styles.typeTabs,marginTop:14}}>
           <button type="button" style={publishType === 'daily' ? styles.typeTabActive : styles.typeTab} onClick={() => selectPublishType('daily')}>
             <span style={styles.typeIconBlue}><Icon name="calendar" size={28} /></span>
             <span><strong style={styles.typeTitle}>Clase diaria</strong><small style={styles.tabSub}>Desde una sesión LIVE</small></span>
@@ -628,6 +706,70 @@ export default function GestionOperativaPage() {
         )}
       </div>
 
+      {/* FECHA DEL PRÓXIMO CURSO INTENSIVO */}
+      <div style={{ ...styles.todayTopicCard, maxWidth:'none', margin:0, height:'100%', borderColor: 'rgba(245,158,11,.34)', background: 'radial-gradient(circle at 0% 0%,rgba(245,158,11,.12),transparent 34%), linear-gradient(180deg,rgba(24,20,12,.94),rgba(12,16,27,.92))' }}>
+        <div style={{...styles.todayTopicHeader,minHeight:104}}>
+          <div style={styles.todayTopicHeading}>
+            <span style={{ ...styles.todayTopicIcon, color: '#fbbf24', borderColor: 'rgba(245,158,11,.42)', background: 'rgba(245,158,11,.10)' }}><Icon name="calendar" size={31} /></span>
+            <div>
+              <div style={{ ...styles.todayTopicEyebrow, color: '#fbbf24' }}>CURSO INTENSIVO</div>
+              <h2 style={styles.todayTopicTitle}>Fecha del próximo curso</h2>
+              <p style={styles.todayTopicIntro}>Configura aquí la fecha oficial. Se guarda en Supabase y conserva la lógica existente para la activación del curso.</p>
+            </div>
+          </div>
+        </div>
+        <div style={{ ...styles.todayTopicGrid, marginTop: 18 }}>
+          <div>
+            <div style={styles.fieldLabel}>Fecha de inicio</div>
+            <div style={styles.inputShell}>
+              <span style={{ ...styles.inputIconVimeo, color: '#fbbf24' }}><Icon name="calendar" size={27} /></span>
+              <input type="date" value={courseDate} onChange={(e) => { setCourseDate(e.target.value); setCourseDateNotice(null); }} style={styles.inputInside} disabled={courseDateLoading || courseDateSaving} />
+            </div>
+            <div style={styles.fieldHelp}>Fecha del próximo curso intensivo.</div>
+          </div>
+          <button type="button" style={{ ...styles.todayTopicButton, opacity: courseDateLoading || courseDateSaving || !courseDate ? .55 : 1 }} disabled={courseDateLoading || courseDateSaving || !courseDate} onClick={saveCourseDateSetting}>
+            <Icon name="send" size={23} /> {courseDateSaving ? 'Guardando...' : 'Guardar fecha'}
+          </button>
+        </div>
+        {courseDateNotice ? <div style={courseDateNotice.startsWith('Fecha') ? styles.todayTopicSuccess : styles.todayTopicError}>{courseDateNotice}</div> : null}
+      </div>
+
+      {/* BITÁCORA DE TRADES: ADMINISTRACIÓN DE ESTRATEGIAS */}
+      <div style={{ ...styles.publishCard, maxWidth:'none', margin:0, height:'100%', borderColor: 'rgba(168,85,247,.34)', background: 'radial-gradient(circle at 0% 0%,rgba(168,85,247,.12),transparent 34%), linear-gradient(180deg,rgba(15,12,31,.95),rgba(5,15,30,.91))' }}>
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:18,flexWrap:'wrap',minHeight:76}}>
+          <div>
+            <div style={{...styles.sectionTitle,color:'#c084fc'}}>BITÁCORA DE TRADES</div>
+            <h2 style={{margin:'6px 0 0',fontSize:23,fontWeight:950}}>Estrategias publicadas</h2>
+            <p style={{...styles.publishIntro,fontSize:14.5,maxWidth:820}}>Administra aquí las estrategias disponibles en los desplegables de la Bitácora y del Simulador de Capital.</p>
+          </div>
+        </div>
+
+        <div style={{marginTop:14,padding:14,borderRadius:14,border:'1px solid rgba(148,163,184,.20)',background:'rgba(3,13,28,.52)'}}>
+          <div>
+            <div style={styles.fieldLabel}>Estrategias de la Bitácora</div>
+            <div style={{...styles.fieldHelp,marginTop:0}}>Solo las estrategias publicadas aparecen en los desplegables del Dashboard y se usan al generar ejercicios.</div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 120px',gap:9,minWidth:0,marginTop:12}}>
+            <div style={{...styles.inputShell,minHeight:51}}><input value={newStrategyName} onChange={(e)=>setNewStrategyName(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter')addTradeStrategy();}} placeholder="Nueva estrategia" style={{...styles.inputInside,paddingLeft:16}} /></div>
+            <button type="button" onClick={addTradeStrategy} disabled={tradingAdminBusy||!newStrategyName.trim()} style={{width:'100%',height:51,border:0,borderRadius:10,background:'linear-gradient(180deg,#188cff,#0767e6)',color:'#fff',fontWeight:950,cursor:'pointer',opacity:(tradingAdminBusy || !newStrategyName.trim()) ? .55 : 1}}>+ Agregar</button>
+          </div>
+
+          <div style={{display:'grid',gap:8,marginTop:10}}>
+            {tradeStrategies.map((row)=><div key={row.id} style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 104px 104px 92px',gap:9,alignItems:'center',padding:9,borderRadius:10,border:'1px solid rgba(148,163,184,.14)',background:'rgba(6,20,39,.68)'}}>
+              <input defaultValue={row.name} disabled={tradingAdminBusy} onBlur={(e)=>renameTradeStrategy(row,e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'){(e.currentTarget as HTMLInputElement).blur();}}} style={{height:40,borderRadius:9,border:'1px solid rgba(123,163,207,.30)',background:'#07172a',color:'#fff',padding:'0 12px',fontSize:14,fontWeight:800}} />
+              <span style={{textAlign:'center',fontSize:11,fontWeight:950,color:row.active?'#86efac':'#94a3b8'}}>{row.active?'PUBLICADA':'OCULTA'}</span>
+              <button type="button" disabled={tradingAdminBusy} onClick={()=>toggleTradeStrategy(row)} style={{height:40,borderRadius:9,border:'1px solid rgba(96,165,250,.34)',background:'rgba(30,64,175,.18)',color:'#dbeafe',fontWeight:900,cursor:'pointer'}}>{row.active?'Ocultar':'Publicar'}</button>
+              <button type="button" disabled={tradingAdminBusy} onClick={()=>deleteTradeStrategy(row)} style={{height:40,borderRadius:9,border:'1px solid rgba(248,113,113,.30)',background:'rgba(127,29,29,.18)',color:'#fecaca',fontWeight:900,cursor:'pointer'}}>Eliminar</button>
+            </div>)}
+            {!tradeStrategies.length ? <div style={{padding:12,color:'rgba(255,255,255,.62)'}}>No hay estrategias configuradas.</div> : null}
+          </div>
+        </div>
+
+        {tradingAdminNotice ? <div style={{marginTop:13,padding:'10px 12px',borderRadius:10,border:'1px solid rgba(96,165,250,.25)',background:'rgba(30,64,175,.13)',color:'#dbeafe',fontSize:13.5,fontWeight:750}}>{tradingAdminNotice}</div> : null}
+      </div>
+
+      </div>
+
       <div style={styles.studentsCard}>
         <div style={styles.studentsHeader}>
           <div>
@@ -642,7 +784,7 @@ export default function GestionOperativaPage() {
 
         {message ? <div style={styles.notice}>{message}</div> : null}
 
-        <div style={{ overflowX: 'auto' }}>
+        <div style={{ overflow: 'auto', maxHeight: '620px', scrollbarGutter: 'stable' }}>
           <table style={styles.table}>
             <thead><tr>
               <th style={styles.th}>Estudiante</th><th style={styles.th}>Estado</th><th style={styles.th}>Saldo</th>
@@ -774,13 +916,13 @@ export default function GestionOperativaPage() {
 const styles: Record<string, any> = {
   page: {
     minHeight: '100vh',
-    padding: '28px 4.5vw 44px',
+    padding: '28px 2.2vw 44px',
     color: '#f8fbff',
     background: 'radial-gradient(circle at 48% 0%, rgba(0,102,204,.13), transparent 31%), linear-gradient(180deg, rgba(2,7,18,.90), rgba(2,8,20,.97)), url("/trading-bg.jpg") center/cover fixed',
     fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif'
   },
   header: {
-    maxWidth: 1500,
+    maxWidth: 1980,
     margin: '0 auto 16px',
     display: 'flex',
     justifyContent: 'space-between',
@@ -809,7 +951,7 @@ const styles: Record<string, any> = {
   },
 
   stats: {
-    maxWidth: 1500,
+    maxWidth: 1980,
     margin: '0 auto 18px',
     display: 'grid',
     gridTemplateColumns: 'repeat(4, minmax(0,1fr))',
@@ -828,17 +970,17 @@ const styles: Record<string, any> = {
   },
   statNumber: { display: 'block', fontSize: 27, lineHeight: 1, fontWeight: 950, marginBottom: 7 },
   statLabel: { fontSize: 15, fontWeight: 750, color: 'rgba(255,255,255,.92)' },
-  statIconBlue: { width: 54, height: 54, borderRadius: 14, display: 'grid', placeItems: 'center', color: '#5eb4ff', background: 'rgba(15,93,190,.20)', border: '1px solid rgba(29,124,255,.52)' },
+  statIconBlue: { width: 54, height: 52, borderRadius: 14, display: 'grid', placeItems: 'center', color: '#5eb4ff', background: 'rgba(15,93,190,.20)', border: '1px solid rgba(29,124,255,.52)' },
   statIconGreen: { width: 54, height: 54, borderRadius: 14, display: 'grid', placeItems: 'center', color: '#15e58e', background: 'rgba(0,121,75,.20)', border: '1px solid rgba(0,193,120,.45)' },
   statIconAmber: { width: 54, height: 54, borderRadius: 14, display: 'grid', placeItems: 'center', color: '#ffad12', background: 'rgba(151,88,0,.22)', border: '1px solid rgba(234,144,0,.50)' },
   statIconPurple: { width: 54, height: 54, borderRadius: 14, display: 'grid', placeItems: 'center', color: '#c47cff', background: 'rgba(94,42,139,.24)', border: '1px solid rgba(150,78,213,.42)' },
 
   todayTopicCard: {
-    maxWidth: 1500,
+    maxWidth: 1980,
     margin: '0 auto 18px',
     border: '1px solid rgba(46,137,255,.42)',
     borderRadius: 19,
-    padding: '21px 24px 18px',
+    padding: '20px 20px 18px',
     background: 'radial-gradient(circle at 0% 0%,rgba(23,112,232,.17),transparent 34%), linear-gradient(180deg,rgba(5,22,43,.96),rgba(4,15,31,.91))',
     boxShadow: '0 22px 55px rgba(0,0,0,.22), 0 0 0 1px rgba(37,124,255,.05) inset',
     backdropFilter: 'blur(12px)'
@@ -851,25 +993,25 @@ const styles: Record<string, any> = {
   todayTopicIntro: { color: 'rgba(255,255,255,.78)', fontSize: 14.5, margin: '7px 0 0', lineHeight: 1.45 },
   todayTopicStatus: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 999, border: '1px solid rgba(28,214,139,.34)', background: 'rgba(0,123,78,.13)', color: '#a8f5d4', fontSize: 11.5, letterSpacing: .65, fontWeight: 900 },
   todayTopicStatusDot: { width: 7, height: 7, borderRadius: '50%', background: '#20e493', boxShadow: '0 0 12px rgba(32,228,147,.65)' },
-  todayTopicGrid: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 220px', gap: 20, alignItems: 'start', marginTop: 18 },
-  todayTopicInputShell: { minHeight: 56, display: 'flex', alignItems: 'center', borderRadius: 12, border: '1px solid rgba(89,151,230,.45)', background: 'linear-gradient(180deg,rgba(12,31,57,.96),rgba(8,23,44,.94))', overflow: 'hidden', boxShadow: '0 0 0 1px rgba(34,113,220,.05) inset' },
+  todayTopicGrid: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 220px', gap: 14, alignItems: 'start', marginTop: 14 },
+  todayTopicInputShell: { minHeight: 54, display: 'flex', alignItems: 'center', borderRadius: 12, border: '1px solid rgba(89,151,230,.45)', background: 'linear-gradient(180deg,rgba(12,31,57,.96),rgba(8,23,44,.94))', overflow: 'hidden', boxShadow: '0 0 0 1px rgba(34,113,220,.05) inset' },
   todayTopicInputIcon: { width: 58, flex: '0 0 auto', display: 'grid', placeItems: 'center', color: '#5ca8ff' },
   todayTopicInput: { flex: 1, minWidth: 0, height: 54, border: 0, outline: 'none', background: 'transparent', color: '#fff', fontSize: 17, fontWeight: 700, padding: '0 12px 0 0', fontFamily: 'inherit' },
   todayTopicCounter: { flex: '0 0 auto', padding: '0 15px 0 10px', color: 'rgba(255,255,255,.47)', fontSize: 11.5, fontWeight: 700 },
-  todayTopicButton: { minHeight: 56, marginTop: 31, width: '100%', borderRadius: 11, border: 0, background: 'linear-gradient(180deg,#188cff,#0767e6)', color: '#fff', fontSize: 15.5, fontWeight: 950, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, boxShadow: '0 12px 28px rgba(0,93,218,.26)' },
-  todayTopicPreview: { marginTop: 14, minHeight: 43, padding: '9px 13px', borderRadius: 11, display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center', gap: 12, border: '1px solid rgba(118,163,213,.18)', background: 'rgba(3,13,28,.52)' },
-  todayTopicPreviewLabel: { color: '#62adff', fontSize: 10.5, letterSpacing: .9, fontWeight: 950 },
-  todayTopicPreviewText: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#fff', fontSize: 13.5, fontWeight: 800 },
-  todayTopicPreviewTime: { paddingLeft: 12, borderLeft: '1px solid rgba(255,255,255,.10)', color: 'rgba(255,255,255,.72)', fontSize: 12, fontWeight: 850 },
+  todayTopicButton: { height: 54, minHeight: 54, marginTop: 26, width: '100%', borderRadius: 11, border: 0, background: 'linear-gradient(180deg,#188cff,#0767e6)', color: '#fff', fontSize: 15.5, fontWeight: 950, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, boxShadow: '0 12px 28px rgba(0,93,218,.26)' },
+  todayTopicPreview: { marginTop: 14, minHeight: 62, padding: '12px 16px', borderRadius: 14, display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center', gap: 14, border: '1px solid rgba(46,137,255,.34)', background: 'radial-gradient(circle at 0% 0%,rgba(23,112,232,.15),transparent 42%), linear-gradient(180deg,rgba(7,27,51,.94),rgba(4,17,34,.92))', boxShadow: '0 10px 26px rgba(0,0,0,.14)' },
+  todayTopicPreviewLabel: { color: '#62adff', fontSize: 11, letterSpacing: 1.05, fontWeight: 950, padding: '7px 9px', borderRadius: 8, border: '1px solid rgba(70,164,255,.28)', background: 'rgba(22,111,225,.12)' },
+  todayTopicPreviewText: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#fff', fontSize: 15, fontWeight: 900, letterSpacing: '-.1px' },
+  todayTopicPreviewTime: { padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(70,164,255,.22)', background: 'rgba(6,32,62,.72)', color: '#cfe7ff', fontSize: 12, fontWeight: 900, whiteSpace: 'nowrap' },
   todayTopicSuccess: { marginTop: 11, padding: '9px 12px', borderRadius: 10, background: 'rgba(0,151,94,.13)', border: '1px solid rgba(31,213,139,.30)', color: '#baf7dc', fontSize: 13, fontWeight: 750 },
   todayTopicError: { marginTop: 11, padding: '9px 12px', borderRadius: 10, background: 'rgba(190,45,65,.14)', border: '1px solid rgba(255,91,113,.30)', color: '#ffd1d7', fontSize: 13, fontWeight: 750 },
 
   publishCard: {
-    maxWidth: 1500,
+    maxWidth: 1980,
     margin: '0 auto 18px',
     border: '1px solid rgba(118,163,213,.26)',
     borderRadius: 19,
-    padding: '22px 24px 18px',
+    padding: '20px 20px 18px',
     background: 'linear-gradient(180deg,rgba(4,20,39,.91),rgba(4,14,29,.88))',
     boxShadow: '0 22px 55px rgba(0,0,0,.22)',
     backdropFilter: 'blur(12px)'
@@ -877,7 +1019,7 @@ const styles: Record<string, any> = {
   sectionTitle: { fontSize: 14, letterSpacing: 1.05, fontWeight: 950, color: '#1993ff' },
   publishIntro: { color: 'rgba(255,255,255,.96)', fontSize: 17, fontWeight: 750, margin: '8px 0 0', lineHeight: 1.45 },
 
-  typeTabs: { display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 14, marginTop: 16 },
+  typeTabs: { display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 10, marginTop: 14 },
   typeTab: {
     position: 'relative',
     minHeight: 96,
@@ -952,8 +1094,8 @@ const styles: Record<string, any> = {
   typeIconAmber: { width: 50, height: 50, borderRadius: 13, display: 'grid', placeItems: 'center', color: '#ff9d20', background: 'rgba(111,62,0,.25)', border: '1px solid rgba(188,104,0,.43)', flex: '0 0 auto' },
   typeIconGreen: { width: 50, height: 50, borderRadius: 13, display: 'grid', placeItems: 'center', color: '#19e493', background: 'rgba(0,91,59,.24)', border: '1px solid rgba(0,174,110,.40)', flex: '0 0 auto' },
 
-  replayGrid: { display: 'grid', gridTemplateColumns: 'minmax(300px,.95fr) minmax(390px,1.25fr) 200px', gap: 20, alignItems: 'start', marginTop: 20 },
-  publishGrid: { display: 'grid', gridTemplateColumns: 'minmax(300px,.95fr) minmax(390px,1.25fr) 200px', gap: 20, alignItems: 'start', marginTop: 20 },
+  replayGrid: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.25fr) 160px', gap: 10, alignItems: 'start', marginTop: 16 },
+  publishGrid: { display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.25fr) 160px', gap: 10, alignItems: 'start', marginTop: 16 },
   fieldLabel: { fontSize: 15, fontWeight: 900, color: 'rgba(255,255,255,.96)', margin: '0 0 8px' },
   fieldHelp: { color: 'rgba(255,255,255,.72)', fontSize: 14, marginTop: 7, lineHeight: 1.35 },
   publishFoot: { color: 'rgba(255,255,255,.64)', fontSize: 13, marginTop: 10, lineHeight: 1.4 },
@@ -990,9 +1132,10 @@ const styles: Record<string, any> = {
   broadcastIcon: { color: '#1aa7ff', display: 'grid', placeItems: 'center' },
 
   publishButton: {
-    minHeight: 52,
-    marginTop: 31,
-    width: 200,
+    height: 51,
+    minHeight: 51,
+    marginTop: 26,
+    width: '100%',
     borderRadius: 10,
     border: 0,
     background: 'linear-gradient(180deg,#188cff,#0767e6)',
@@ -1008,7 +1151,7 @@ const styles: Record<string, any> = {
   },
 
   studentsCard: {
-    maxWidth: 1500,
+    maxWidth: 1980,
     margin: '0 auto 20px',
     border: '1px solid rgba(118,163,213,.26)',
     borderRadius: 19,
@@ -1024,7 +1167,7 @@ const styles: Record<string, any> = {
   searchIcon: { width: 52, borderLeft: '1px solid rgba(123,163,207,.20)', display: 'grid', placeItems: 'center', color: 'rgba(255,255,255,.72)' },
 
   table: { width: '100%', borderCollapse: 'collapse', minWidth: 1080 },
-  th: { textAlign: 'left', padding: '11px 10px', color: 'rgba(255,255,255,.72)', fontSize: 14, fontWeight: 800, borderBottom: '1px solid rgba(118,163,213,.20)' },
+  th: { position: 'sticky', top: 0, zIndex: 2, textAlign: 'left', padding: '11px 10px', color: 'rgba(255,255,255,.72)', fontSize: 14, fontWeight: 800, borderBottom: '1px solid rgba(118,163,213,.20)', background: '#07172a', boxShadow: '0 1px 0 rgba(118,163,213,.20)' },
   td: { padding: '10px 10px', borderTop: '1px solid rgba(118,163,213,.16)', verticalAlign: 'middle', fontSize: 14 },
   studentIdentity: { display: 'flex', alignItems: 'center', gap: 12 },
   avatar: { width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(180deg,#2384ff,#075ecc)', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 900, fontSize: 15, boxShadow: '0 8px 18px rgba(0,92,214,.20)' },

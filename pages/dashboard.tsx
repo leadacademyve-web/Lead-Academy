@@ -508,6 +508,40 @@ function isChatAdminEmail(email?: string | null) {
 }
 
 
+type TradeStrategy = string;
+type TradeOptionType = 'CALL' | 'PUT';
+type LiveTrade = {
+  id: string;
+  ticker: string;
+  option_type: TradeOptionType;
+  strategy: TradeStrategy;
+  result_pct: number;
+  created_at: string;
+  live_session_id?: string | null;
+  trade_source?: 'REAL' | 'EDUCATIONAL';
+};
+
+const DEFAULT_TRADE_STRATEGIES: TradeStrategy[] = ['Apertura Alcista', 'Apertura Bajista', 'Ruptura Alcista', 'Ruptura Bajista'];
+
+function formatPortalNumber(value: number, decimals = 0) {
+  const n = Number(value || 0);
+  return new Intl.NumberFormat('es-ES', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(n);
+}
+
+function formatPortalMoney(value: number, signed = false) {
+  const n = Number(value || 0);
+  const sign = signed && n > 0 ? '+' : '';
+  return `${sign}$${formatPortalNumber(n, 2)}`;
+}
+
+function tradePct(value: number) {
+  const n = Number(value || 0);
+  return `${n > 0 ? '+' : ''}${formatPortalNumber(n, 1)}%`;
+}
+
 type PortalIconName = 'videos' | 'chat' | 'book' | 'calendar' | 'live' | 'play' | 'classes' | 'profile' | 'support' | 'arrow' | 'download' | 'external' | 'image' | 'wifi' | 'pause';
 
 function PortalIcon({ name, size = 20 }: { name: PortalIconName; size?: number }) {
@@ -599,6 +633,36 @@ export default function DashboardPage() {
   const [adminLiveAction, setAdminLiveAction] = useState<'start' | 'end' | null>(null);
   const [adminLiveWorking, setAdminLiveWorking] = useState(false);
   const [adminLiveNotice, setAdminLiveNotice] = useState<string | null>(null);
+  const [showAdminMetrics, setShowAdminMetrics] = useState(true);
+  const [showTradeJournal, setShowTradeJournal] = useState(false);
+  const [showTradeForm, setShowTradeForm] = useState(false);
+  const [tradeJournalView, setTradeJournalView] = useState<'resumen' | 'simulador'>('resumen');
+  const [simCapital, setSimCapital] = useState('1000');
+  const [simMode, setSimMode] = useState<'fixed' | 'protected' | 'compound'>('fixed');
+  const [simFixedAmount, setSimFixedAmount] = useState('500');
+  const [simPercent, setSimPercent] = useState('50');
+  const [simStrategy, setSimStrategy] = useState<'ALL' | TradeStrategy>('ALL');
+  const [simOptionType, setSimOptionType] = useState<'ALL' | TradeOptionType>('ALL');
+  const [simStartDate, setSimStartDate] = useState('');
+  const [simEndDate, setSimEndDate] = useState('');
+  const [tradeJournalLoading, setTradeJournalLoading] = useState(false);
+  const [tradeJournalError, setTradeJournalError] = useState<string | null>(null);
+  const [savingTrade, setSavingTrade] = useState(false);
+  const [liveTrades, setLiveTrades] = useState<LiveTrade[]>([]);
+  const [tradeStrategies, setTradeStrategies] = useState<TradeStrategy[]>(DEFAULT_TRADE_STRATEGIES);
+  const [tradeJournalMode, setTradeJournalMode] = useState<'REAL' | 'EDUCATIONAL'>('REAL');
+  const [educationalTradeCount, setEducationalTradeCount] = useState('1000');
+  const [educationalWinRate, setEducationalWinRate] = useState('86');
+  const [educationalGainMin, setEducationalGainMin] = useState('12');
+  const [educationalGainMax, setEducationalGainMax] = useState('15');
+  const [educationalLossMin, setEducationalLossMin] = useState('10');
+  const [educationalLossMax, setEducationalLossMax] = useState('20');
+  const [educationalWorking, setEducationalWorking] = useState(false);
+  const [capitalCurveHoverIndex, setCapitalCurveHoverIndex] = useState<number | null>(null);
+  const [capitalCurveDragging, setCapitalCurveDragging] = useState(false);
+  const [tradeForm, setTradeForm] = useState<{ ticker: string; optionType: TradeOptionType; strategy: TradeStrategy; resultPct: string }>({
+    ticker: '', optionType: 'CALL', strategy: DEFAULT_TRADE_STRATEGIES[0], resultPct: ''
+  });
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const emojiPanelRef = useRef<HTMLDivElement | null>(null);
   const chatFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -634,6 +698,183 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [isChatAdmin]);
 
+
+  async function loadTradeStrategies() {
+    const { data, error } = await supabase
+      .from('trade_strategies')
+      .select('name')
+      .eq('active', true)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true });
+    if (error) return;
+    const names = (data || []).map((row: any) => String(row.name || '').trim()).filter(Boolean);
+    if (names.length) {
+      setTradeStrategies(names);
+      setTradeForm((prev) => names.includes(prev.strategy) ? prev : { ...prev, strategy: names[0] });
+    }
+  }
+
+  async function loadTradeJournal(showLoading = false) {
+    if (showLoading) setTradeJournalLoading(true);
+    setTradeJournalError(null);
+
+    const { data: modeSetting, error: modeError } = await supabase
+      .from('portal_settings')
+      .select('value')
+      .eq('key', 'trade_journal_mode')
+      .maybeSingle();
+
+    const mode = !modeError && String(modeSetting?.value || '').toUpperCase() === 'EDUCATIONAL' ? 'EDUCATIONAL' : 'REAL';
+    setTradeJournalMode(mode);
+
+    const { data, error } = await supabase
+      .from('live_trade_journal')
+      .select('id,ticker,option_type,strategy,result_pct,created_at,live_session_id,trade_source')
+      .eq('trade_source', mode)
+      .order('created_at', { ascending: false });
+    if (error) {
+      setTradeJournalError('No se pudo cargar la bitácora por modo. Ejecuta primero la migración SQL REAL / EDUCACIONAL en Supabase.');
+      if (showLoading) setTradeJournalLoading(false);
+      return;
+    }
+    setLiveTrades((data || []) as LiveTrade[]);
+    if (showLoading) setTradeJournalLoading(false);
+  }
+
+  async function setTradeMode(mode: 'REAL' | 'EDUCATIONAL') {
+    if (!isChatAdmin || mode === tradeJournalMode) return;
+    setTradeJournalError(null);
+    const { error } = await supabase.rpc('admin_set_trade_journal_mode', { p_mode: mode });
+    if (error) { setTradeJournalError(error.message || 'No se pudo cambiar el modo de la bitácora.'); return; }
+    setTradeJournalMode(mode);
+    setShowTradeForm(false);
+    await loadTradeJournal(true);
+  }
+
+  async function regenerateEducationalTrades() {
+    if (!isChatAdmin || educationalWorking || tradeJournalMode !== 'EDUCATIONAL') return;
+    const parse = (v: string) => Number(String(v).replace('%','').replace(',','.'));
+    const tradeCount=Math.round(parse(educationalTradeCount)), winRate=parse(educationalWinRate), gainMin=parse(educationalGainMin), gainMax=parse(educationalGainMax), lossMin=parse(educationalLossMin), lossMax=parse(educationalLossMax);
+    if (![tradeCount,winRate,gainMin,gainMax,lossMin,lossMax].every(Number.isFinite) || tradeCount < 10 || tradeCount > 10000 || winRate < 0 || winRate > 100 || gainMin <= 0 || gainMax < gainMin || lossMin <= 0 || lossMax < lossMin) {
+      setTradeJournalError('Revisa los parámetros: cantidad de trades 10–10.000; Win Rate 0–100; ganancias y pérdidas deben ser positivas y el máximo debe ser mayor o igual al mínimo.');
+      return;
+    }
+    setEducationalWorking(true); setTradeJournalError(null);
+    const { error } = await supabase.rpc('admin_regenerate_educational_trades', {
+      p_trade_count: tradeCount, p_win_rate: winRate, p_gain_min: gainMin, p_gain_max: gainMax, p_loss_min: lossMin, p_loss_max: lossMax
+    });
+    if (error) setTradeJournalError(error.message || 'No se pudieron regenerar los trades educativos.');
+    else await loadTradeJournal(true);
+    setEducationalWorking(false);
+  }
+
+  async function saveTradeJournalEntry() {
+    if (!isChatAdmin || savingTrade || tradeJournalMode !== 'REAL') return;
+    const ticker = tradeForm.ticker.trim().toUpperCase();
+    const resultPct = Number(String(tradeForm.resultPct).replace('%', '').replace(',', '.'));
+    if (!ticker || !Number.isFinite(resultPct) || resultPct === 0) {
+      setTradeJournalError('Completa el ticker y un resultado % distinto de 0.');
+      return;
+    }
+    setSavingTrade(true);
+    setTradeJournalError(null);
+    const { error } = await supabase.from('live_trade_journal').insert({
+      ticker,
+      option_type: tradeForm.optionType,
+      strategy: tradeForm.strategy,
+      result_pct: resultPct,
+      live_session_id: activeLiveSession?.session_id || null,
+      created_by_email: userEmail || null,
+      trade_source: 'REAL',
+    });
+    if (error) {
+      setTradeJournalError(error.message || 'No se pudo guardar el trade.');
+      setSavingTrade(false);
+      return;
+    }
+    setTradeForm({ ticker: '', optionType: 'CALL', strategy: 'Apertura Alcista', resultPct: '' });
+    setShowTradeForm(false);
+    await loadTradeJournal();
+    setSavingTrade(false);
+  }
+
+  async function deleteTradeJournalEntry(id: string) {
+    if (!isChatAdmin || !id || tradeJournalMode !== 'REAL') return;
+    if (!window.confirm('¿Eliminar este trade de la bitácora?')) return;
+    const { error } = await supabase.from('live_trade_journal').delete().eq('id', id);
+    if (error) { setTradeJournalError(error.message || 'No se pudo eliminar el trade.'); return; }
+    setLiveTrades((rows) => rows.filter((row) => row.id !== id));
+  }
+
+  const tradeStats = useMemo(() => {
+    const total = liveTrades.length;
+    const winners = liveTrades.filter((t) => Number(t.result_pct) > 0);
+    const losers = liveTrades.filter((t) => Number(t.result_pct) < 0);
+    const sum = liveTrades.reduce((acc, t) => acc + Number(t.result_pct || 0), 0);
+    const avg = total ? sum / total : 0;
+    const byStrategy = tradeStrategies.map((strategy) => {
+      const rows = liveTrades.filter((t) => t.strategy === strategy);
+      const wins = rows.filter((t) => Number(t.result_pct) > 0);
+      const losses = rows.filter((t) => Number(t.result_pct) < 0);
+      const result = rows.reduce((acc, t) => acc + Number(t.result_pct || 0), 0);
+      const avgWin = wins.length ? wins.reduce((a, t) => a + Number(t.result_pct), 0) / wins.length : 0;
+      const avgLoss = losses.length ? losses.reduce((a, t) => a + Number(t.result_pct), 0) / losses.length : 0;
+      return { strategy, total: rows.length, wins: wins.length, losses: losses.length, winRate: rows.length ? (wins.length / rows.length) * 100 : 0, result, avgWin, avgLoss };
+    });
+    return { total, winners: winners.length, losers: losers.length, winRate: total ? (winners.length / total) * 100 : 0, sum, avg, byStrategy };
+  }, [liveTrades, tradeStrategies]);
+
+  const capitalSimulation = useMemo(() => {
+    const initial = Math.max(0, Number(String(simCapital).replace(',', '.')) || 0);
+    const fixedAmount = Math.max(0, Number(String(simFixedAmount).replace(',', '.')) || 0);
+    const pct = Math.min(100, Math.max(0, Number(String(simPercent).replace(',', '.')) || 0)) / 100;
+    const nyDateKey = (iso: string) => {
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(iso));
+      const get = (t: string) => parts.find((x) => x.type === t)?.value || '';
+      return `${get('year')}-${get('month')}-${get('day')}`;
+    };
+    const trades = [...liveTrades].filter((t) => {
+      const d = nyDateKey(t.created_at);
+      return (!simStartDate || d >= simStartDate) && (!simEndDate || d <= simEndDate) && (simStrategy === 'ALL' || t.strategy === simStrategy) && (simOptionType === 'ALL' || t.option_type === simOptionType);
+    }).sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    let balance = initial, peak = initial, protectedInvestment = initial * pct, maxDrawdown = 0, investedSum = 0;
+    const rows = trades.map((t, index) => {
+      let investment = 0;
+      let note = '';
+      if (simMode === 'fixed') investment = Math.min(fixedAmount, balance);
+      if (simMode === 'compound') investment = balance * pct;
+      if (simMode === 'protected') {
+        if (balance < protectedInvestment) {
+          protectedInvestment = balance * pct;
+          note = 'Reajuste por reserva agotada';
+        }
+        investment = protectedInvestment;
+      }
+      const before = balance;
+      const pnl = investment * (Number(t.result_pct || 0) / 100);
+      balance = Math.max(0, balance + pnl);
+      investedSum += investment;
+      if (balance > peak) {
+        peak = balance;
+        if (simMode === 'protected') protectedInvestment = peak * pct;
+        if (!note && simMode === 'protected') note = 'Nuevo máximo';
+      } else if (simMode === 'protected' && !note) note = 'Monto protegido';
+      const dd = peak > 0 ? ((peak - balance) / peak) * 100 : 0;
+      maxDrawdown = Math.max(maxDrawdown, dd);
+      return { ...t, index: index + 1, before, investment, pnl, balance, drawdown: dd, note };
+    });
+    const finalBalance = rows.length ? rows[rows.length - 1].balance : initial;
+    return { initial, trades, rows, finalBalance, profit: finalBalance - initial, returnPct: initial > 0 ? ((finalBalance - initial) / initial) * 100 : 0, maxDrawdown, avgInvestment: rows.length ? investedSum / rows.length : 0 };
+  }, [liveTrades, simCapital, simMode, simFixedAmount, simPercent, simStrategy, simOptionType, simStartDate, simEndDate]);
+
+  const capitalGainLoss = useMemo(() => {
+    const totalGains = capitalSimulation.rows.reduce((sum, row) => sum + (row.pnl > 0 ? row.pnl : 0), 0);
+    const totalLosses = capitalSimulation.rows.reduce((sum, row) => sum + (row.pnl < 0 ? Math.abs(row.pnl) : 0), 0);
+    const net = totalGains - totalLosses;
+    const gross = totalGains + totalLosses;
+    const ratio = gross > 0 ? (totalGains / gross) * 100 : 0;
+    return { totalGains, totalLosses, net, ratio };
+  }, [capitalSimulation.rows]);
 
   async function loadPauseStatus(userId: string, showLoading = false) {
     if (showLoading) setPauseStatusLoading(true);
@@ -924,6 +1165,12 @@ return normalized;
     }, 1000);
 
     return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    loadTradeJournal(true);
+    loadTradeStrategies();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1993,11 +2240,144 @@ return normalized;
                   borderRadius: 24,
                   overflow: 'hidden',
                   display: 'block',
+                  position: 'relative',
                   background: '#000',
                   boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 0 1px rgba(96,165,250,0.06), 0 20px 40px rgba(0,0,0,0.28)',
                 }}
               >
-                {activeTab === 'biblioteca' && activeLibraryVideo ? (
+                {showTradeJournal ? (
+                  <div style={{ width: '100%', height: '100%', overflow: 'hidden', background: 'linear-gradient(180deg,#061326 0%,#031020 100%)', color: '#fff', padding: 18, display:'flex', flexDirection:'column' }}>
+                    <div style={{ marginBottom: 14 }}>
+                      <div><div style={{ color: '#a855f7', fontSize: 12, fontWeight: 900, letterSpacing: 1.2 }}>BITÁCORA DE TRADES</div><div style={{ fontSize: 24, fontWeight: 950 }}>{tradeJournalMode==='EDUCATIONAL'?'Escenario estadístico educacional':'Estadísticas acumuladas de estrategias en vivo'}</div></div>
+                    </div>
+                    {tradeJournalError ? <div className="notice" style={{ marginBottom: 12 }}>{tradeJournalError}</div> : null}
+                    <div style={{display:'flex',alignItems:'stretch',justifyContent:'space-between',gap:12,marginBottom:14}}>
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',borderRadius:14,overflow:'hidden',border:'1px solid rgba(114,161,216,.25)',background:'rgba(4,13,28,.76)',minWidth:390}}>
+                        {[{key:'resumen' as const,label:'RESUMEN E HISTORIAL'},{key:'simulador' as const,label:'SIMULADOR DE CAPITAL'}].map((tab,index)=>{const active=tradeJournalView===tab.key;return <button key={tab.key} type="button" onClick={()=>{setTradeJournalView(tab.key);if(tab.key==='simulador')setShowTradeForm(false);}} style={{minHeight:48,padding:'0 18px',border:0,borderRight:index===0?'1px solid rgba(114,161,216,.18)':0,background:active?'linear-gradient(180deg,#246fe8,#185ac6)':'transparent',color:active?'#fff':'rgba(255,255,255,.84)',fontSize:12.5,fontWeight:900,cursor:'pointer'}}>{tab.label}</button>})}
+                      </div>
+                      <div style={{display:'flex',gap:8,alignItems:'stretch',flexWrap:'wrap',justifyContent:'flex-end'}}>
+                        {isChatAdmin ? <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 10px',minHeight:48,borderRadius:12,border:'1px solid rgba(96,165,250,.22)',background:'rgba(4,13,28,.76)'}}><span style={{fontSize:11,fontWeight:950,color:tradeJournalMode==='REAL'?'#60a5fa':'rgba(255,255,255,.52)'}}>REAL</span><button type="button" aria-label="Cambiar modo de bitácora" onClick={()=>setTradeMode(tradeJournalMode==='REAL'?'EDUCATIONAL':'REAL')} style={{width:46,height:27,border:0,borderRadius:999,padding:3,cursor:'pointer',background:tradeJournalMode==='EDUCATIONAL'?'#22c55e':'#2563eb',boxShadow:'inset 0 0 0 1px rgba(255,255,255,.15)',transition:'all .18s ease'}}><span style={{display:'block',width:21,height:21,borderRadius:'50%',background:'#fff',boxShadow:'0 2px 5px rgba(0,0,0,.35)',transform:tradeJournalMode==='EDUCATIONAL'?'translateX(19px)':'translateX(0)',transition:'transform .18s ease'}}/></button><span style={{fontSize:11,fontWeight:950,color:tradeJournalMode==='EDUCATIONAL'?'#4ade80':'rgba(255,255,255,.52)'}}>EDUCATIONAL</span></div> : null}
+                        {isChatAdmin && tradeJournalView==='resumen' && tradeJournalMode==='REAL' ? <button type="button" className="btn btn-secondary" style={{minHeight:48,padding:'10px 16px',fontSize:14,fontWeight:950,border:'1px solid rgba(77,145,255,.48)',background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))'}} onClick={() => setShowTradeForm((v) => !v)}>+ Registrar trade</button> : null}
+                        <button type="button" className="btn btn-secondary" style={{minHeight:48,padding:'10px 16px',fontSize:14,fontWeight:950,border:'1px solid rgba(77,145,255,.48)',background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))'}} onClick={() => setShowTradeJournal(false)}>← Volver al video</button>
+                      </div>
+                    </div>
+                    {tradeJournalMode === 'EDUCATIONAL' && isChatAdmin ? <div style={{display:'grid',gridTemplateColumns:'repeat(6,minmax(105px,1fr)) auto',gap:9,alignItems:'end',margin:'-4px 0 12px',padding:'11px 12px',borderRadius:12,border:'1px solid rgba(34,197,94,.22)',background:'rgba(5,35,45,.72)'}}>{[
+                      ['CANTIDAD TRADES',educationalTradeCount,setEducationalTradeCount],['WIN RATE %',educationalWinRate,setEducationalWinRate],['GANANCIA MÍN. %',educationalGainMin,setEducationalGainMin],['GANANCIA MÁX. %',educationalGainMax,setEducationalGainMax],['PÉRDIDA MÍN. %',educationalLossMin,setEducationalLossMin],['PÉRDIDA MÁX. %',educationalLossMax,setEducationalLossMax]
+                    ].map(([label,value,setter]:any)=><label key={label} style={{fontSize:10,fontWeight:950,color:'rgba(255,255,255,.72)'}}>{label}<input value={value} onChange={e=>setter(e.target.value)} inputMode={label==='CANTIDAD TRADES'?'numeric':'decimal'} style={{width:'100%',marginTop:6,padding:'10px 11px',borderRadius:9,border:'1px solid rgba(96,165,250,.24)',background:'#07172a',color:'#fff',fontSize:14,fontWeight:900}}/></label>)}<button type="button" disabled={educationalWorking} onClick={regenerateEducationalTrades} style={{minHeight:39,padding:'9px 14px',borderRadius:9,border:'1px solid rgba(34,197,94,.46)',background:'linear-gradient(180deg,#16a34a,#15803d)',color:'#fff',fontSize:11.5,fontWeight:950,cursor:educationalWorking?'wait':'pointer',whiteSpace:'nowrap',opacity:educationalWorking ? .7 : 1}}>{educationalWorking?'GENERANDO...':`REGENERAR ${formatPortalNumber(Math.max(0,Math.round(Number(educationalTradeCount)||0)))}`}</button></div> : null}
+                    {tradeJournalView === 'resumen' ? <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column'}}>
+                    <div style={{ display: 'grid', gridTemplateColumns: showTradeForm && isChatAdmin ? 'repeat(5,minmax(0,1fr)) 350px' : 'repeat(6,minmax(0,1fr))', gap: showTradeForm && isChatAdmin ? 12 : 9, marginBottom: 14 }}>
+                      {[
+                        ['TOTAL TRADES', formatPortalNumber(tradeStats.total), '#c084fc'], ['TRADES EXITOSOS', formatPortalNumber(tradeStats.winners), '#4ade80'], ['NO EXITOSOS', formatPortalNumber(tradeStats.losers), '#f87171'],
+                        ['WIN RATE GLOBAL', `${formatPortalNumber(tradeStats.winRate, 1)}%`, '#60a5fa'], ['RESULTADO ACUMULADO', tradePct(tradeStats.sum), '#fbbf24'], ['PROMEDIO / TRADE', tradePct(tradeStats.avg), '#60a5fa']
+                      ].map(([label,value,color]) => <div key={String(label)} style={{ border:'1px solid rgba(96,165,250,.15)', borderRadius:12, padding:'12px 13px', background:'rgba(6,24,47,.78)' }}><div style={{ color:String(color), fontSize:10, fontWeight:900 }}>{label}</div><div style={{ fontSize:25, fontWeight:950, marginTop:7 }}>{value}</div></div>)}
+                    </div>
+                    <div style={{ display:'grid', gridTemplateColumns: showTradeForm && isChatAdmin ? 'minmax(0,1fr) 350px' : '1fr', gap:12, flex:1, minHeight:0 }}>
+                      <div style={{ minWidth:0, minHeight:0, display:'flex', flexDirection:'column' }}>
+                        <div style={{ border:'1px solid rgba(96,165,250,.15)', borderRadius:14, overflow:'hidden', background:'rgba(3,16,32,.72)', marginBottom:12 }}>
+                          <div style={{ padding:'12px 14px', fontWeight:950, fontSize:15 }}>RENDIMIENTO POR ESTRATEGIA</div>
+                          <div style={{ display:'grid', gridTemplateColumns:'1.7fr .55fr .65fr .75fr .8fr 1fr 1fr 1fr', gap:8, padding:'10px 14px', fontSize:14, opacity:.78, fontWeight:850 }}><span>Estrategia</span><span>Trades</span><span>Exitosos</span><span>No exitosos</span><span>Win Rate</span><span>Resultado</span><span>Prom. exitoso</span><span>Prom. no exitoso</span></div>
+                          {tradeStats.byStrategy.map((row) => <div key={row.strategy} style={{ display:'grid', gridTemplateColumns:'1.7fr .55fr .65fr .75fr .8fr 1fr 1fr 1fr', gap:8, alignItems:'center', padding:'12px 14px', borderTop:'1px solid rgba(148,163,184,.10)', fontSize:16 }}><strong>{row.strategy}</strong><b>{formatPortalNumber(row.total)}</b><b style={{color:'#4ade80'}}>{formatPortalNumber(row.wins)}</b><b style={{color:'#f87171'}}>{formatPortalNumber(row.losses)}</b><b>{formatPortalNumber(row.winRate, 1)}%</b><b style={{color:row.result>=0?'#4ade80':'#f87171'}}>{tradePct(row.result)}</b><b style={{color:'#4ade80'}}>{tradePct(row.avgWin)}</b><b style={{color:'#f87171'}}>{tradePct(row.avgLoss)}</b></div>)}
+                        </div>
+                        <div style={{ border:'1px solid rgba(96,165,250,.15)', borderRadius:14, overflow:'hidden', background:'rgba(3,16,32,.72)', flex:1, minHeight:0, display:'flex', flexDirection:'column' }}>
+                          <div style={{ padding:'12px 14px', fontWeight:950, fontSize:15, display:'flex', justifyContent:'space-between', gap:10 }}><span>TRADES RECIENTES</span><span style={{fontSize:13,opacity:.7,fontWeight:750}}>{liveTrades.length} trades · desplaza para ver más</span></div>
+                          <div style={{ display:'grid', gridTemplateColumns:'1.45fr .55fr .6fr 1.2fr .65fr .75fr 32px', gap:8, padding:'10px 14px', fontSize:14, opacity:.78, fontWeight:850, background:'rgba(7,23,42,.96)' }}><span>Fecha / Hora</span><span>Ticker</span><span>Tipo</span><span>Estrategia</span><span>Resultado</span><span>Estado</span><span></span></div>
+                          <div style={{flex:1,minHeight:0,overflowY:'auto',scrollbarGutter:'stable'}}>
+                          {tradeJournalLoading ? <div style={{padding:18,opacity:.7}}>Cargando bitácora...</div> : liveTrades.length ? liveTrades.map((trade) => <div key={trade.id} style={{ display:'grid', gridTemplateColumns:'1.45fr .55fr .6fr 1.2fr .65fr .75fr 32px', gap:8, alignItems:'center', padding:'11px 14px', borderTop:'1px solid rgba(148,163,184,.10)', fontSize:16 }}><span>{new Date(trade.created_at).toLocaleString('es-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit'})} NY</span><b>{trade.ticker}</b><b style={{color:trade.option_type==='CALL'?'#4ade80':'#f87171'}}>{trade.option_type}</b><span>{trade.strategy}</span><b style={{color:Number(trade.result_pct)>0?'#4ade80':'#f87171'}}>{tradePct(Number(trade.result_pct))}</b><span>{Number(trade.result_pct)>0?'🟢 Exitoso':'🔴 No exitoso'}</span>{isChatAdmin && tradeJournalMode==='REAL'?<button onClick={()=>deleteTradeJournalEntry(trade.id)} title="Eliminar" style={{background:'transparent',border:0,color:'#94a3b8',cursor:'pointer'}}>×</button>:<span/>}</div>) : <div style={{padding:18,opacity:.7}}>Aún no hay trades registrados.</div>}
+                          </div>
+                        </div>
+                      </div>
+                      {showTradeForm && isChatAdmin ? <div style={{display:'grid',gap:12,alignSelf:'start'}}>
+                      <div style={{ border:'1px solid rgba(96,165,250,.18)', borderRadius:14, padding:14, background:'linear-gradient(180deg,rgba(20,39,64,.98),rgba(8,25,45,.98))' }}>
+                        <div style={{fontWeight:950,fontSize:16}}>REGISTRAR NUEVO TRADE</div><div style={{fontSize:11,opacity:.72,marginBottom:13}}>Registra únicamente el resultado porcentual.</div>
+                        <label style={{fontSize:11,fontWeight:850}}>Ticker *</label><input value={tradeForm.ticker} onChange={(e)=>setTradeForm({...tradeForm,ticker:e.target.value.toUpperCase()})} placeholder="Ej: SPY, QQQ, NVDA" style={{width:'100%',margin:'6px 0 12px',padding:'11px',borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}} />
+                        <label style={{fontSize:11,fontWeight:850}}>Tipo *</label><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,margin:'6px 0 12px'}}>{(['CALL','PUT'] as TradeOptionType[]).map(type=><button key={type} onClick={()=>setTradeForm({...tradeForm,optionType:type})} style={{padding:11,borderRadius:9,border:`1px solid ${type==='CALL'?'rgba(74,222,128,.55)':'rgba(248,113,113,.55)'}`,background:tradeForm.optionType===type?(type==='CALL'?'rgba(34,197,94,.16)':'rgba(239,68,68,.16)'):'transparent',color:type==='CALL'?'#4ade80':'#f87171',fontWeight:950,cursor:'pointer'}}>{type}</button>)}</div>
+                        <label style={{fontSize:11,fontWeight:850}}>Estrategia *</label><select value={tradeForm.strategy} onChange={(e)=>setTradeForm({...tradeForm,strategy:e.target.value as TradeStrategy})} style={{width:'100%',margin:'6px 0 12px',padding:'11px',borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}}>{tradeStrategies.map(x=><option key={x}>{x}</option>)}</select>
+                        <label style={{fontSize:11,fontWeight:850}}>Resultado % *</label><div style={{position:'relative'}}><input value={tradeForm.resultPct} onChange={(e)=>setTradeForm({...tradeForm,resultPct:e.target.value})} placeholder="Ej: +12.5 o -18.7" inputMode="decimal" style={{width:'100%',margin:'6px 0 5px',padding:'11px 34px 11px 11px',borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}}/><span style={{position:'absolute',right:12,top:17,opacity:.7}}>%</span></div><div style={{fontSize:10,color:'#94a3b8',marginBottom:15}}>Usa + para ganancias y - para pérdidas.</div>
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1.2fr',gap:8}}><button className="btn" onClick={()=>setShowTradeForm(false)}>Cancelar</button><button className="btn btn-primary" disabled={savingTrade} onClick={saveTradeJournalEntry}>{savingTrade?'Guardando...':'Guardar trade'}</button></div>
+                        <div style={{fontSize:10,opacity:.6,marginTop:10}}>Fecha y hora se guardan automáticamente.</div>
+                      </div>
+                      <div style={{border:'1px solid rgba(96,165,250,.18)',borderRadius:14,padding:14,background:'rgba(3,16,32,.86)'}}>
+                        <div style={{fontWeight:950,fontSize:15,marginBottom:10}}>TOTALES</div>
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1.15fr',gap:10,alignItems:'center'}}>
+                          <div style={{display:'grid',gap:8}}>
+                            <div><div style={{fontSize:10,fontWeight:900,opacity:.68}}>TOTAL GAINS</div><div style={{fontSize:19,fontWeight:950,color:'#4ade80'}}>{formatPortalMoney(capitalGainLoss.totalGains,true)}</div></div>
+                            <div><div style={{fontSize:10,fontWeight:900,opacity:.68}}>TOTAL LOSSES</div><div style={{fontSize:19,fontWeight:950,color:'#f87171'}}>-{formatPortalMoney(capitalGainLoss.totalLosses)}</div></div>
+                            <div><div style={{fontSize:10,fontWeight:900,opacity:.68}}>NET GAIN / LOSS</div><div style={{fontSize:19,fontWeight:950,color:capitalGainLoss.net>=0?'#4ade80':'#f87171'}}>{formatPortalMoney(capitalGainLoss.net,true)}</div></div>
+                          </div>
+                          <div style={{position:'relative',height:105,display:'grid',placeItems:'end center'}}>
+                            <svg viewBox="0 0 170 95" style={{position:'absolute',inset:0,width:'100%',height:'100%',overflow:'visible'}} aria-hidden="true">
+                              <path d="M15 85 A70 70 0 0 1 155 85" pathLength="100" fill="none" stroke="#dc2626" strokeWidth="18" strokeLinecap="butt"/>
+                              <path d="M15 85 A70 70 0 0 1 155 85" pathLength="100" fill="none" stroke="#22c55e" strokeWidth="18" strokeLinecap="butt" strokeDasharray={`${Math.max(0,Math.min(100,capitalGainLoss.ratio))} ${100-Math.max(0,Math.min(100,capitalGainLoss.ratio))}`}/>
+                            </svg>
+                            <div style={{position:'relative',zIndex:1,textAlign:'center',paddingBottom:2}}><div style={{fontSize:10,fontWeight:900,opacity:.72}}>GAIN/LOSS RATIO</div><div style={{fontSize:26,fontWeight:950,lineHeight:1.05}}>{formatPortalNumber(capitalGainLoss.ratio,1)}%</div></div>
+                          </div>
+                        </div>
+                        <div style={{fontSize:9.5,opacity:.55,marginTop:8}}>Calculado con los parámetros activos del Simulador de Capital.</div>
+                      </div>
+                      </div> : null}
+                    </div>
+                    </div> : (
+                      <div style={{display:'grid',gap:12,alignContent:'start'}}>
+                        <div style={{border:'1px solid rgba(96,165,250,.18)',borderRadius:14,padding:14,background:'rgba(3,16,32,.72)'}}>
+                          <div style={{fontWeight:950,fontSize:18,marginBottom:14}}>CONFIGURAR SIMULACIÓN</div>
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}}>
+                            <label style={{fontSize:16,fontWeight:950}}>Capital inicial $<input value={simCapital} onChange={e=>setSimCapital(e.target.value)} inputMode="decimal" style={{width:'100%',marginTop:8,padding:'15px 13px',fontSize:17,fontWeight:900,borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}}/></label>
+                            {simMode==='fixed'?<label style={{fontSize:16,fontWeight:950}}>Monto por trade $<input value={simFixedAmount} onChange={e=>setSimFixedAmount(e.target.value)} inputMode="decimal" style={{width:'100%',marginTop:8,padding:'15px 13px',fontSize:17,fontWeight:900,borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}}/></label>:<label style={{fontSize:16,fontWeight:950}}>% del capital por trade<input value={simPercent} onChange={e=>setSimPercent(e.target.value)} inputMode="decimal" style={{width:'100%',marginTop:8,padding:'15px 13px',fontSize:17,fontWeight:900,borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}}/></label>}
+                            <label style={{fontSize:16,fontWeight:950}}>Desde<input type="date" value={simStartDate} onChange={e=>setSimStartDate(e.target.value)} style={{width:'100%',marginTop:8,padding:'15px 13px',fontSize:16,fontWeight:850,borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}}/></label>
+                            <label style={{fontSize:16,fontWeight:950}}>Hasta<input type="date" value={simEndDate} onChange={e=>setSimEndDate(e.target.value)} style={{width:'100%',marginTop:8,padding:'15px 13px',fontSize:16,fontWeight:850,borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}}/></label>
+                          </div>
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginTop:12}}>
+                            {[['fixed','Monto fijo','Misma cantidad en cada trade'],['protected','% protegido','Sube con nuevos máximos; mantiene entrada durante retrocesos'],['compound','Compuesto puro','Recalcula el % sobre el balance después de cada trade']].map(([mode,title,desc])=><button key={mode} onClick={()=>setSimMode(mode as any)} style={{textAlign:'left',padding:'13px 14px',borderRadius:10,border:`1px solid ${simMode===mode?'#60a5fa':'rgba(148,163,184,.20)'}`,background:simMode===mode?'rgba(59,130,246,.14)':'rgba(7,23,42,.7)',color:'#fff',cursor:'pointer'}}><b style={{fontSize:15}}>{title}</b><div style={{fontSize:12,opacity:.76,marginTop:5,lineHeight:1.3}}>{desc}</div></button>)}
+                          </div>
+                          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:10}}>
+                            <select value={simStrategy} onChange={e=>setSimStrategy(e.target.value as any)} style={{padding:'12px 11px',fontSize:14,fontWeight:750,borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}}><option value="ALL">Todas las estrategias</option>{tradeStrategies.map(x=><option key={x}>{x}</option>)}</select>
+                            <select value={simOptionType} onChange={e=>setSimOptionType(e.target.value as any)} style={{padding:'12px 11px',fontSize:14,fontWeight:750,borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}}><option value="ALL">CALL + PUT</option><option>CALL</option><option>PUT</option></select>
+                          </div>
+                        </div>
+                        <div style={{display:'grid',gridTemplateColumns:'repeat(6,minmax(0,1fr))',gap:9}}>{[
+                          ['CAPITAL INICIAL',formatPortalMoney(capitalSimulation.initial)],['CAPITAL FINAL',formatPortalMoney(capitalSimulation.finalBalance)],['GANANCIA / PÉRDIDA',formatPortalMoney(capitalSimulation.profit,true)],['RETORNO',tradePct(capitalSimulation.returnPct)],['TRADES',formatPortalNumber(capitalSimulation.rows.length)],['MÁX. DRAWDOWN',`${formatPortalNumber(capitalSimulation.maxDrawdown,1)}%`]
+                        ].map(([l,v])=><div key={String(l)} style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:12,padding:'12px 13px',background:'rgba(6,24,47,.78)'}}><div style={{fontSize:11,fontWeight:900,opacity:.72}}>{l}</div><div style={{fontSize:27,fontWeight:950,marginTop:7,lineHeight:1.05}}>{v}</div></div>)}</div>
+                        <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.35fr) minmax(330px,.65fr)',gap:12,alignItems:'stretch'}}>
+                          <div style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:14,padding:14,background:'rgba(3,16,32,.72)',minHeight:230}}>
+                            <div style={{display:'grid',gridTemplateColumns:'auto repeat(4,minmax(105px,1fr)) auto',gap:14,alignItems:'center',marginBottom:12}}>
+                              <div><div style={{fontWeight:950,fontSize:15}}>CURVA DE CAPITAL</div><div style={{fontSize:10,opacity:.6,marginTop:3}}>Evolución del balance después de cada trade</div></div>
+                              <div><div style={{fontSize:9.5,fontWeight:900,opacity:.62}}>TRADES EJECUTADOS</div><div style={{fontSize:17,fontWeight:950,marginTop:3}}>{formatPortalNumber(capitalSimulation.rows.length)} / {formatPortalNumber(capitalSimulation.trades.length)}</div></div>
+                              <div><div style={{fontSize:9.5,fontWeight:900,opacity:.62}}>MEJOR BALANCE</div><div style={{fontSize:17,fontWeight:950,marginTop:3}}>{formatPortalMoney(Math.max(capitalSimulation.initial,...capitalSimulation.rows.map(r=>r.balance)))}</div></div>
+                              <div><div style={{fontSize:9.5,fontWeight:900,opacity:.62}}>INVERSIÓN PROMEDIO</div><div style={{fontSize:17,fontWeight:950,marginTop:3}}>{formatPortalMoney(capitalSimulation.avgInvestment)}</div></div>
+                              <div><div style={{fontSize:9.5,fontWeight:900,opacity:.62}}>MÁX. DRAWDOWN</div><div style={{fontSize:17,fontWeight:950,marginTop:3,color:capitalSimulation.maxDrawdown>0?'#fbbf24':'#fff'}}>{formatPortalNumber(capitalSimulation.maxDrawdown,1)}%</div></div>
+                              <div style={{textAlign:'right'}}><div style={{fontSize:11,opacity:.68,fontWeight:900}}>CAPITAL FINAL</div><div style={{fontSize:29,fontWeight:950,color:capitalSimulation.profit>=0?'#4ade80':'#f87171'}}>{formatPortalMoney(capitalSimulation.finalBalance)}</div></div>
+                            </div>
+                            {capitalSimulation.rows.length ? (()=>{const vals=[capitalSimulation.initial,...capitalSimulation.rows.map(r=>r.balance)];const min=Math.min(...vals),max=Math.max(...vals);const span=Math.max(1,max-min);const pts=vals.map((v,i)=>`${(i/(Math.max(1,vals.length-1)))*100},${92-((v-min)/span)*76}`).join(' ');const hoverIndex=capitalCurveHoverIndex===null?null:Math.max(0,Math.min(vals.length-1,capitalCurveHoverIndex));const hoverValue=hoverIndex===null?null:vals[hoverIndex];const hoverRow=hoverIndex && hoverIndex>0?capitalSimulation.rows[hoverIndex-1]:null;const hoverX=hoverIndex===null?0:(hoverIndex/Math.max(1,vals.length-1))*100;const hoverY=hoverValue===null?0:92-((hoverValue-min)/span)*76;return <div style={{height:150,position:'relative',cursor:capitalCurveDragging?'grabbing':'crosshair',userSelect:'none',touchAction:'none'}} onPointerLeave={()=>{if(!capitalCurveDragging)setCapitalCurveHoverIndex(null);}} onPointerDown={(e)=>{e.currentTarget.setPointerCapture(e.pointerId);setCapitalCurveDragging(true);const rect=e.currentTarget.getBoundingClientRect();const ratio=Math.max(0,Math.min(1,(e.clientX-rect.left)/Math.max(1,rect.width)));setCapitalCurveHoverIndex(Math.round(ratio*(vals.length-1)));}} onPointerMove={(e)=>{if(e.pointerType!=='mouse'&&!capitalCurveDragging)return;const rect=e.currentTarget.getBoundingClientRect();const ratio=Math.max(0,Math.min(1,(e.clientX-rect.left)/Math.max(1,rect.width)));setCapitalCurveHoverIndex(Math.round(ratio*(vals.length-1)));}} onPointerUp={(e)=>{if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);setCapitalCurveDragging(false);}} onPointerCancel={()=>setCapitalCurveDragging(false)}><svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{width:'100%',height:'100%',overflow:'visible',pointerEvents:'none'}}><line x1="0" y1="92" x2="100" y2="92" stroke="rgba(148,163,184,.18)" strokeWidth=".5"/><line x1="0" y1="54" x2="100" y2="54" stroke="rgba(148,163,184,.10)" strokeWidth=".5"/><line x1="0" y1="16" x2="100" y2="16" stroke="rgba(148,163,184,.10)" strokeWidth=".5"/><polyline points={pts} fill="none" stroke={capitalSimulation.profit>=0?'#22c55e':'#ef4444'} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round"/>{hoverIndex!==null?<line x1={hoverX} y1="10" x2={hoverX} y2="92" stroke="rgba(255,255,255,.28)" strokeWidth=".35" vectorEffect="non-scaling-stroke"/>:null}</svg>{hoverIndex!==null?<div style={{position:'absolute',left:`${hoverX}%`,top:`${hoverY}%`,width:9,height:9,borderRadius:'50%',background:capitalSimulation.profit>=0?'#22c55e':'#ef4444',boxShadow:`0 0 0 3px ${capitalSimulation.profit>=0?'rgba(34,197,94,.18)':'rgba(239,68,68,.18)'}`,transform:'translate(-50%,-50%)',pointerEvents:'none',zIndex:2}}/>:null}{hoverIndex!==null&&hoverValue!==null?<div style={{position:'absolute',top:6,left:`${Math.min(78,Math.max(2,hoverX))}%`,transform:hoverX>70?'translateX(-100%)':'translateX(0)',pointerEvents:'none',minWidth:190,padding:'11px 13px',borderRadius:10,border:'1px solid rgba(96,165,250,.35)',background:'rgba(3,13,28,.96)',boxShadow:'0 10px 30px rgba(0,0,0,.35)',fontSize:13,lineHeight:1.45,zIndex:3}}><div style={{fontWeight:950,color:'#fff',fontSize:14}}>{hoverIndex===0?'Capital inicial':`Trade #${formatPortalNumber(hoverIndex)}`}</div><div style={{marginTop:5}}>Balance: <strong style={{fontSize:14}}>{formatPortalMoney(hoverValue)}</strong></div>{hoverRow?<><div>P/L: <strong style={{color:hoverRow.pnl>=0?'#4ade80':'#f87171',fontSize:14}}>{formatPortalMoney(hoverRow.pnl,true)}</strong></div><div>Resultado: <strong style={{color:Number(hoverRow.result_pct)>=0?'#4ade80':'#f87171',fontSize:14}}>{tradePct(Number(hoverRow.result_pct))}</strong></div></>:null}</div>:null}<div style={{position:'absolute',left:0,bottom:-2,fontSize:9,opacity:.55}}>Inicio {formatPortalMoney(capitalSimulation.initial)}</div><div style={{position:'absolute',right:0,bottom:-2,fontSize:9,opacity:.55}}>{formatPortalNumber(capitalSimulation.rows.length)} trades</div></div>})() : <div style={{height:150,display:'grid',placeItems:'center',opacity:.65}}>No hay trades para graficar.</div>}
+                          </div>
+                          <div style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:14,padding:16,background:'rgba(3,16,32,.72)',display:'grid',gridTemplateColumns:'1fr 1.15fr',gap:14,alignItems:'center'}}>
+                            <div>
+                              <div style={{fontWeight:950,fontSize:15,marginBottom:12}}>TOTALES</div>
+                              <div style={{display:'grid',gap:10}}>
+                                <div><div style={{fontSize:10.5,fontWeight:900,opacity:.68}}>TOTAL GAINS</div><div style={{fontSize:21,fontWeight:950,color:'#4ade80'}}>{formatPortalMoney(capitalGainLoss.totalGains,true)}</div></div>
+                                <div><div style={{fontSize:10.5,fontWeight:900,opacity:.68}}>TOTAL LOSSES</div><div style={{fontSize:21,fontWeight:950,color:'#f87171'}}>-{formatPortalMoney(capitalGainLoss.totalLosses)}</div></div>
+                                <div><div style={{fontSize:10.5,fontWeight:900,opacity:.68}}>NET GAIN / LOSS</div><div style={{fontSize:21,fontWeight:950,color:capitalGainLoss.net>=0?'#4ade80':'#f87171'}}>{formatPortalMoney(capitalGainLoss.net,true)}</div></div>
+                              </div>
+                            </div>
+                            <div style={{position:'relative',height:145,display:'grid',placeItems:'end center'}}>
+                              <svg viewBox="0 0 170 100" style={{position:'absolute',inset:0,width:'100%',height:'100%',overflow:'visible'}} aria-hidden="true">
+                                <path d="M15 88 A70 70 0 0 1 155 88" pathLength="100" fill="none" stroke="#dc2626" strokeWidth="19" strokeLinecap="butt"/>
+                                <path d="M15 88 A70 70 0 0 1 155 88" pathLength="100" fill="none" stroke="#22c55e" strokeWidth="19" strokeLinecap="butt" strokeDasharray={`${Math.max(0,Math.min(100,capitalGainLoss.ratio))} ${100-Math.max(0,Math.min(100,capitalGainLoss.ratio))}`}/>
+                              </svg>
+                              <div style={{position:'relative',zIndex:1,textAlign:'center',paddingBottom:7}}><div style={{fontSize:11,fontWeight:900,opacity:.72}}>GAIN/LOSS RATIO</div><div style={{fontSize:31,fontWeight:950,lineHeight:1.05}}>{formatPortalNumber(capitalGainLoss.ratio,1)}%</div></div>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:14,overflow:'hidden',background:'rgba(3,16,32,.72)',minHeight:0}}>
+                          <div style={{padding:'14px 16px',fontWeight:950,fontSize:17,display:'flex',justifyContent:'space-between',gap:10}}><span>BALANCE TRADE POR TRADE</span><span style={{fontSize:12,opacity:.65,fontWeight:700}}>{formatPortalNumber(capitalSimulation.rows.length)} operaciones · desplaza para ver más</span></div>
+                          <div style={{display:'grid',gridTemplateColumns:'.35fr 1.15fr .55fr .55fr 1.15fr .65fr .8fr .75fr .85fr .75fr',gap:9,padding:'13px 14px',fontSize:15,opacity:.88,fontWeight:950,background:'rgba(7,23,42,.96)'}}><span>#</span><span>Fecha</span><span>Ticker</span><span>Tipo</span><span>Estrategia</span><span>Resultado</span><span>Inversión</span><span>P/L $</span><span>Balance</span><span>Estado</span></div>
+                          <div style={{height:'clamp(360px,43vh,465px)',maxHeight:'465px',overflowY:'auto',scrollbarGutter:'stable'}}>
+                            {capitalSimulation.rows.length?capitalSimulation.rows.map(r=><div key={r.id} style={{display:'grid',gridTemplateColumns:'.35fr 1.15fr .55fr .55fr 1.15fr .65fr .8fr .75fr .85fr .75fr',gap:9,alignItems:'center',padding:'13px 14px',borderTop:'1px solid rgba(148,163,184,.10)',fontSize:16,background:r.pnl>=0?'rgba(34,197,94,.018)':'rgba(239,68,68,.025)'}}><span>{formatPortalNumber(r.index)}</span><span>{new Date(r.created_at).toLocaleDateString('es-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'2-digit'})}</span><b>{r.ticker}</b><b>{r.option_type}</b><span>{r.strategy}</span><b style={{color:Number(r.result_pct)>=0?'#4ade80':'#f87171'}}>{tradePct(Number(r.result_pct))}</b><span>{formatPortalMoney(r.investment)}</span><b style={{color:r.pnl>=0?'#4ade80':'#f87171'}}>{formatPortalMoney(r.pnl,true)}</b><b>{formatPortalMoney(r.balance)}</b><span style={{fontSize:14,fontWeight:950,color:r.pnl>=0?'#4ade80':'#fbbf24'}}>{simMode==='protected'?r.note:(r.pnl>=0?'Ganancia':'Retroceso')}</span></div>):<div style={{padding:18,opacity:.7}}>No hay trades para los filtros y fechas seleccionados.</div>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : activeTab === 'biblioteca'  && activeLibraryVideo ? (
                   <div
                     style={{
                       position: 'relative',
@@ -2227,8 +2607,8 @@ return normalized;
         <aside
           className="panel"
           style={{
-            height: '88vh',
-            minHeight: '88vh',
+            height: '90vh',
+            minHeight: '90vh',
             display: 'flex',
             flexDirection: 'column',
             overflowY: 'auto',
@@ -2243,7 +2623,9 @@ return normalized;
             <>
               {/* RESUMEN SUPERIOR */}
               {isChatAdmin ? (
-                <div
+                <div style={{marginBottom: showAdminMetrics ? 18 : 10}}>
+                  <button type="button" onClick={()=>setShowAdminMetrics(v=>!v)} style={{width:'100%',minHeight:32,border:'1px solid rgba(114,161,216,.20)',borderRadius:10,background:'rgba(4,15,31,.58)',color:'rgba(255,255,255,.78)',fontSize:11.5,fontWeight:850,cursor:'pointer',marginBottom:showAdminMetrics?8:0}}>{showAdminMetrics ? '▴ Ocultar métricas administrativas' : '▾ Mostrar métricas administrativas'}</button>
+                  {showAdminMetrics ? <div
                   style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(4, minmax(0,1fr))',
@@ -2272,6 +2654,7 @@ return normalized;
                       <div style={{ width: '100%', paddingTop: 4, fontSize: 10.5, lineHeight: 1.12, fontWeight: 850, color: 'rgba(255,255,255,.82)', textAlign: 'center', whiteSpace: 'normal', overflowWrap: 'normal', wordBreak: 'normal' }}>{item.label}</div>
                     </div>
                   ))}
+                  </div> : null}
                 </div>
               ) : (
                 <div
@@ -2657,9 +3040,9 @@ return normalized;
                     style={{
                       marginTop: 'auto',
                       display: 'grid',
-                      gridTemplateColumns: isChatAdmin ? '1fr 1fr' : '1fr',
+                      gridTemplateColumns: '1fr',
                       gap: 8,
-                      padding: '10px 11px',
+                      padding: '9px 11px 10px',
                       borderRadius: 13,
                       background: 'linear-gradient(180deg,rgba(10,27,50,.72),rgba(6,18,35,.72))',
                       border: '1px solid rgba(114,161,216,.16)',
@@ -2667,15 +3050,22 @@ return normalized;
                       color: 'rgba(255,255,255,.76)',
                     }}
                   >
-                    <div style={{ display: 'flex', gap: 9, alignItems: 'center' }}>
-                      <span style={{ color: '#4f91ff', display: 'grid', placeItems: 'center' }}><PortalIcon name="support" size={21} /></span>
-                      <div><strong style={{ display: 'block', color: '#fff', marginBottom: 2 }}>Soporte</strong><div>Lead@leadacademy.com.ve</div><div>+1 786 620 4377</div></div>
-                    </div>
                     {isChatAdmin ? (
-                      <button type="button" className="btn btn-secondary" style={{ width: '100%', minHeight: 44, padding: '10px 12px', fontSize: 14.5, fontWeight: 950, letterSpacing: '.1px', border: '1px solid rgba(77,145,255,.48)', background: 'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))', boxShadow: '0 8px 20px rgba(0,0,0,.14)' }} onClick={() => router.push('/gestion-operativa')}>
-                        ⚙ Gestión Operativa
-                      </button>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, minWidth:0 }}>
+                        <button type="button" className="btn btn-secondary" style={{ width:'100%', minWidth:0, minHeight:44, padding:'10px 10px', fontSize:12.5, fontWeight:950, letterSpacing:'.05px', whiteSpace:'nowrap', border:'1px solid rgba(77,145,255,.48)', background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))', boxShadow:'0 8px 20px rgba(0,0,0,.14)' }} onClick={() => { setShowTradeJournal(true); setTradeJournalView('resumen'); setShowTradeForm(false); loadTradeJournal(); }}>
+                          Bitácora de Trades
+                        </button>
+                        <button type="button" className="btn btn-secondary" style={{ width:'100%', minWidth:0, minHeight:44, padding:'10px 10px', fontSize:12.5, fontWeight:950, letterSpacing:'.05px', whiteSpace:'nowrap', border:'1px solid rgba(77,145,255,.48)', background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))', boxShadow:'0 8px 20px rgba(0,0,0,.14)' }} onClick={() => router.push('/gestion-operativa')}>
+                          Gestión Operativa
+                        </button>
+                      </div>
                     ) : null}
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:9, minWidth:0, flexWrap:'wrap', padding:'3px 2px 0', color:'rgba(255,255,255,.84)' }}>
+                      <span style={{ color:'#4f91ff', display:'grid', placeItems:'center', flex:'0 0 auto' }}><PortalIcon name="support" size={20} /></span>
+                      <strong style={{ color:'#fff', fontSize:12.5, flex:'0 0 auto' }}>Soporte</strong>
+                      <span style={{fontSize:11.5,fontWeight:700,opacity:.9}}>Lead@leadacademy.com.ve</span>
+                      <span style={{fontSize:11.5,fontWeight:700,opacity:.9}}>+1 786 620 4377</span>
+                    </div>
                   </div>
                 </>
               ) : activeTab === 'chatLive' ? (
