@@ -724,7 +724,10 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       .eq('key', 'trade_journal_mode')
       .maybeSingle();
 
-    const mode = !modeError && String(modeSetting?.value || '').toUpperCase() === 'EDUCATIONAL' ? 'EDUCATIONAL' : 'REAL';
+    const adminMode = !modeError && String(modeSetting?.value || '').toUpperCase() === 'EDUCATIONAL' ? 'EDUCATIONAL' : 'REAL';
+    // Students always enter the journal in REAL read-only mode.
+    // The global REAL/EDUCATIONAL setting remains an administrator-only concern.
+    const mode: 'REAL' | 'EDUCATIONAL' = isChatAdmin ? adminMode : 'REAL';
     setTradeJournalMode(mode);
 
     const { data, error } = await supabase
@@ -3050,16 +3053,14 @@ return normalized;
                       color: 'rgba(255,255,255,.76)',
                     }}
                   >
-                    {isChatAdmin ? (
-                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, minWidth:0 }}>
-                        <button type="button" className="btn btn-secondary" style={{ width:'100%', minWidth:0, minHeight:44, padding:'10px 10px', fontSize:12.5, fontWeight:950, letterSpacing:'.05px', whiteSpace:'nowrap', border:'1px solid rgba(77,145,255,.48)', background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))', boxShadow:'0 8px 20px rgba(0,0,0,.14)' }} onClick={() => { setShowTradeJournal(true); setTradeJournalView('resumen'); setShowTradeForm(false); loadTradeJournal(); }}>
-                          Bitácora de Trades
-                        </button>
-                        <button type="button" className="btn btn-secondary" style={{ width:'100%', minWidth:0, minHeight:44, padding:'10px 10px', fontSize:12.5, fontWeight:950, letterSpacing:'.05px', whiteSpace:'nowrap', border:'1px solid rgba(77,145,255,.48)', background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))', boxShadow:'0 8px 20px rgba(0,0,0,.14)' }} onClick={() => router.push('/gestion-operativa')}>
-                          Gestión Operativa
-                        </button>
-                      </div>
-                    ) : null}
+                    <div style={{ display:'grid', gridTemplateColumns:isChatAdmin?'1fr 1fr':'1fr', gap:8, minWidth:0 }}>
+                      <button type="button" className="btn btn-secondary" style={{ width:'100%', minWidth:0, minHeight:44, padding:'10px 10px', fontSize:12.5, fontWeight:950, letterSpacing:'.05px', whiteSpace:'nowrap', border:'1px solid rgba(77,145,255,.48)', background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))', boxShadow:'0 8px 20px rgba(0,0,0,.14)' }} onClick={() => { setShowTradeJournal(true); setTradeJournalView('resumen'); setShowTradeForm(false); loadTradeJournal(); }}>
+                        Bitácora de Trades
+                      </button>
+                      {isChatAdmin ? <button type="button" className="btn btn-secondary" style={{ width:'100%', minWidth:0, minHeight:44, padding:'10px 10px', fontSize:12.5, fontWeight:950, letterSpacing:'.05px', whiteSpace:'nowrap', border:'1px solid rgba(77,145,255,.48)', background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))', boxShadow:'0 8px 20px rgba(0,0,0,.14)' }} onClick={() => router.push('/gestion-operativa')}>
+                        Gestión Operativa
+                      </button> : null}
+                    </div>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:9, minWidth:0, flexWrap:'wrap', padding:'3px 2px 0', color:'rgba(255,255,255,.84)' }}>
                       <span style={{ color:'#4f91ff', display:'grid', placeItems:'center', flex:'0 0 auto' }}><PortalIcon name="support" size={20} /></span>
                       <strong style={{ color:'#fff', fontSize:12.5, flex:'0 0 auto' }}>Soporte</strong>
