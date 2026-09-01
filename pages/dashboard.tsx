@@ -2218,6 +2218,20 @@ return normalized;
       : null;
   const isLiveClassActive = Boolean(activeLiveSession) && !classesPaused;
 
+  // Dashboard is a fixed-screen workspace. Prevent only the browser/page scroll
+  // while this page is mounted; internal scroll areas keep working normally.
+  useEffect(() => {
+    const previousBodyOverflowY = document.body.style.overflowY;
+    const previousHtmlOverflowY = document.documentElement.style.overflowY;
+    document.body.style.overflowY = 'hidden';
+    document.documentElement.style.overflowY = 'hidden';
+
+    return () => {
+      document.body.style.overflowY = previousBodyOverflowY;
+      document.documentElement.style.overflowY = previousHtmlOverflowY;
+    };
+  }, []);
+
   return (
     <main
       className="container dashboard"
