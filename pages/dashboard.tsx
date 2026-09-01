@@ -714,21 +714,58 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     }
   }
 
-  async function loadTradeJournal(showLoading = false) {
+  async function loadTradeJournal(showLoading = false, requestedMode?: 'REAL' | 'EDUCATIONAL') {
     if (showLoading) setTradeJournalLoading(true);
     setTradeJournalError(null);
 
-    const { data: modeSetting, error: modeError } = await supabase
-      .from('portal_settings')
-      .select('value')
-      .eq('key', 'trade_journal_mode')
-      .maybeSingle();
+    const { data: authData } = await supabase.auth.getUser();
+    const authUser = authData.user;
+    const actualIsAdmin = isChatAdminEmail(authUser?.email || userEmail);
 
-    const adminMode = !modeError && String(modeSetting?.value || '').toUpperCase() === 'EDUCATIONAL' ? 'EDUCATIONAL' : 'REAL';
-    // Students always enter the journal in REAL read-only mode.
-    // The global REAL/EDUCATIONAL setting remains an administrator-only concern.
-    const mode: 'REAL' | 'EDUCATIONAL' = isChatAdmin ? adminMode : 'REAL';
+    let mode: 'REAL' | 'EDUCATIONAL' = requestedMode || tradeJournalMode;
+
+    if (actualIsAdmin) {
+      const { data: modeSetting, error: modeError } = await supabase
+        .from('portal_settings')
+        .select('value')
+        .eq('key', 'trade_journal_mode')
+        .maybeSingle();
+      mode = !modeError && String(modeSetting?.value || '').toUpperCase() === 'EDUCATIONAL' ? 'EDUCATIONAL' : 'REAL';
+    }
+
     setTradeJournalMode(mode);
+
+    if (!actualIsAdmin && mode === 'EDUCATIONAL') {
+      const [{ data, error }, { data: settings }] = await Promise.all([
+        supabase
+          .from('student_educational_trades')
+          .select('id,ticker,option_type,strategy,result_pct,created_at')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('student_educational_settings')
+          .select('trade_count,win_rate,gain_min,gain_max,loss_min,loss_max')
+          .maybeSingle(),
+      ]);
+
+      if (error) {
+        setTradeJournalError('No se pudo cargar tu escenario EDUCATIONAL personal. Ejecuta primero el SQL de EDUCATIONAL por estudiante.');
+        if (showLoading) setTradeJournalLoading(false);
+        return;
+      }
+
+      if (settings) {
+        setEducationalTradeCount(String(settings.trade_count ?? 1000));
+        setEducationalWinRate(String(settings.win_rate ?? 86));
+        setEducationalGainMin(String(settings.gain_min ?? 12));
+        setEducationalGainMax(String(settings.gain_max ?? 15));
+        setEducationalLossMin(String(settings.loss_min ?? 10));
+        setEducationalLossMax(String(settings.loss_max ?? 20));
+      }
+
+      setLiveTrades((data || []).map((row: any) => ({ ...row, trade_source: 'EDUCATIONAL' })) as LiveTrade[]);
+      if (showLoading) setTradeJournalLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from('live_trade_journal')
@@ -745,17 +782,24 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   }
 
   async function setTradeMode(mode: 'REAL' | 'EDUCATIONAL') {
-    if (!isChatAdmin || mode === tradeJournalMode) return;
+    if (mode === tradeJournalMode) return;
     setTradeJournalError(null);
-    const { error } = await supabase.rpc('admin_set_trade_journal_mode', { p_mode: mode });
-    if (error) { setTradeJournalError(error.message || 'No se pudo cambiar el modo de la bitácora.'); return; }
-    setTradeJournalMode(mode);
     setShowTradeForm(false);
-    await loadTradeJournal(true);
+
+    if (isChatAdmin) {
+      const { error } = await supabase.rpc('admin_set_trade_journal_mode', { p_mode: mode });
+      if (error) { setTradeJournalError(error.message || 'No se pudo cambiar el modo de la bitácora.'); return; }
+      await loadTradeJournal(true, mode);
+      return;
+    }
+
+    // Student mode is personal/local: it never changes the administrator's global mode.
+    setTradeJournalMode(mode);
+    await loadTradeJournal(true, mode);
   }
 
   async function regenerateEducationalTrades() {
-    if (!isChatAdmin || educationalWorking || tradeJournalMode !== 'EDUCATIONAL') return;
+    if (educationalWorking || tradeJournalMode !== 'EDUCATIONAL') return;
     const parse = (v: string) => Number(String(v).replace('%','').replace(',','.'));
     const tradeCount=Math.round(parse(educationalTradeCount)), winRate=parse(educationalWinRate), gainMin=parse(educationalGainMin), gainMax=parse(educationalGainMax), lossMin=parse(educationalLossMin), lossMax=parse(educationalLossMax);
     if (![tradeCount,winRate,gainMin,gainMax,lossMin,lossMax].every(Number.isFinite) || tradeCount < 10 || tradeCount > 10000 || winRate < 0 || winRate > 100 || gainMin <= 0 || gainMax < gainMin || lossMin <= 0 || lossMax < lossMin) {
@@ -763,11 +807,12 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       return;
     }
     setEducationalWorking(true); setTradeJournalError(null);
-    const { error } = await supabase.rpc('admin_regenerate_educational_trades', {
+    const rpcName = isChatAdmin ? 'admin_regenerate_educational_trades' : 'student_regenerate_educational_trades';
+    const { error } = await supabase.rpc(rpcName, {
       p_trade_count: tradeCount, p_win_rate: winRate, p_gain_min: gainMin, p_gain_max: gainMax, p_loss_min: lossMin, p_loss_max: lossMax
     });
     if (error) setTradeJournalError(error.message || 'No se pudieron regenerar los trades educativos.');
-    else await loadTradeJournal(true);
+    else await loadTradeJournal(true, 'EDUCATIONAL');
     setEducationalWorking(false);
   }
 
@@ -2259,12 +2304,12 @@ return normalized;
                         {[{key:'resumen' as const,label:'RESUMEN E HISTORIAL'},{key:'simulador' as const,label:'SIMULADOR DE CAPITAL'}].map((tab,index)=>{const active=tradeJournalView===tab.key;return <button key={tab.key} type="button" onClick={()=>{setTradeJournalView(tab.key);if(tab.key==='simulador')setShowTradeForm(false);}} style={{minHeight:48,padding:'0 18px',border:0,borderRight:index===0?'1px solid rgba(114,161,216,.18)':0,background:active?'linear-gradient(180deg,#246fe8,#185ac6)':'transparent',color:active?'#fff':'rgba(255,255,255,.84)',fontSize:12.5,fontWeight:900,cursor:'pointer'}}>{tab.label}</button>})}
                       </div>
                       <div style={{display:'flex',gap:8,alignItems:'stretch',flexWrap:'wrap',justifyContent:'flex-end'}}>
-                        {isChatAdmin ? <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 10px',minHeight:48,borderRadius:12,border:'1px solid rgba(96,165,250,.22)',background:'rgba(4,13,28,.76)'}}><span style={{fontSize:11,fontWeight:950,color:tradeJournalMode==='REAL'?'#60a5fa':'rgba(255,255,255,.52)'}}>REAL</span><button type="button" aria-label="Cambiar modo de bitácora" onClick={()=>setTradeMode(tradeJournalMode==='REAL'?'EDUCATIONAL':'REAL')} style={{width:46,height:27,border:0,borderRadius:999,padding:3,cursor:'pointer',background:tradeJournalMode==='EDUCATIONAL'?'#22c55e':'#2563eb',boxShadow:'inset 0 0 0 1px rgba(255,255,255,.15)',transition:'all .18s ease'}}><span style={{display:'block',width:21,height:21,borderRadius:'50%',background:'#fff',boxShadow:'0 2px 5px rgba(0,0,0,.35)',transform:tradeJournalMode==='EDUCATIONAL'?'translateX(19px)':'translateX(0)',transition:'transform .18s ease'}}/></button><span style={{fontSize:11,fontWeight:950,color:tradeJournalMode==='EDUCATIONAL'?'#4ade80':'rgba(255,255,255,.52)'}}>EDUCATIONAL</span></div> : null}
+                        <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 10px',minHeight:48,borderRadius:12,border:'1px solid rgba(96,165,250,.22)',background:'rgba(4,13,28,.76)'}}><span style={{fontSize:11,fontWeight:950,color:tradeJournalMode==='REAL'?'#60a5fa':'rgba(255,255,255,.52)'}}>REAL</span><button type="button" aria-label="Cambiar modo de bitácora" onClick={()=>setTradeMode(tradeJournalMode==='REAL'?'EDUCATIONAL':'REAL')} style={{width:46,height:27,border:0,borderRadius:999,padding:3,cursor:'pointer',background:tradeJournalMode==='EDUCATIONAL'?'#22c55e':'#2563eb',boxShadow:'inset 0 0 0 1px rgba(255,255,255,.15)',transition:'all .18s ease'}}><span style={{display:'block',width:21,height:21,borderRadius:'50%',background:'#fff',boxShadow:'0 2px 5px rgba(0,0,0,.35)',transform:tradeJournalMode==='EDUCATIONAL'?'translateX(19px)':'translateX(0)',transition:'transform .18s ease'}}/></button><span style={{fontSize:11,fontWeight:950,color:tradeJournalMode==='EDUCATIONAL'?'#4ade80':'rgba(255,255,255,.52)'}}>EDUCATIONAL</span></div>
                         {isChatAdmin && tradeJournalView==='resumen' && tradeJournalMode==='REAL' ? <button type="button" className="btn btn-secondary" style={{minHeight:48,padding:'10px 16px',fontSize:14,fontWeight:950,border:'1px solid rgba(77,145,255,.48)',background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))'}} onClick={() => setShowTradeForm((v) => !v)}>+ Registrar trade</button> : null}
                         <button type="button" className="btn btn-secondary" style={{minHeight:48,padding:'10px 16px',fontSize:14,fontWeight:950,border:'1px solid rgba(77,145,255,.48)',background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))'}} onClick={() => setShowTradeJournal(false)}>← Volver al video</button>
                       </div>
                     </div>
-                    {tradeJournalMode === 'EDUCATIONAL' && isChatAdmin ? <div style={{display:'grid',gridTemplateColumns:'repeat(6,minmax(105px,1fr)) auto',gap:9,alignItems:'end',margin:'-4px 0 12px',padding:'11px 12px',borderRadius:12,border:'1px solid rgba(34,197,94,.22)',background:'rgba(5,35,45,.72)'}}>{[
+                    {tradeJournalMode === 'EDUCATIONAL' ? <div style={{display:'grid',gridTemplateColumns:'repeat(6,minmax(105px,1fr)) auto',gap:9,alignItems:'end',margin:'-4px 0 12px',padding:'11px 12px',borderRadius:12,border:'1px solid rgba(34,197,94,.22)',background:'rgba(5,35,45,.72)'}}>{[
                       ['CANTIDAD TRADES',educationalTradeCount,setEducationalTradeCount],['WIN RATE %',educationalWinRate,setEducationalWinRate],['GANANCIA MÍN. %',educationalGainMin,setEducationalGainMin],['GANANCIA MÁX. %',educationalGainMax,setEducationalGainMax],['PÉRDIDA MÍN. %',educationalLossMin,setEducationalLossMin],['PÉRDIDA MÁX. %',educationalLossMax,setEducationalLossMax]
                     ].map(([label,value,setter]:any)=><label key={label} style={{fontSize:10,fontWeight:950,color:'rgba(255,255,255,.72)'}}>{label}<input value={value} onChange={e=>setter(e.target.value)} inputMode={label==='CANTIDAD TRADES'?'numeric':'decimal'} style={{width:'100%',marginTop:6,padding:'10px 11px',borderRadius:9,border:'1px solid rgba(96,165,250,.24)',background:'#07172a',color:'#fff',fontSize:14,fontWeight:900}}/></label>)}<button type="button" disabled={educationalWorking} onClick={regenerateEducationalTrades} style={{minHeight:39,padding:'9px 14px',borderRadius:9,border:'1px solid rgba(34,197,94,.46)',background:'linear-gradient(180deg,#16a34a,#15803d)',color:'#fff',fontSize:11.5,fontWeight:950,cursor:educationalWorking?'wait':'pointer',whiteSpace:'nowrap',opacity:educationalWorking ? .7 : 1}}>{educationalWorking?'GENERANDO...':`REGENERAR ${formatPortalNumber(Math.max(0,Math.round(Number(educationalTradeCount)||0)))}`}</button></div> : null}
                     {tradeJournalView === 'resumen' ? <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column'}}>
