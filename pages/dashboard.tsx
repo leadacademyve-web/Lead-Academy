@@ -2293,8 +2293,9 @@ return normalized;
                   boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 0 1px rgba(96,165,250,0.06), 0 20px 40px rgba(0,0,0,0.28)',
                 }}
               >
+                <>
                 {showTradeJournal ? (
-                  <div style={{ width: '100%', height: '100%', overflow: 'hidden', background: 'linear-gradient(180deg,#061326 0%,#031020 100%)', color: '#fff', padding: 18, display:'flex', flexDirection:'column' }}>
+                  <div style={{ position:'absolute', inset:0, zIndex:20, width: '100%', height: '100%', overflow: 'hidden', background: 'linear-gradient(180deg,#061326 0%,#031020 100%)', color: '#fff', padding: 18, display:'flex', flexDirection:'column' }}>
                     <div style={{ marginBottom: 14 }}>
                       <div><div style={{ color: '#a855f7', fontSize: 12, fontWeight: 900, letterSpacing: 1.2 }}>BITÁCORA DE TRADES</div><div style={{ fontSize: 24, fontWeight: 950 }}>{tradeJournalMode==='EDUCATIONAL'?'Escenario estadístico educacional':'Estadísticas acumuladas de estrategias en vivo'}</div></div>
                     </div>
@@ -2425,7 +2426,8 @@ return normalized;
                       </div>
                     )}
                   </div>
-                ) : activeTab === 'biblioteca'  && activeLibraryVideo ? (
+                ) : null}
+                {activeTab === 'biblioteca'  && activeLibraryVideo ? (
                   <div
                     style={{
                       position: 'relative',
@@ -2614,6 +2616,7 @@ return normalized;
                     </div>
                   </div>
                 )}
+                </>
               </div>
             </>
           ) : (
