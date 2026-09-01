@@ -2222,9 +2222,12 @@ return normalized;
     <main
       className="container dashboard"
       style={{
-        maxWidth: '98vw',
-        width: '98vw',
-        paddingInline: '0.5vw',
+        maxWidth: 'none',
+        width: '100%',
+        marginLeft: 0,
+        marginRight: 0,
+        paddingInline: '1vw',
+        boxSizing: 'border-box',
         minHeight: '100vh',
         position: 'relative',
         overflow: 'hidden',
@@ -2366,7 +2369,7 @@ return normalized;
                       </div> : null}
                     </div>
                     </div> : (
-                      <div style={{flex:1,minHeight:0,display:'grid',gap:12,alignContent:'start',overflowY:'auto',overflowX:'hidden',scrollbarGutter:'stable',paddingBottom:2}}>
+                      <div style={{flex:1,minHeight:0,display:'grid',gridTemplateRows:'auto auto auto minmax(0,1fr)',gap:12,alignContent:'stretch',overflow:'hidden',paddingBottom:47}}>
                         <div style={{border:'1px solid rgba(96,165,250,.18)',borderRadius:14,padding:14,background:'rgba(3,16,32,.72)'}}>
                           <div style={{fontWeight:950,fontSize:18,marginBottom:14}}>CONFIGURAR SIMULACIÓN</div>
                           <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}}>
@@ -2416,10 +2419,10 @@ return normalized;
                             </div>
                           </div>
                         </div>
-                        <div style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:14,overflow:'hidden',background:'rgba(3,16,32,.72)',minHeight:0}}>
+                        <div style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:14,overflow:'hidden',background:'rgba(3,16,32,.72)',minHeight:0,display:'flex',flexDirection:'column'}}>
                           <div style={{padding:'14px 16px',fontWeight:950,fontSize:17,display:'flex',justifyContent:'space-between',gap:10}}><span>BALANCE TRADE POR TRADE</span><span style={{fontSize:12,opacity:.65,fontWeight:700}}>{formatPortalNumber(capitalSimulation.rows.length)} operaciones · desplaza para ver más</span></div>
                           <div style={{display:'grid',gridTemplateColumns:'.35fr 1.15fr .55fr .55fr 1.15fr .65fr .8fr .75fr .85fr .75fr',gap:9,padding:'13px 14px',fontSize:15,opacity:.88,fontWeight:950,background:'rgba(7,23,42,.96)'}}><span>#</span><span>Fecha</span><span>Ticker</span><span>Tipo</span><span>Estrategia</span><span>Resultado</span><span>Inversión</span><span>P/L $</span><span>Balance</span><span>Estado</span></div>
-                          <div style={{height:'clamp(300px,34vh,390px)',maxHeight:'390px',overflowY:'auto',overscrollBehavior:'contain',scrollbarGutter:'stable',paddingBottom:1}}>
+                          <div style={{flex:1,minHeight:0,overflowY:'auto',overflowX:'hidden',overscrollBehavior:'contain',scrollbarGutter:'stable',paddingBottom:8}}>
                             {capitalSimulation.rows.length?capitalSimulation.rows.map(r=><div key={r.id} style={{display:'grid',gridTemplateColumns:'.35fr 1.15fr .55fr .55fr 1.15fr .65fr .8fr .75fr .85fr .75fr',gap:9,alignItems:'center',padding:'13px 14px',borderTop:'1px solid rgba(148,163,184,.10)',fontSize:16,background:r.pnl>=0?'rgba(34,197,94,.018)':'rgba(239,68,68,.025)'}}><span>{formatPortalNumber(r.index)}</span><span>{new Date(r.created_at).toLocaleDateString('es-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'2-digit'})}</span><b>{r.ticker}</b><b>{r.option_type}</b><span>{r.strategy}</span><b style={{color:Number(r.result_pct)>=0?'#4ade80':'#f87171'}}>{tradePct(Number(r.result_pct))}</b><span>{formatPortalMoney(r.investment)}</span><b style={{color:r.pnl>=0?'#4ade80':'#f87171'}}>{formatPortalMoney(r.pnl,true)}</b><b>{formatPortalMoney(r.balance)}</b><span style={{fontSize:14,fontWeight:950,color:r.pnl>=0?'#4ade80':'#fbbf24'}}>{simMode==='protected'?r.note:(r.pnl>=0?'Ganancia':'Retroceso')}</span></div>):<div style={{padding:18,opacity:.7}}>No hay trades para los filtros y fechas seleccionados.</div>}
                           </div>
                         </div>
