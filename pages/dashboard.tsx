@@ -2366,7 +2366,7 @@ return normalized;
                       </div> : null}
                     </div>
                     </div> : (
-                      <div style={{display:'grid',gap:12,alignContent:'start'}}>
+                      <div style={{flex:1,minHeight:0,display:'grid',gap:12,alignContent:'start',overflowY:'auto',overflowX:'hidden',scrollbarGutter:'stable',paddingBottom:2}}>
                         <div style={{border:'1px solid rgba(96,165,250,.18)',borderRadius:14,padding:14,background:'rgba(3,16,32,.72)'}}>
                           <div style={{fontWeight:950,fontSize:18,marginBottom:14}}>CONFIGURAR SIMULACIÓN</div>
                           <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}}>
