@@ -79,7 +79,7 @@ function formatDate(value?: string | null) {
   if (!value) return '';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleString();
+  return d.toLocaleString('en-US');
 }
 
 function formatNextClassDateNY(value?: string | null) {
@@ -88,7 +88,7 @@ function formatNextClassDateNY(value?: string | null) {
   if (Number.isNaN(d.getTime())) return '';
 
   try {
-    const datePart = new Intl.DateTimeFormat('es-ES', {
+    const datePart = new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/New_York',
       weekday: 'long',
       day: 'numeric',
@@ -257,11 +257,11 @@ function getDisplayName(user: any) {
 
 function formatNYDate() {
   try {
-    return new Intl.DateTimeFormat('es-ES', {
+    return new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/New_York',
       weekday: 'long',
-      day: 'numeric',
       month: 'long',
+      day: 'numeric',
       year: 'numeric',
     }).format(new Date());
   } catch {
@@ -2334,7 +2334,7 @@ return normalized;
                           <div style={{ padding:'12px 14px', fontWeight:950, fontSize:15, display:'flex', justifyContent:'space-between', gap:10 }}><span>TRADES RECIENTES</span><span style={{fontSize:13,opacity:.7,fontWeight:750}}>{liveTrades.length} trades · desplaza para ver más</span></div>
                           <div style={{ display:'grid', gridTemplateColumns:'.32fr 1.45fr .55fr .6fr 1.2fr .65fr .75fr 32px', gap:8, padding:'10px 14px', fontSize:14, opacity:.78, fontWeight:850, background:'rgba(7,23,42,.96)' }}><span>#</span><span>Fecha / Hora</span><span>Ticker</span><span>Tipo</span><span>Estrategia</span><span>Resultado</span><span>Estado</span><span></span></div>
                           <div style={{flex:1,minHeight:0,overflowY:'auto',scrollbarGutter:'stable'}}>
-                          {tradeJournalLoading ? <div style={{padding:18,opacity:.7}}>Cargando bitácora...</div> : liveTrades.length ? liveTrades.map((trade, tradeIndex) => <div key={trade.id} style={{ display:'grid', gridTemplateColumns:'.32fr 1.45fr .55fr .6fr 1.2fr .65fr .75fr 32px', gap:8, alignItems:'center', padding:'11px 14px', borderTop:'1px solid rgba(148,163,184,.10)', fontSize:16 }}><span>{formatPortalNumber(liveTrades.length - tradeIndex)}</span><span>{new Date(trade.created_at).toLocaleString('es-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit'})} NY</span><b>{trade.ticker}</b><b style={{color:trade.option_type==='CALL'?'#4ade80':'#f87171'}}>{trade.option_type}</b><span>{trade.strategy}</span><b style={{color:Number(trade.result_pct)>0?'#4ade80':'#f87171'}}>{tradePct(Number(trade.result_pct))}</b><span>{Number(trade.result_pct)>0?'🟢 Exitoso':'🔴 No exitoso'}</span>{isChatAdmin && tradeJournalMode==='REAL'?<button onClick={()=>deleteTradeJournalEntry(trade.id)} title="Eliminar" style={{background:'transparent',border:0,color:'#94a3b8',cursor:'pointer'}}>×</button>:<span/>}</div>) : <div style={{padding:18,opacity:.7}}>Aún no hay trades registrados.</div>}
+                          {tradeJournalLoading ? <div style={{padding:18,opacity:.7}}>Cargando bitácora...</div> : liveTrades.length ? liveTrades.map((trade, tradeIndex) => <div key={trade.id} style={{ display:'grid', gridTemplateColumns:'.32fr 1.45fr .55fr .6fr 1.2fr .65fr .75fr 32px', gap:8, alignItems:'center', padding:'11px 14px', borderTop:'1px solid rgba(148,163,184,.10)', fontSize:16 }}><span>{formatPortalNumber(liveTrades.length - tradeIndex)}</span><span>{new Date(trade.created_at).toLocaleString('en-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true})} NY</span><b>{trade.ticker}</b><b style={{color:trade.option_type==='CALL'?'#4ade80':'#f87171'}}>{trade.option_type}</b><span>{trade.strategy}</span><b style={{color:Number(trade.result_pct)>0?'#4ade80':'#f87171'}}>{tradePct(Number(trade.result_pct))}</b><span>{Number(trade.result_pct)>0?'🟢 Exitoso':'🔴 No exitoso'}</span>{isChatAdmin && tradeJournalMode==='REAL'?<button onClick={()=>deleteTradeJournalEntry(trade.id)} title="Eliminar" style={{background:'transparent',border:0,color:'#94a3b8',cursor:'pointer'}}>×</button>:<span/>}</div>) : <div style={{padding:18,opacity:.7}}>Aún no hay trades registrados.</div>}
                           </div>
                         </div>
                       </div>
@@ -2423,7 +2423,7 @@ return normalized;
                           <div style={{padding:'14px 16px',fontWeight:950,fontSize:17,display:'flex',justifyContent:'space-between',gap:10}}><span>BALANCE TRADE POR TRADE</span><span style={{fontSize:12,opacity:.65,fontWeight:700}}>{formatPortalNumber(capitalSimulation.rows.length)} operaciones · desplaza para ver más</span></div>
                           <div style={{display:'grid',gridTemplateColumns:'.35fr 1.15fr .55fr .55fr 1.15fr .65fr .8fr .75fr .85fr .75fr',gap:9,padding:'13px 14px',fontSize:15,opacity:.88,fontWeight:950,background:'rgba(7,23,42,.96)'}}><span>#</span><span>Fecha</span><span>Ticker</span><span>Tipo</span><span>Estrategia</span><span>Resultado</span><span>Inversión</span><span>P/L $</span><span>Balance</span><span>Estado</span></div>
                           <div style={{flex:1,minHeight:0,overflowY:'auto',overflowX:'hidden',overscrollBehavior:'contain',scrollbarGutter:'stable',paddingBottom:8}}>
-                            {capitalSimulation.rows.length?capitalSimulation.rows.map(r=><div key={r.id} style={{display:'grid',gridTemplateColumns:'.35fr 1.15fr .55fr .55fr 1.15fr .65fr .8fr .75fr .85fr .75fr',gap:9,alignItems:'center',padding:'13px 14px',borderTop:'1px solid rgba(148,163,184,.10)',fontSize:16,background:r.pnl>=0?'rgba(34,197,94,.018)':'rgba(239,68,68,.025)'}}><span>{formatPortalNumber(r.index)}</span><span>{new Date(r.created_at).toLocaleDateString('es-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'2-digit'})}</span><b>{r.ticker}</b><b>{r.option_type}</b><span>{r.strategy}</span><b style={{color:Number(r.result_pct)>=0?'#4ade80':'#f87171'}}>{tradePct(Number(r.result_pct))}</b><span>{formatPortalMoney(r.investment)}</span><b style={{color:r.pnl>=0?'#4ade80':'#f87171'}}>{formatPortalMoney(r.pnl,true)}</b><b>{formatPortalMoney(r.balance)}</b><span style={{fontSize:14,fontWeight:950,color:r.pnl>=0?'#4ade80':'#fbbf24'}}>{simMode==='protected'?r.note:(r.pnl>=0?'Ganancia':'Retroceso')}</span></div>):<div style={{padding:18,opacity:.7}}>No hay trades para los filtros y fechas seleccionados.</div>}
+                            {capitalSimulation.rows.length?capitalSimulation.rows.map(r=><div key={r.id} style={{display:'grid',gridTemplateColumns:'.35fr 1.15fr .55fr .55fr 1.15fr .65fr .8fr .75fr .85fr .75fr',gap:9,alignItems:'center',padding:'13px 14px',borderTop:'1px solid rgba(148,163,184,.10)',fontSize:16,background:r.pnl>=0?'rgba(34,197,94,.018)':'rgba(239,68,68,.025)'}}><span>{formatPortalNumber(r.index)}</span><span>{new Date(r.created_at).toLocaleDateString('en-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'numeric'})}</span><b>{r.ticker}</b><b>{r.option_type}</b><span>{r.strategy}</span><b style={{color:Number(r.result_pct)>=0?'#4ade80':'#f87171'}}>{tradePct(Number(r.result_pct))}</b><span>{formatPortalMoney(r.investment)}</span><b style={{color:r.pnl>=0?'#4ade80':'#f87171'}}>{formatPortalMoney(r.pnl,true)}</b><b>{formatPortalMoney(r.balance)}</b><span style={{fontSize:14,fontWeight:950,color:r.pnl>=0?'#4ade80':'#fbbf24'}}>{simMode==='protected'?r.note:(r.pnl>=0?'Ganancia':'Retroceso')}</span></div>):<div style={{padding:18,opacity:.7}}>No hay trades para los filtros y fechas seleccionados.</div>}
                           </div>
                         </div>
                       </div>
