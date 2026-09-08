@@ -840,7 +840,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       setSavingTrade(false);
       return;
     }
-    setTradeForm({ ticker: '', optionType: 'CALL', strategy: 'Apertura Alcista', resultPct: '' });
+    setTradeForm((prev) => ({ ticker: '', optionType: 'CALL', strategy: prev.strategy, resultPct: '' }));
     setShowTradeForm(false);
     await loadTradeJournal();
     setSavingTrade(false);
