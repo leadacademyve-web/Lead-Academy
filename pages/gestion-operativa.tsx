@@ -242,7 +242,7 @@ export default function GestionOperativaPage() {
   }
 
   async function submitStudentModal() {
-    if (!studentModal || !reason.trim()) return;
+    if (!studentModal || reason.trim().length < 3) return;
     const { row } = studentModal;
     setWorkingId(row.user_id);
     setMessage(null);
@@ -864,9 +864,10 @@ export default function GestionOperativaPage() {
             <p style={styles.muted}><strong style={{ color: '#fff' }}>{formatPersonName(studentModal.row.full_name)}</strong><br />{studentModal.row.email}</p>
             <div style={styles.fieldLabel}>Motivo administrativo</div>
             <textarea autoFocus value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Escribe el motivo..." style={styles.textarea} />
+            <div style={{ ...styles.fieldHelp, marginTop: 7 }}>Escribe un motivo de al menos 3 caracteres.</div>
             <div style={styles.modalActions}>
               <button style={styles.buttonSecondary} onClick={() => setStudentModal(null)}>Cancelar</button>
-              <button disabled={!reason.trim() || workingId === studentModal.row.user_id} style={{ ...styles.button, opacity: !reason.trim() ? .55 : 1 }} onClick={submitStudentModal}>Confirmar</button>
+              <button disabled={reason.trim().length < 3 || workingId === studentModal.row.user_id} style={{ ...styles.button, opacity: reason.trim().length < 3 ? .55 : 1 }} onClick={submitStudentModal}>Confirmar</button>
             </div>
           </div>
         </div>
