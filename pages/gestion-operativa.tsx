@@ -43,6 +43,9 @@ type ChatSimulationState = {
   name_count: number;
   template_count: number;
   expression_count: number;
+  winner_message_pct: number;
+  loss_min_pct: number;
+  loss_max_pct: number;
 };
 
 type StudentModal = {
@@ -165,6 +168,9 @@ export default function GestionOperativaPage() {
   const [chatSimMinInterval, setChatSimMinInterval] = useState('20');
   const [chatSimMaxInterval, setChatSimMaxInterval] = useState('75');
   const [chatSimMaxMessages, setChatSimMaxMessages] = useState('80');
+  const [chatSimWinnerPct, setChatSimWinnerPct] = useState('85');
+  const [chatSimLossMinPct, setChatSimLossMinPct] = useState('-15');
+  const [chatSimLossMaxPct, setChatSimLossMaxPct] = useState('-5');
   const [chatSimTicker, setChatSimTicker] = useState('');
   const [chatSimMinPct, setChatSimMinPct] = useState('100');
   const [chatSimMaxPct, setChatSimMaxPct] = useState('500');
@@ -235,6 +241,9 @@ export default function GestionOperativaPage() {
         setChatSimMinInterval(String(state.min_interval_seconds ?? 20));
         setChatSimMaxInterval(String(state.max_interval_seconds ?? 75));
         setChatSimMaxMessages(String(state.max_messages_per_session ?? 80));
+        setChatSimWinnerPct(String(state.winner_message_pct ?? 85));
+        setChatSimLossMinPct(String(state.loss_min_pct ?? -15));
+        setChatSimLossMaxPct(String(state.loss_max_pct ?? -5));
       }
     }
     if (!chatSimSymbolsResult.error) setChatSimulationSymbols((chatSimSymbolsResult.data || []) as ChatSimulationSymbol[]);
@@ -536,12 +545,23 @@ export default function GestionOperativaPage() {
     const minInterval = Number(chatSimMinInterval);
     const maxInterval = Number(chatSimMaxInterval);
     const maxMessages = Number(chatSimMaxMessages);
+    const winnerPct = Number(chatSimWinnerPct);
+    const lossMinPct = Number(chatSimLossMinPct);
+    const lossMaxPct = Number(chatSimLossMaxPct);
     if (!Number.isFinite(minInterval) || !Number.isFinite(maxInterval) || minInterval < 5 || maxInterval < minInterval) {
       setChatSimulationNotice('La frecuencia debe ser válida: mínimo 5 segundos y el máximo no puede ser menor que el mínimo.');
       return;
     }
     if (!Number.isFinite(maxMessages) || maxMessages < 1 || maxMessages > 1000) {
       setChatSimulationNotice('La cantidad máxima debe estar entre 1 y 1,000 mensajes por sesión.');
+      return;
+    }
+    if (!Number.isFinite(winnerPct) || winnerPct < 0 || winnerPct > 100) {
+      setChatSimulationNotice('El porcentaje de mensajes ganadores debe estar entre 0 y 100.');
+      return;
+    }
+    if (!Number.isFinite(lossMinPct) || !Number.isFinite(lossMaxPct) || lossMinPct >= 0 || lossMaxPct >= 0 || lossMinPct > lossMaxPct) {
+      setChatSimulationNotice('El rango de pérdidas debe ser negativo. Ejemplo: -15 a -5.');
       return;
     }
     setChatSimulationBusy(true);
@@ -551,6 +571,9 @@ export default function GestionOperativaPage() {
       p_min_interval_seconds: Math.round(minInterval),
       p_max_interval_seconds: Math.round(maxInterval),
       p_max_messages_per_session: Math.round(maxMessages),
+      p_winner_message_pct: winnerPct,
+      p_loss_min_pct: lossMinPct,
+      p_loss_max_pct: lossMaxPct,
     });
     setChatSimulationBusy(false);
     if (error) {
@@ -918,6 +941,9 @@ export default function GestionOperativaPage() {
           <div><div style={styles.fieldLabel}>Frecuencia mínima (seg)</div><div style={styles.inputShell}><input type="number" min={5} value={chatSimMinInterval} onChange={e=>setChatSimMinInterval(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div></div>
           <div><div style={styles.fieldLabel}>Frecuencia máxima (seg)</div><div style={styles.inputShell}><input type="number" min={5} value={chatSimMaxInterval} onChange={e=>setChatSimMaxInterval(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div></div>
           <div><div style={styles.fieldLabel}>Máximo por sesión</div><div style={styles.inputShell}><input type="number" min={1} max={1000} value={chatSimMaxMessages} onChange={e=>setChatSimMaxMessages(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div></div>
+          <div><div style={styles.fieldLabel}>Mensajes ganadores (%)</div><div style={styles.inputShell}><input type="number" min={0} max={100} value={chatSimWinnerPct} onChange={e=>setChatSimWinnerPct(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div><div style={styles.fieldHelp}>Ej: 85 = aproximadamente 85% positivos y 15% negativos.</div></div>
+          <div><div style={styles.fieldLabel}>Pérdida mínima (%)</div><div style={styles.inputShell}><input type="number" max={-1} value={chatSimLossMinPct} onChange={e=>setChatSimLossMinPct(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div><div style={styles.fieldHelp}>Ej: -15</div></div>
+          <div><div style={styles.fieldLabel}>Pérdida máxima (%)</div><div style={styles.inputShell}><input type="number" max={-1} value={chatSimLossMaxPct} onChange={e=>setChatSimLossMaxPct(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div><div style={styles.fieldHelp}>Ej: -5. Puede salir “Me sacó con -10%”.</div></div>
         </div>
         <div style={{display:'flex',gap:10,marginTop:12,flexWrap:'wrap'}}>
           <button type="button" disabled={chatSimulationBusy} onClick={()=>saveChatSimulationSettings()} style={styles.button}>Guardar configuración</button>
