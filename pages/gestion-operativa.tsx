@@ -30,6 +30,21 @@ type VideoPublishType = 'daily' | 'course' | 'special';
 type TradeJournalMode = 'REAL' | 'EDUCATIONAL';
 type TradeStrategyAdminRow = { id: string; name: string; active: boolean; sort_order: number; };
 
+type ChatSimulationSymbol = { id: string; ticker: string; min_pct: number; max_pct: number; active: boolean; };
+type ChatSimulationState = {
+  enabled: boolean;
+  min_interval_seconds: number;
+  max_interval_seconds: number;
+  max_messages_per_session: number;
+  messages_sent: number;
+  current_session_id: string | null;
+  next_message_at: string | null;
+  symbol_count: number;
+  name_count: number;
+  template_count: number;
+  expression_count: number;
+};
+
 type StudentModal = {
   row: StudentRow;
   kind: 'pause' | 'counter';
@@ -145,6 +160,19 @@ export default function GestionOperativaPage() {
   const [tradingAdminBusy, setTradingAdminBusy] = useState(false);
   const [tradingAdminNotice, setTradingAdminNotice] = useState<string | null>(null);
 
+  const [chatSimulation, setChatSimulation] = useState<ChatSimulationState | null>(null);
+  const [chatSimulationSymbols, setChatSimulationSymbols] = useState<ChatSimulationSymbol[]>([]);
+  const [chatSimMinInterval, setChatSimMinInterval] = useState('20');
+  const [chatSimMaxInterval, setChatSimMaxInterval] = useState('75');
+  const [chatSimMaxMessages, setChatSimMaxMessages] = useState('80');
+  const [chatSimTicker, setChatSimTicker] = useState('');
+  const [chatSimMinPct, setChatSimMinPct] = useState('100');
+  const [chatSimMaxPct, setChatSimMaxPct] = useState('500');
+  const [chatSimExpression, setChatSimExpression] = useState('');
+  const [chatSimTemplate, setChatSimTemplate] = useState('');
+  const [chatSimulationBusy, setChatSimulationBusy] = useState(false);
+  const [chatSimulationNotice, setChatSimulationNotice] = useState<string | null>(null);
+
   async function load() {
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) {
@@ -161,7 +189,7 @@ export default function GestionOperativaPage() {
 
     setAuthorized(true);
 
-    const [studentsResult, replayResult, topicResult, courseDateResult, strategiesResult, tradeModeResult, winRateResult] = await Promise.all([
+    const [studentsResult, replayResult, topicResult, courseDateResult, strategiesResult, tradeModeResult, winRateResult, chatSimResult, chatSimSymbolsResult] = await Promise.all([
       supabase.rpc('admin_operational_students'),
       supabase.rpc('admin_replay_sessions'),
       supabase.from('portal_settings').select('value').eq('key', 'today_class_topic').maybeSingle(),
@@ -169,6 +197,8 @@ export default function GestionOperativaPage() {
       supabase.from('trade_strategies').select('id,name,active,sort_order').order('sort_order', { ascending: true }).order('created_at', { ascending: true }),
       supabase.from('portal_settings').select('value').eq('key', 'trade_journal_mode').maybeSingle(),
       supabase.from('portal_settings').select('value').eq('key', 'educational_trade_win_rate').maybeSingle(),
+      supabase.rpc('admin_get_live_chat_simulation'),
+      supabase.from('live_chat_simulation_symbols').select('id,ticker,min_pct,max_pct,active').order('ticker', { ascending: true }),
     ]);
 
     if (studentsResult.error) {
@@ -198,6 +228,16 @@ export default function GestionOperativaPage() {
     if (!strategiesResult.error) setTradeStrategies((strategiesResult.data || []) as TradeStrategyAdminRow[]);
     if (!tradeModeResult.error) setTradeMode(String(tradeModeResult.data?.value || '').toUpperCase() === 'EDUCATIONAL' ? 'EDUCATIONAL' : 'REAL');
     if (!winRateResult.error && winRateResult.data?.value != null) setEducationalWinRate(String(winRateResult.data.value));
+    if (!chatSimResult.error) {
+      const state = (Array.isArray(chatSimResult.data) ? chatSimResult.data[0] : chatSimResult.data) as ChatSimulationState | null;
+      if (state) {
+        setChatSimulation(state);
+        setChatSimMinInterval(String(state.min_interval_seconds ?? 20));
+        setChatSimMaxInterval(String(state.max_interval_seconds ?? 75));
+        setChatSimMaxMessages(String(state.max_messages_per_session ?? 80));
+      }
+    }
+    if (!chatSimSymbolsResult.error) setChatSimulationSymbols((chatSimSymbolsResult.data || []) as ChatSimulationSymbol[]);
 
     setLoading(false);
   }
@@ -490,6 +530,94 @@ export default function GestionOperativaPage() {
     await load();
   }
 
+
+  async function saveChatSimulationSettings(nextEnabled?: boolean) {
+    if (chatSimulationBusy) return;
+    const minInterval = Number(chatSimMinInterval);
+    const maxInterval = Number(chatSimMaxInterval);
+    const maxMessages = Number(chatSimMaxMessages);
+    if (!Number.isFinite(minInterval) || !Number.isFinite(maxInterval) || minInterval < 5 || maxInterval < minInterval) {
+      setChatSimulationNotice('La frecuencia debe ser válida: mínimo 5 segundos y el máximo no puede ser menor que el mínimo.');
+      return;
+    }
+    if (!Number.isFinite(maxMessages) || maxMessages < 1 || maxMessages > 1000) {
+      setChatSimulationNotice('La cantidad máxima debe estar entre 1 y 1,000 mensajes por sesión.');
+      return;
+    }
+    setChatSimulationBusy(true);
+    setChatSimulationNotice(null);
+    const { data, error } = await supabase.rpc('admin_set_live_chat_simulation', {
+      p_enabled: typeof nextEnabled === 'boolean' ? nextEnabled : Boolean(chatSimulation?.enabled),
+      p_min_interval_seconds: Math.round(minInterval),
+      p_max_interval_seconds: Math.round(maxInterval),
+      p_max_messages_per_session: Math.round(maxMessages),
+    });
+    setChatSimulationBusy(false);
+    if (error) {
+      setChatSimulationNotice(error.message);
+      return;
+    }
+    const state = (Array.isArray(data) ? data[0] : data) as ChatSimulationState | null;
+    if (state) setChatSimulation(state);
+    setChatSimulationNotice(typeof nextEnabled === 'boolean'
+      ? (nextEnabled ? 'Simulación CHAT LIVE activada.' : 'Simulación detenida.')
+      : 'Configuración de simulación guardada.');
+    await load();
+  }
+
+  async function addChatSimulationSymbol() {
+    const ticker = chatSimTicker.trim().toUpperCase().replace(/[^A-Z0-9.-]/g, '');
+    const minPct = Number(chatSimMinPct);
+    const maxPct = Number(chatSimMaxPct);
+    if (!ticker) return setChatSimulationNotice('Escribe un símbolo válido.');
+    if (!Number.isFinite(minPct) || !Number.isFinite(maxPct) || minPct < 0 || maxPct < minPct) {
+      return setChatSimulationNotice('El rango de rentabilidad del símbolo no es válido.');
+    }
+    setChatSimulationBusy(true); setChatSimulationNotice(null);
+    const { error } = await supabase.from('live_chat_simulation_symbols').upsert({
+      ticker, min_pct: minPct, max_pct: maxPct, active: true,
+    }, { onConflict: 'ticker' });
+    setChatSimulationBusy(false);
+    if (error) return setChatSimulationNotice(error.message);
+    setChatSimTicker('');
+    setChatSimulationNotice(`${ticker} agregado a la simulación.`);
+    await load();
+  }
+
+  async function deleteChatSimulationSymbol(id: string) {
+    if (chatSimulationBusy) return;
+    setChatSimulationBusy(true);
+    const { error } = await supabase.from('live_chat_simulation_symbols').delete().eq('id', id);
+    setChatSimulationBusy(false);
+    if (error) return setChatSimulationNotice(error.message);
+    await load();
+  }
+
+  async function addChatSimulationContent(kind: 'expression' | 'template') {
+    const value = (kind === 'expression' ? chatSimExpression : chatSimTemplate).trim();
+    if (!value) return;
+    setChatSimulationBusy(true); setChatSimulationNotice(null);
+    const table = kind === 'expression' ? 'live_chat_simulation_expressions' : 'live_chat_simulation_templates';
+    const payload = kind === 'expression' ? { expression: value, active: true } : { template: value, active: true };
+    const { error } = await supabase.from(table).insert(payload);
+    setChatSimulationBusy(false);
+    if (error) return setChatSimulationNotice(error.message);
+    if (kind === 'expression') setChatSimExpression(''); else setChatSimTemplate('');
+    setChatSimulationNotice(kind === 'expression' ? 'Expresión agregada.' : 'Plantilla agregada.');
+    await load();
+  }
+
+  async function deleteOnlySimulatedChat() {
+    if (chatSimulationBusy) return;
+    if (!window.confirm('¿Borrar solamente los mensajes simulados del CHAT LIVE? Los mensajes reales no se tocarán.')) return;
+    setChatSimulationBusy(true); setChatSimulationNotice(null);
+    const { data, error } = await supabase.rpc('admin_delete_simulated_chat_messages');
+    setChatSimulationBusy(false);
+    if (error) return setChatSimulationNotice(error.message);
+    setChatSimulationNotice(`${Number(data || 0)} mensaje(s) simulado(s) eliminado(s).`);
+    await load();
+  }
+
   if (loading) {
     return <main style={styles.page}><div style={styles.card}>Cargando Gestión Operativa...</div></main>;
   }
@@ -768,6 +896,74 @@ export default function GestionOperativaPage() {
         {tradingAdminNotice ? <div style={{marginTop:13,padding:'10px 12px',borderRadius:10,border:'1px solid rgba(96,165,250,.25)',background:'rgba(30,64,175,.13)',color:'#dbeafe',fontSize:13.5,fontWeight:750}}>{tradingAdminNotice}</div> : null}
       </div>
 
+      </div>
+
+      {/* SIMULACIÓN CHAT LIVE */}
+      <div style={{...styles.publishCard,maxWidth:1980,margin:'0 auto 18px',borderColor:'rgba(16,185,129,.34)',background:'radial-gradient(circle at 0% 0%,rgba(16,185,129,.12),transparent 34%), linear-gradient(180deg,rgba(4,24,31,.95),rgba(4,14,29,.90))'}}>
+        <div style={{display:'flex',justifyContent:'space-between',gap:18,alignItems:'flex-start',flexWrap:'wrap'}}>
+          <div>
+            <div style={{...styles.sectionTitle,color:'#34d399'}}>SIMULACIÓN CHAT LIVE</div>
+            <h2 style={{margin:'6px 0 0',fontSize:24,fontWeight:950}}>Generador de comentarios durante la clase</h2>
+            <p style={{...styles.publishIntro,fontSize:14.5,maxWidth:920}}>Combina nombres, símbolos, porcentajes, estrategias activas, expresiones y plantillas. Los mensajes se publican en el CHAT LIVE existente.</p>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <span style={{fontSize:12,fontWeight:950,color:chatSimulation?.enabled?'#86efac':'#94a3b8'}}>{chatSimulation?.enabled?'ACTIVA':'INACTIVA'}</span>
+            <button type="button" disabled={chatSimulationBusy} onClick={()=>saveChatSimulationSettings(!chatSimulation?.enabled)} style={{width:74,height:38,borderRadius:999,border:'1px solid rgba(148,163,184,.28)',background:chatSimulation?.enabled?'#059669':'#334155',padding:4,cursor:'pointer',opacity:chatSimulationBusy ? .6 : 1}}>
+              <span style={{display:'block',width:28,height:28,borderRadius:'50%',background:'#fff',transform:chatSimulation?.enabled?'translateX(34px)':'translateX(0)',transition:'transform .18s ease'}} />
+            </button>
+          </div>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10,marginTop:16}}>
+          <div><div style={styles.fieldLabel}>Frecuencia mínima (seg)</div><div style={styles.inputShell}><input type="number" min={5} value={chatSimMinInterval} onChange={e=>setChatSimMinInterval(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div></div>
+          <div><div style={styles.fieldLabel}>Frecuencia máxima (seg)</div><div style={styles.inputShell}><input type="number" min={5} value={chatSimMaxInterval} onChange={e=>setChatSimMaxInterval(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div></div>
+          <div><div style={styles.fieldLabel}>Máximo por sesión</div><div style={styles.inputShell}><input type="number" min={1} max={1000} value={chatSimMaxMessages} onChange={e=>setChatSimMaxMessages(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div></div>
+        </div>
+        <div style={{display:'flex',gap:10,marginTop:12,flexWrap:'wrap'}}>
+          <button type="button" disabled={chatSimulationBusy} onClick={()=>saveChatSimulationSettings()} style={styles.button}>Guardar configuración</button>
+          <button type="button" disabled={chatSimulationBusy} onClick={deleteOnlySimulatedChat} style={{...styles.buttonSecondary,borderColor:'rgba(248,113,113,.34)',color:'#fecaca'}}>Borrar solo simulados</button>
+          <span style={{alignSelf:'center',color:'rgba(255,255,255,.68)',fontSize:13,fontWeight:750}}>Enviados: {chatSimulation?.messages_sent || 0} / {chatSimulation?.max_messages_per_session || Number(chatSimMaxMessages)||0}</span>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'1.05fr .95fr',gap:14,marginTop:18}}>
+          <div style={{padding:14,borderRadius:14,border:'1px solid rgba(52,211,153,.20)',background:'rgba(3,18,29,.58)'}}>
+            <div style={styles.fieldLabel}>Símbolos y rentabilidad</div>
+            <div style={{display:'grid',gridTemplateColumns:'minmax(120px,1fr) 130px 130px 110px',gap:8}}>
+              <div style={styles.inputShell}><input value={chatSimTicker} onChange={e=>setChatSimTicker(e.target.value.toUpperCase())} placeholder="AAPL" style={{...styles.inputInside,paddingLeft:16}} /></div>
+              <div style={styles.inputShell}><input type="number" value={chatSimMinPct} onChange={e=>setChatSimMinPct(e.target.value)} placeholder="Min %" style={{...styles.inputInside,paddingLeft:16}} /></div>
+              <div style={styles.inputShell}><input type="number" value={chatSimMaxPct} onChange={e=>setChatSimMaxPct(e.target.value)} placeholder="Max %" style={{...styles.inputInside,paddingLeft:16}} /></div>
+              <button type="button" disabled={chatSimulationBusy} onClick={addChatSimulationSymbol} style={{...styles.button,padding:'8px 12px'}}>+ Agregar</button>
+            </div>
+            <div style={{display:'grid',gap:7,marginTop:10,maxHeight:220,overflowY:'auto'}}>
+              {chatSimulationSymbols.map(row=><div key={row.id} style={{display:'grid',gridTemplateColumns:'1fr auto auto 86px',gap:10,alignItems:'center',padding:'9px 10px',borderRadius:10,background:'rgba(6,30,42,.72)',border:'1px solid rgba(148,163,184,.13)'}}>
+                <strong>{row.ticker}</strong><span>{Number(row.min_pct)}%</span><span>→ {Number(row.max_pct)}%</span>
+                <button type="button" onClick={()=>deleteChatSimulationSymbol(row.id)} disabled={chatSimulationBusy} style={{...styles.buttonSecondary,padding:'7px 9px',color:'#fecaca'}}>Eliminar</button>
+              </div>)}
+              {!chatSimulationSymbols.length?<div style={styles.fieldHelp}>Agrega al menos un símbolo antes de activar la simulación.</div>:null}
+            </div>
+          </div>
+
+          <div style={{padding:14,borderRadius:14,border:'1px solid rgba(96,165,250,.20)',background:'rgba(3,18,29,.58)'}}>
+            <div style={styles.fieldLabel}>Estrategias incluidas automáticamente</div>
+            <div style={{display:'flex',gap:7,flexWrap:'wrap',marginBottom:13}}>
+              {tradeStrategies.filter(s=>s.active).map(s=><span key={s.id} style={{padding:'7px 9px',borderRadius:999,border:'1px solid rgba(96,165,250,.28)',background:'rgba(30,64,175,.17)',fontSize:12,fontWeight:850}}>{s.name}</span>)}
+            </div>
+            <div style={styles.fieldLabel}>Nueva expresión libre</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 110px',gap:8}}>
+              <div style={styles.inputShell}><input value={chatSimExpression} onChange={e=>setChatSimExpression(e.target.value)} placeholder="Ej: Espectacular!" style={{...styles.inputInside,paddingLeft:16}} /></div>
+              <button type="button" disabled={chatSimulationBusy||!chatSimExpression.trim()} onClick={()=>addChatSimulationContent('expression')} style={{...styles.button,padding:'8px 10px'}}>Agregar</button>
+            </div>
+            <div style={{...styles.fieldHelp,marginTop:8}}>Expresiones activas: {chatSimulation?.expression_count || 0}</div>
+
+            <div style={{...styles.fieldLabel,marginTop:15}}>Nueva plantilla</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 110px',gap:8}}>
+              <div style={styles.inputShell}><input value={chatSimTemplate} onChange={e=>setChatSimTemplate(e.target.value)} placeholder="{expression} {ticker} {pct}% con {strategy}!" style={{...styles.inputInside,paddingLeft:16}} /></div>
+              <button type="button" disabled={chatSimulationBusy||!chatSimTemplate.trim()} onClick={()=>addChatSimulationContent('template')} style={{...styles.button,padding:'8px 10px'}}>Agregar</button>
+            </div>
+            <div style={styles.fieldHelp}>Variables: <strong>{'{ticker}'}</strong>, <strong>{'{pct}'}</strong>, <strong>{'{strategy}'}</strong>, <strong>{'{expression}'}</strong>. Plantillas activas: {chatSimulation?.template_count || 0} · Nombres: {chatSimulation?.name_count || 0}</div>
+          </div>
+        </div>
+        {chatSimulationNotice?<div style={{marginTop:13,padding:'10px 12px',borderRadius:10,border:'1px solid rgba(52,211,153,.25)',background:'rgba(5,150,105,.10)',color:'#d1fae5',fontSize:13.5,fontWeight:750}}>{chatSimulationNotice}</div>:null}
       </div>
 
       <div style={styles.studentsCard}>
