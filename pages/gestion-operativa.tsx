@@ -31,6 +31,7 @@ type TradeJournalMode = 'REAL' | 'EDUCATIONAL';
 type TradeStrategyAdminRow = { id: string; name: string; active: boolean; sort_order: number; };
 
 type ChatSimulationSymbol = { id: string; ticker: string; min_pct: number; max_pct: number; active: boolean; };
+type ChatSimulationTextItem = { id: string; text: string; };
 type ChatSimulationState = {
   enabled: boolean;
   min_interval_seconds: number;
@@ -166,6 +167,10 @@ export default function GestionOperativaPage() {
   const [chatSimulation, setChatSimulation] = useState<ChatSimulationState | null>(null);
   const [chatSimulationSymbols, setChatSimulationSymbols] = useState<ChatSimulationSymbol[]>([]);
   const [chatSimulationStrategyIds, setChatSimulationStrategyIds] = useState<string[]>([]);
+  const [chatSimulationExpressions, setChatSimulationExpressions] = useState<ChatSimulationTextItem[]>([]);
+  const [chatSimulationTemplates, setChatSimulationTemplates] = useState<ChatSimulationTextItem[]>([]);
+  const [chatSimulationLossTemplates, setChatSimulationLossTemplates] = useState<ChatSimulationTextItem[]>([]);
+  const [chatSimLossTemplate, setChatSimLossTemplate] = useState('');
   const [chatSimMinInterval, setChatSimMinInterval] = useState('20');
   const [chatSimMaxInterval, setChatSimMaxInterval] = useState('75');
   const [chatSimMaxMessages, setChatSimMaxMessages] = useState('80');
@@ -196,7 +201,7 @@ export default function GestionOperativaPage() {
 
     setAuthorized(true);
 
-    const [studentsResult, replayResult, topicResult, courseDateResult, strategiesResult, tradeModeResult, winRateResult, chatSimResult, chatSimSymbolsResult, chatSimStrategiesResult] = await Promise.all([
+    const [studentsResult, replayResult, topicResult, courseDateResult, strategiesResult, tradeModeResult, winRateResult, chatSimResult, chatSimSymbolsResult, chatSimStrategiesResult, chatSimExpressionsResult, chatSimTemplatesResult, chatSimLossTemplatesResult] = await Promise.all([
       supabase.rpc('admin_operational_students'),
       supabase.rpc('admin_replay_sessions'),
       supabase.from('portal_settings').select('value').eq('key', 'today_class_topic').maybeSingle(),
@@ -207,6 +212,9 @@ export default function GestionOperativaPage() {
       supabase.rpc('admin_get_live_chat_simulation'),
       supabase.from('live_chat_simulation_symbols').select('id,ticker,min_pct,max_pct,active').order('ticker', { ascending: true }),
       supabase.from('live_chat_simulation_strategies').select('strategy_id').eq('enabled', true),
+      supabase.from('live_chat_simulation_expressions').select('id,expression').eq('active', true).order('created_at', { ascending: true }),
+      supabase.from('live_chat_simulation_templates').select('id,template').eq('active', true).order('created_at', { ascending: true }),
+      supabase.from('live_chat_simulation_loss_templates').select('id,template').eq('active', true).order('created_at', { ascending: true }),
     ]);
 
     if (studentsResult.error) {
@@ -250,6 +258,9 @@ export default function GestionOperativaPage() {
     }
     if (!chatSimSymbolsResult.error) setChatSimulationSymbols((chatSimSymbolsResult.data || []) as ChatSimulationSymbol[]);
     if (!chatSimStrategiesResult.error) setChatSimulationStrategyIds((chatSimStrategiesResult.data || []).map((r:any)=>String(r.strategy_id)));
+    if (!chatSimExpressionsResult.error) setChatSimulationExpressions((chatSimExpressionsResult.data || []).map((r:any)=>({id:String(r.id),text:String(r.expression)})));
+    if (!chatSimTemplatesResult.error) setChatSimulationTemplates((chatSimTemplatesResult.data || []).map((r:any)=>({id:String(r.id),text:String(r.template)})));
+    if (!chatSimLossTemplatesResult.error) setChatSimulationLossTemplates((chatSimLossTemplatesResult.data || []).map((r:any)=>({id:String(r.id),text:String(r.template)})));
 
     setLoading(false);
   }
@@ -633,6 +644,28 @@ export default function GestionOperativaPage() {
     await load();
   }
 
+  async function addChatSimulationLossTemplate() {
+    const value = chatSimLossTemplate.trim();
+    if (!value || chatSimulationBusy) return;
+    setChatSimulationBusy(true); setChatSimulationNotice(null);
+    const { error } = await supabase.from('live_chat_simulation_loss_templates').insert({ template: value, active: true });
+    setChatSimulationBusy(false);
+    if (error) { setChatSimulationNotice(error.message); return; }
+    setChatSimLossTemplate(''); setChatSimulationNotice('Plantilla negativa agregada.');
+    await load();
+  }
+
+  async function removeChatSimulationText(kind: 'expression' | 'template' | 'loss_template', id: string) {
+    if (chatSimulationBusy) return;
+    const table = kind === 'expression' ? 'live_chat_simulation_expressions' : kind === 'template' ? 'live_chat_simulation_templates' : 'live_chat_simulation_loss_templates';
+    setChatSimulationBusy(true); setChatSimulationNotice(null);
+    const { error } = await supabase.from(table).delete().eq('id', id);
+    setChatSimulationBusy(false);
+    if (error) { setChatSimulationNotice(error.message); return; }
+    setChatSimulationNotice('Elemento eliminado.');
+    await load();
+  }
+
   async function toggleChatSimulationStrategy(strategyId: string, enabled: boolean) {
     if (chatSimulationBusy) return;
     setChatSimulationBusy(true);
@@ -1009,14 +1042,32 @@ export default function GestionOperativaPage() {
               <div style={styles.inputShell}><input value={chatSimExpression} onChange={e=>setChatSimExpression(e.target.value)} placeholder="Ej: Espectacular!" style={{...styles.inputInside,paddingLeft:16}} /></div>
               <button type="button" disabled={chatSimulationBusy||!chatSimExpression.trim()} onClick={()=>addChatSimulationContent('expression')} style={{...styles.button,padding:'8px 10px'}}>Agregar</button>
             </div>
-            <div style={{...styles.fieldHelp,marginTop:8}}>Expresiones activas: {chatSimulation?.expression_count || 0}</div>
+            <div style={{...styles.fieldHelp,marginTop:8,marginBottom:6}}>Expresiones activas: {chatSimulationExpressions.length}</div>
+            <div style={{display:'grid',gap:5,maxHeight:145,overflowY:'auto',paddingRight:3,marginBottom:14}}>
+              {chatSimulationExpressions.map(x=><div key={x.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'7px 9px',border:'1px solid rgba(148,163,184,.16)',borderRadius:8}}><span style={{fontSize:12}}>{x.text}</span><button type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText('expression',x.id)} style={{...styles.dangerBtn,padding:'4px 8px',fontSize:11}}>Eliminar</button></div>)}
+            </div>
 
-            <div style={{...styles.fieldLabel,marginTop:15}}>Nueva plantilla</div>
+            <div style={{...styles.fieldLabel,marginTop:15}}>Nueva plantilla positiva</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 110px',gap:8}}>
               <div style={styles.inputShell}><input value={chatSimTemplate} onChange={e=>setChatSimTemplate(e.target.value)} placeholder="{expression} {ticker} {pct}% con {strategy}!" style={{...styles.inputInside,paddingLeft:16}} /></div>
               <button type="button" disabled={chatSimulationBusy||!chatSimTemplate.trim()} onClick={()=>addChatSimulationContent('template')} style={{...styles.button,padding:'8px 10px'}}>Agregar</button>
             </div>
-            <div style={styles.fieldHelp}>Variables: <strong>{'{ticker}'}</strong>, <strong>{'{pct}'}</strong>, <strong>{'{strategy}'}</strong>, <strong>{'{expression}'}</strong>. Plantillas activas: {chatSimulation?.template_count || 0} · Nombres: {chatSimulation?.name_count || 0}</div>
+            <div style={{...styles.fieldHelp,marginTop:8,marginBottom:6}}>Plantillas positivas activas: {chatSimulationTemplates.length}</div>
+            <div style={{display:'grid',gap:5,maxHeight:165,overflowY:'auto',paddingRight:3,marginBottom:14}}>
+              {chatSimulationTemplates.map(x=><div key={x.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'7px 9px',border:'1px solid rgba(148,163,184,.16)',borderRadius:8}}><span style={{fontSize:12}}>{x.text}</span><button type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText('template',x.id)} style={{...styles.dangerBtn,padding:'4px 8px',fontSize:11}}>Eliminar</button></div>)}
+            </div>
+
+            <div style={{...styles.fieldLabel,marginTop:15}}>Nueva plantilla de pérdida</div>
+            <div style={{...styles.fieldHelp,marginTop:0,marginBottom:7}}>Texto libre para negativos. <strong>{'{pct}'}</strong> usa automáticamente el rango negativo configurado arriba.</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 110px',gap:8}}>
+              <div style={styles.inputShell}><input value={chatSimLossTemplate} onChange={e=>setChatSimLossTemplate(e.target.value)} placeholder="Me sacó {ticker} con {pct}% usando {strategy}. Vamos a la próxima." style={{...styles.inputInside,paddingLeft:16}} /></div>
+              <button type="button" disabled={chatSimulationBusy||!chatSimLossTemplate.trim()} onClick={addChatSimulationLossTemplate} style={{...styles.button,padding:'8px 10px'}}>Agregar</button>
+            </div>
+            <div style={{...styles.fieldHelp,marginTop:8,marginBottom:6}}>Plantillas negativas activas: {chatSimulationLossTemplates.length}</div>
+            <div style={{display:'grid',gap:5,maxHeight:165,overflowY:'auto',paddingRight:3,marginBottom:8}}>
+              {chatSimulationLossTemplates.map(x=><div key={x.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'7px 9px',border:'1px solid rgba(248,113,113,.20)',borderRadius:8}}><span style={{fontSize:12}}>{x.text}</span><button type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText('loss_template',x.id)} style={{...styles.dangerBtn,padding:'4px 8px',fontSize:11}}>Eliminar</button></div>)}
+            </div>
+            <div style={styles.fieldHelp}>Variables: <strong>{'{ticker}'}</strong>, <strong>{'{pct}'}</strong>, <strong>{'{strategy}'}</strong>, <strong>{'{expression}'}</strong>. Nombres: {chatSimulation?.name_count || 0}</div>
           </div>
         </div>
         {chatSimulationNotice?<div style={{marginTop:13,padding:'10px 12px',borderRadius:10,border:'1px solid rgba(52,211,153,.25)',background:'rgba(5,150,105,.10)',color:'#d1fae5',fontSize:13.5,fontWeight:750}}>{chatSimulationNotice}</div>:null}
