@@ -165,6 +165,7 @@ export default function GestionOperativaPage() {
 
   const [chatSimulation, setChatSimulation] = useState<ChatSimulationState | null>(null);
   const [chatSimulationSymbols, setChatSimulationSymbols] = useState<ChatSimulationSymbol[]>([]);
+  const [chatSimulationStrategyIds, setChatSimulationStrategyIds] = useState<string[]>([]);
   const [chatSimMinInterval, setChatSimMinInterval] = useState('20');
   const [chatSimMaxInterval, setChatSimMaxInterval] = useState('75');
   const [chatSimMaxMessages, setChatSimMaxMessages] = useState('80');
@@ -195,7 +196,7 @@ export default function GestionOperativaPage() {
 
     setAuthorized(true);
 
-    const [studentsResult, replayResult, topicResult, courseDateResult, strategiesResult, tradeModeResult, winRateResult, chatSimResult, chatSimSymbolsResult] = await Promise.all([
+    const [studentsResult, replayResult, topicResult, courseDateResult, strategiesResult, tradeModeResult, winRateResult, chatSimResult, chatSimSymbolsResult, chatSimStrategiesResult] = await Promise.all([
       supabase.rpc('admin_operational_students'),
       supabase.rpc('admin_replay_sessions'),
       supabase.from('portal_settings').select('value').eq('key', 'today_class_topic').maybeSingle(),
@@ -205,6 +206,7 @@ export default function GestionOperativaPage() {
       supabase.from('portal_settings').select('value').eq('key', 'educational_trade_win_rate').maybeSingle(),
       supabase.rpc('admin_get_live_chat_simulation'),
       supabase.from('live_chat_simulation_symbols').select('id,ticker,min_pct,max_pct,active').order('ticker', { ascending: true }),
+      supabase.from('live_chat_simulation_strategies').select('strategy_id').eq('enabled', true),
     ]);
 
     if (studentsResult.error) {
@@ -247,6 +249,7 @@ export default function GestionOperativaPage() {
       }
     }
     if (!chatSimSymbolsResult.error) setChatSimulationSymbols((chatSimSymbolsResult.data || []) as ChatSimulationSymbol[]);
+    if (!chatSimStrategiesResult.error) setChatSimulationStrategyIds((chatSimStrategiesResult.data || []).map((r:any)=>String(r.strategy_id)));
 
     setLoading(false);
   }
@@ -630,6 +633,25 @@ export default function GestionOperativaPage() {
     await load();
   }
 
+  async function toggleChatSimulationStrategy(strategyId: string, enabled: boolean) {
+    if (chatSimulationBusy) return;
+    setChatSimulationBusy(true);
+    setChatSimulationNotice(null);
+    const { error } = await supabase.rpc('admin_set_live_chat_simulation_strategy', {
+      p_strategy_id: strategyId,
+      p_enabled: enabled,
+    });
+    setChatSimulationBusy(false);
+    if (error) {
+      setChatSimulationNotice(error.message);
+      return;
+    }
+    setChatSimulationStrategyIds(prev => enabled
+      ? Array.from(new Set([...prev, strategyId]))
+      : prev.filter(id => id !== strategyId));
+    setChatSimulationNotice(enabled ? 'Estrategia habilitada para la simulación.' : 'Estrategia retirada de la simulación.');
+  }
+
   async function deleteOnlySimulatedChat() {
     if (chatSimulationBusy) return;
     if (!window.confirm('¿Borrar solamente los mensajes simulados del CHAT LIVE? Los mensajes reales no se tocarán.')) return;
@@ -970,9 +992,17 @@ export default function GestionOperativaPage() {
           </div>
 
           <div style={{padding:14,borderRadius:14,border:'1px solid rgba(96,165,250,.20)',background:'rgba(3,18,29,.58)'}}>
-            <div style={styles.fieldLabel}>Estrategias incluidas automáticamente</div>
-            <div style={{display:'flex',gap:7,flexWrap:'wrap',marginBottom:13}}>
-              {tradeStrategies.filter(s=>s.active).map(s=><span key={s.id} style={{padding:'7px 9px',borderRadius:999,border:'1px solid rgba(96,165,250,.28)',background:'rgba(30,64,175,.17)',fontSize:12,fontWeight:850}}>{s.name}</span>)}
+            <div style={styles.fieldLabel}>Estrategias para esta simulación</div>
+            <div style={{...styles.fieldHelp,marginTop:0,marginBottom:10}}>Habilita solamente las estrategias que quieres que aparezcan. Si marcas una sola, todos los comentarios con estrategia usarán esa.</div>
+            <div style={{display:'grid',gap:7,marginBottom:13}}>
+              {tradeStrategies.filter(s=>s.active).map(s=>{
+                const selected = chatSimulationStrategyIds.includes(s.id);
+                return <button key={s.id} type="button" disabled={chatSimulationBusy} onClick={()=>toggleChatSimulationStrategy(s.id,!selected)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,width:'100%',padding:'9px 11px',borderRadius:10,border:selected?'1px solid rgba(52,211,153,.48)':'1px solid rgba(148,163,184,.20)',background:selected?'rgba(5,150,105,.16)':'rgba(15,23,42,.45)',color:'#fff',cursor:'pointer',textAlign:'left'}}>
+                  <span style={{fontSize:13,fontWeight:850}}>{s.name}</span>
+                  <span style={{fontSize:11,fontWeight:950,color:selected?'#86efac':'#94a3b8'}}>{selected?'✓ HABILITADA':'DESHABILITADA'}</span>
+                </button>;
+              })}
+              {!tradeStrategies.filter(s=>s.active).length?<div style={styles.fieldHelp}>No hay estrategias publicadas en la Bitácora.</div>:null}
             </div>
             <div style={styles.fieldLabel}>Nueva expresión libre</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 110px',gap:8}}>
