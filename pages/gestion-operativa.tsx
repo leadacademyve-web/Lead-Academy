@@ -1006,68 +1006,82 @@ export default function GestionOperativaPage() {
           <span style={{alignSelf:'center',color:'rgba(255,255,255,.68)',fontSize:13,fontWeight:750}}>Enviados: {chatSimulation?.messages_sent || 0} / {chatSimulation?.max_messages_per_session || Number(chatSimMaxMessages)||0}</span>
         </div>
 
-        <div style={{display:'grid',gridTemplateColumns:'1.05fr .95fr',gap:14,marginTop:18}}>
-          <div style={{padding:14,borderRadius:14,border:'1px solid rgba(52,211,153,.20)',background:'rgba(3,18,29,.58)'}}>
+        <div style={{display:'grid',gridTemplateColumns:'minmax(300px,.78fr) minmax(330px,.92fr) minmax(520px,1.55fr)',gap:12,marginTop:14,alignItems:'start'}}>
+          {/* SÍMBOLOS — compacto, pensado para 3–4 símbolos */}
+          <div style={{padding:12,borderRadius:14,border:'1px solid rgba(52,211,153,.20)',background:'rgba(3,18,29,.58)'}}>
             <div style={styles.fieldLabel}>Símbolos y rentabilidad</div>
-            <div style={{display:'grid',gridTemplateColumns:'minmax(120px,1fr) 130px 130px 110px',gap:8}}>
-              <div style={styles.inputShell}><input value={chatSimTicker} onChange={e=>setChatSimTicker(e.target.value.toUpperCase())} placeholder="AAPL" style={{...styles.inputInside,paddingLeft:16}} /></div>
-              <div style={styles.inputShell}><input type="number" value={chatSimMinPct} onChange={e=>setChatSimMinPct(e.target.value)} placeholder="Min %" style={{...styles.inputInside,paddingLeft:16}} /></div>
-              <div style={styles.inputShell}><input type="number" value={chatSimMaxPct} onChange={e=>setChatSimMaxPct(e.target.value)} placeholder="Max %" style={{...styles.inputInside,paddingLeft:16}} /></div>
-              <button type="button" disabled={chatSimulationBusy} onClick={addChatSimulationSymbol} style={{...styles.button,padding:'8px 12px'}}>+ Agregar</button>
+            <div style={{display:'grid',gridTemplateColumns:'minmax(90px,1fr) 78px 78px 88px',gap:6}}>
+              <div style={styles.inputShell}><input value={chatSimTicker} onChange={e=>setChatSimTicker(e.target.value.toUpperCase())} placeholder="AAPL" style={{...styles.inputInside,paddingLeft:12}} /></div>
+              <div style={styles.inputShell}><input type="number" value={chatSimMinPct} onChange={e=>setChatSimMinPct(e.target.value)} placeholder="Min %" style={{...styles.inputInside,paddingLeft:10}} /></div>
+              <div style={styles.inputShell}><input type="number" value={chatSimMaxPct} onChange={e=>setChatSimMaxPct(e.target.value)} placeholder="Max %" style={{...styles.inputInside,paddingLeft:10}} /></div>
+              <button type="button" disabled={chatSimulationBusy} onClick={addChatSimulationSymbol} style={{...styles.button,padding:'7px 9px',fontSize:12}}>+ Agregar</button>
             </div>
-            <div style={{display:'grid',gap:7,marginTop:10,maxHeight:220,overflowY:'auto'}}>
-              {chatSimulationSymbols.map(row=><div key={row.id} style={{display:'grid',gridTemplateColumns:'1fr auto auto 86px',gap:10,alignItems:'center',padding:'9px 10px',borderRadius:10,background:'rgba(6,30,42,.72)',border:'1px solid rgba(148,163,184,.13)'}}>
-                <strong>{row.ticker}</strong><span>{Number(row.min_pct)}%</span><span>→ {Number(row.max_pct)}%</span>
-                <button type="button" onClick={()=>deleteChatSimulationSymbol(row.id)} disabled={chatSimulationBusy} style={{...styles.buttonSecondary,padding:'7px 9px',color:'#fecaca'}}>Eliminar</button>
+            <div style={{display:'grid',gap:5,marginTop:8,maxHeight:154,overflowY:'auto',paddingRight:2}}>
+              {chatSimulationSymbols.map(row=><div key={row.id} style={{display:'grid',gridTemplateColumns:'1fr auto auto 28px',gap:7,alignItems:'center',padding:'7px 8px',borderRadius:9,background:'rgba(6,30,42,.72)',border:'1px solid rgba(148,163,184,.12)'}}>
+                <strong style={{fontSize:12.5}}>{row.ticker}</strong><span style={{fontSize:12}}>{Number(row.min_pct)}%</span><span style={{fontSize:12}}>→ {Number(row.max_pct)}%</span>
+                <button title="Eliminar símbolo" aria-label={`Eliminar ${row.ticker}`} type="button" onClick={()=>deleteChatSimulationSymbol(row.id)} disabled={chatSimulationBusy} style={{width:26,height:26,borderRadius:7,border:'1px solid rgba(248,113,113,.18)',background:'rgba(127,29,29,.12)',color:'rgba(254,202,202,.78)',cursor:'pointer',fontSize:15,lineHeight:1,padding:0}}>×</button>
               </div>)}
               {!chatSimulationSymbols.length?<div style={styles.fieldHelp}>Agrega al menos un símbolo antes de activar la simulación.</div>:null}
             </div>
           </div>
 
-          <div style={{padding:14,borderRadius:14,border:'1px solid rgba(96,165,250,.20)',background:'rgba(3,18,29,.58)'}}>
+          {/* ESTRATEGIAS */}
+          <div style={{padding:12,borderRadius:14,border:'1px solid rgba(96,165,250,.20)',background:'rgba(3,18,29,.58)'}}>
             <div style={styles.fieldLabel}>Estrategias para esta simulación</div>
-            <div style={{...styles.fieldHelp,marginTop:0,marginBottom:10}}>Habilita solamente las estrategias que quieres que aparezcan. Si marcas una sola, todos los comentarios con estrategia usarán esa.</div>
-            <div style={{display:'grid',gap:7,marginBottom:13}}>
+            <div style={{...styles.fieldHelp,marginTop:0,marginBottom:7}}>Habilita solo las estrategias que quieras usar.</div>
+            <div style={{display:'grid',gap:5,maxHeight:196,overflowY:'auto',paddingRight:2}}>
               {tradeStrategies.filter(s=>s.active).map(s=>{
                 const selected = chatSimulationStrategyIds.includes(s.id);
-                return <button key={s.id} type="button" disabled={chatSimulationBusy} onClick={()=>toggleChatSimulationStrategy(s.id,!selected)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,width:'100%',padding:'9px 11px',borderRadius:10,border:selected?'1px solid rgba(52,211,153,.48)':'1px solid rgba(148,163,184,.20)',background:selected?'rgba(5,150,105,.16)':'rgba(15,23,42,.45)',color:'#fff',cursor:'pointer',textAlign:'left'}}>
-                  <span style={{fontSize:13,fontWeight:850}}>{s.name}</span>
-                  <span style={{fontSize:11,fontWeight:950,color:selected?'#86efac':'#94a3b8'}}>{selected?'✓ HABILITADA':'DESHABILITADA'}</span>
+                return <button key={s.id} type="button" disabled={chatSimulationBusy} onClick={()=>toggleChatSimulationStrategy(s.id,!selected)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,width:'100%',padding:'7px 9px',borderRadius:9,border:selected?'1px solid rgba(52,211,153,.42)':'1px solid rgba(148,163,184,.16)',background:selected?'rgba(5,150,105,.14)':'rgba(15,23,42,.38)',color:'#fff',cursor:'pointer',textAlign:'left'}}>
+                  <span style={{fontSize:12,fontWeight:850,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.name}</span>
+                  <span style={{fontSize:9.5,fontWeight:950,color:selected?'#86efac':'#94a3b8',flexShrink:0}}>{selected?'✓ HABILITADA':'DESHABILITADA'}</span>
                 </button>;
               })}
-              {!tradeStrategies.filter(s=>s.active).length?<div style={styles.fieldHelp}>No hay estrategias publicadas en la Bitácora.</div>:null}
+              {!tradeStrategies.filter(s=>s.active).length?<div style={styles.fieldHelp}>No hay estrategias publicadas.</div>:null}
             </div>
-            <div style={styles.fieldLabel}>Nueva expresión libre</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 110px',gap:8}}>
-              <div style={styles.inputShell}><input value={chatSimExpression} onChange={e=>setChatSimExpression(e.target.value)} placeholder="Ej: Espectacular!" style={{...styles.inputInside,paddingLeft:16}} /></div>
-              <button type="button" disabled={chatSimulationBusy||!chatSimExpression.trim()} onClick={()=>addChatSimulationContent('expression')} style={{...styles.button,padding:'8px 10px'}}>Agregar</button>
-            </div>
-            <div style={{...styles.fieldHelp,marginTop:8,marginBottom:6}}>Expresiones activas: {chatSimulationExpressions.length}</div>
-            <div style={{display:'grid',gap:5,maxHeight:145,overflowY:'auto',paddingRight:3,marginBottom:14}}>
-              {chatSimulationExpressions.map(x=><div key={x.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'7px 9px',border:'1px solid rgba(148,163,184,.16)',borderRadius:8}}><span style={{fontSize:12}}>{x.text}</span><button type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText('expression',x.id)} style={{...styles.dangerBtn,padding:'4px 8px',fontSize:11}}>Eliminar</button></div>)}
+          </div>
+
+          {/* BANCOS DE TEXTO — tres columnas compactas */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:8}}>
+            <div style={{padding:10,borderRadius:12,border:'1px solid rgba(148,163,184,.15)',background:'rgba(3,18,29,.58)',minWidth:0}}>
+              <div style={styles.fieldLabel}>Expresiones</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 72px',gap:5}}>
+                <div style={styles.inputShell}><input value={chatSimExpression} onChange={e=>setChatSimExpression(e.target.value)} placeholder="Ej: Espectacular!" style={{...styles.inputInside,paddingLeft:10,fontSize:12}} /></div>
+                <button type="button" disabled={chatSimulationBusy||!chatSimExpression.trim()} onClick={()=>addChatSimulationContent('expression')} style={{...styles.button,padding:'7px 6px',fontSize:11}}>Agregar</button>
+              </div>
+              <div style={{...styles.fieldHelp,margin:'6px 0 4px'}}>Activas: {chatSimulationExpressions.length}</div>
+              <div style={{display:'grid',gap:4,maxHeight:128,overflowY:'auto',paddingRight:2}}>
+                {chatSimulationExpressions.map(x=><div key={x.id} style={{display:'grid',gridTemplateColumns:'1fr 24px',alignItems:'center',gap:5,padding:'5px 6px',border:'1px solid rgba(148,163,184,.12)',borderRadius:7,minWidth:0}}><span title={x.text} style={{fontSize:10.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{x.text}</span><button title="Eliminar" aria-label="Eliminar expresión" type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText('expression',x.id)} style={{width:22,height:22,borderRadius:6,border:'1px solid rgba(248,113,113,.15)',background:'rgba(127,29,29,.10)',color:'rgba(254,202,202,.72)',cursor:'pointer',fontSize:13,lineHeight:1,padding:0}}>×</button></div>)}
+              </div>
             </div>
 
-            <div style={{...styles.fieldLabel,marginTop:15}}>Nueva plantilla positiva</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 110px',gap:8}}>
-              <div style={styles.inputShell}><input value={chatSimTemplate} onChange={e=>setChatSimTemplate(e.target.value)} placeholder="{expression} {ticker} {pct}% con {strategy}!" style={{...styles.inputInside,paddingLeft:16}} /></div>
-              <button type="button" disabled={chatSimulationBusy||!chatSimTemplate.trim()} onClick={()=>addChatSimulationContent('template')} style={{...styles.button,padding:'8px 10px'}}>Agregar</button>
-            </div>
-            <div style={{...styles.fieldHelp,marginTop:8,marginBottom:6}}>Plantillas positivas activas: {chatSimulationTemplates.length}</div>
-            <div style={{display:'grid',gap:5,maxHeight:165,overflowY:'auto',paddingRight:3,marginBottom:14}}>
-              {chatSimulationTemplates.map(x=><div key={x.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'7px 9px',border:'1px solid rgba(148,163,184,.16)',borderRadius:8}}><span style={{fontSize:12}}>{x.text}</span><button type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText('template',x.id)} style={{...styles.dangerBtn,padding:'4px 8px',fontSize:11}}>Eliminar</button></div>)}
+            <div style={{padding:10,borderRadius:12,border:'1px solid rgba(52,211,153,.15)',background:'rgba(3,18,29,.58)',minWidth:0}}>
+              <div style={styles.fieldLabel}>Plantillas positivas</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 72px',gap:5}}>
+                <div style={styles.inputShell}><input value={chatSimTemplate} onChange={e=>setChatSimTemplate(e.target.value)} placeholder="{expression} {ticker} +{pct}%" style={{...styles.inputInside,paddingLeft:10,fontSize:12}} /></div>
+                <button type="button" disabled={chatSimulationBusy||!chatSimTemplate.trim()} onClick={()=>addChatSimulationContent('template')} style={{...styles.button,padding:'7px 6px',fontSize:11}}>Agregar</button>
+              </div>
+              <div style={{...styles.fieldHelp,margin:'6px 0 4px'}}>Activas: {chatSimulationTemplates.length}</div>
+              <div style={{display:'grid',gap:4,maxHeight:128,overflowY:'auto',paddingRight:2}}>
+                {chatSimulationTemplates.map(x=><div key={x.id} style={{display:'grid',gridTemplateColumns:'1fr 24px',alignItems:'center',gap:5,padding:'5px 6px',border:'1px solid rgba(52,211,153,.11)',borderRadius:7,minWidth:0}}><span title={x.text} style={{fontSize:10.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{x.text}</span><button title="Eliminar" aria-label="Eliminar plantilla positiva" type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText('template',x.id)} style={{width:22,height:22,borderRadius:6,border:'1px solid rgba(248,113,113,.15)',background:'rgba(127,29,29,.10)',color:'rgba(254,202,202,.72)',cursor:'pointer',fontSize:13,lineHeight:1,padding:0}}>×</button></div>)}
+              </div>
             </div>
 
-            <div style={{...styles.fieldLabel,marginTop:15}}>Nueva plantilla de pérdida</div>
-            <div style={{...styles.fieldHelp,marginTop:0,marginBottom:7}}>Texto libre para negativos. <strong>{'{pct}'}</strong> usa automáticamente el rango negativo configurado arriba.</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 110px',gap:8}}>
-              <div style={styles.inputShell}><input value={chatSimLossTemplate} onChange={e=>setChatSimLossTemplate(e.target.value)} placeholder="Me sacó {ticker} con {pct}% usando {strategy}. Vamos a la próxima." style={{...styles.inputInside,paddingLeft:16}} /></div>
-              <button type="button" disabled={chatSimulationBusy||!chatSimLossTemplate.trim()} onClick={addChatSimulationLossTemplate} style={{...styles.button,padding:'8px 10px'}}>Agregar</button>
+            <div style={{padding:10,borderRadius:12,border:'1px solid rgba(248,113,113,.15)',background:'rgba(3,18,29,.58)',minWidth:0}}>
+              <div style={styles.fieldLabel}>Plantillas de pérdida</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 72px',gap:5}}>
+                <div style={styles.inputShell}><input value={chatSimLossTemplate} onChange={e=>setChatSimLossTemplate(e.target.value)} placeholder="Me sacó {ticker} con {pct}%" style={{...styles.inputInside,paddingLeft:10,fontSize:12}} /></div>
+                <button type="button" disabled={chatSimulationBusy||!chatSimLossTemplate.trim()} onClick={addChatSimulationLossTemplate} style={{...styles.button,padding:'7px 6px',fontSize:11}}>Agregar</button>
+              </div>
+              <div style={{...styles.fieldHelp,margin:'6px 0 4px'}}>Activas: {chatSimulationLossTemplates.length}</div>
+              <div style={{display:'grid',gap:4,maxHeight:128,overflowY:'auto',paddingRight:2}}>
+                {chatSimulationLossTemplates.map(x=><div key={x.id} style={{display:'grid',gridTemplateColumns:'1fr 24px',alignItems:'center',gap:5,padding:'5px 6px',border:'1px solid rgba(248,113,113,.11)',borderRadius:7,minWidth:0}}><span title={x.text} style={{fontSize:10.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{x.text}</span><button title="Eliminar" aria-label="Eliminar plantilla negativa" type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText('loss_template',x.id)} style={{width:22,height:22,borderRadius:6,border:'1px solid rgba(248,113,113,.15)',background:'rgba(127,29,29,.10)',color:'rgba(254,202,202,.72)',cursor:'pointer',fontSize:13,lineHeight:1,padding:0}}>×</button></div>)}
+              </div>
             </div>
-            <div style={{...styles.fieldHelp,marginTop:8,marginBottom:6}}>Plantillas negativas activas: {chatSimulationLossTemplates.length}</div>
-            <div style={{display:'grid',gap:5,maxHeight:165,overflowY:'auto',paddingRight:3,marginBottom:8}}>
-              {chatSimulationLossTemplates.map(x=><div key={x.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,padding:'7px 9px',border:'1px solid rgba(248,113,113,.20)',borderRadius:8}}><span style={{fontSize:12}}>{x.text}</span><button type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText('loss_template',x.id)} style={{...styles.dangerBtn,padding:'4px 8px',fontSize:11}}>Eliminar</button></div>)}
+
+            <div style={{gridColumn:'1 / -1',...styles.fieldHelp,marginTop:0,padding:'2px 2px 0'}}>
+              Variables: <strong>{'{ticker}'}</strong>, <strong>{'{pct}'}</strong>, <strong>{'{strategy}'}</strong>, <strong>{'{expression}'}</strong> · Nombres: {chatSimulation?.name_count || 0}
             </div>
-            <div style={styles.fieldHelp}>Variables: <strong>{'{ticker}'}</strong>, <strong>{'{pct}'}</strong>, <strong>{'{strategy}'}</strong>, <strong>{'{expression}'}</strong>. Nombres: {chatSimulation?.name_count || 0}</div>
           </div>
         </div>
         {chatSimulationNotice?<div style={{marginTop:13,padding:'10px 12px',borderRadius:10,border:'1px solid rgba(52,211,153,.25)',background:'rgba(5,150,105,.10)',color:'#d1fae5',fontSize:13.5,fontWeight:750}}>{chatSimulationNotice}</div>:null}
