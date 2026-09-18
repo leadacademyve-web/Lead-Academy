@@ -139,6 +139,7 @@ export default function GestionOperativaPage() {
 
   const [studentModal, setStudentModal] = useState<StudentModal | null>(null);
   const [reason, setReason] = useState('');
+  const [classAmount, setClassAmount] = useState(1);
 
   const [publishType, setPublishType] = useState<VideoPublishType>('daily');
   const [vimeoId, setVimeoId] = useState('');
@@ -304,6 +305,7 @@ export default function GestionOperativaPage() {
 
   function openCounterModal(row: StudentRow, operation: CounterOperation) {
     setReason('');
+    setClassAmount(1);
     setStudentModal({ row, kind: 'counter', operation });
   }
 
@@ -324,22 +326,29 @@ export default function GestionOperativaPage() {
       setMessage(studentModal.pause ? `${formatPersonName(row.full_name)} fue pausado.` : `${formatPersonName(row.full_name)} fue reactivado.`);
     } else {
       const operation = studentModal.operation as CounterOperation;
+      const amount = (operation === 'add_package' || operation === 'remove_package')
+        ? Math.max(1, Math.floor(Number(classAmount) || 1))
+        : 1;
       const { data, error } = await supabase.rpc('admin_change_class_counters', {
         p_user_id: row.user_id,
         p_operation: operation,
-        p_amount: 1,
+        p_amount: amount,
         p_reason: reason.trim(),
       });
       setWorkingId(null);
       if (error) return setMessage(error.message);
       const result = Array.isArray(data) ? data[0] : data;
       if (result) {
-        setMessage(`${counterLabels[operation]} completado. ${result.classes_used}/${result.total_classes} usadas · ${result.remaining_classes} restantes.`);
+        const amountText = (operation === 'add_package' || operation === 'remove_package')
+          ? `${Math.max(1, Math.floor(Number(classAmount) || 1))} clase${Math.max(1, Math.floor(Number(classAmount) || 1)) === 1 ? '' : 's'}`
+          : '1 clase';
+        setMessage(`${operation === 'add_package' ? 'Agregadas' : operation === 'remove_package' ? 'Quitadas' : counterLabels[operation]} ${amountText}. ${result.classes_used}/${result.total_classes} usadas · ${result.remaining_classes} restantes.`);
       }
     }
 
     setStudentModal(null);
     setReason('');
+    setClassAmount(1);
     await load();
   }
 
@@ -1041,7 +1050,7 @@ export default function GestionOperativaPage() {
             <div style={{display:'grid',gap:7,marginTop:10,maxHeight:180,overflowY:'auto',paddingRight:3}}>
               {chatSimulationSymbols.map(row=><div key={row.id} style={{display:'grid',gridTemplateColumns:'1fr auto auto 72px',gap:10,alignItems:'center',padding:'9px 10px',borderRadius:9,background:'rgba(6,30,42,.72)',border:'1px solid rgba(148,163,184,.12)'}}>
                 <strong style={{fontSize:15}}>{row.ticker}</strong><span style={{fontSize:14}}>{Number(row.min_pct)}%</span><span style={{fontSize:14}}>→ {Number(row.max_pct)}%</span>
-                <button type="button" onClick={()=>deleteChatSimulationSymbol(row.id)} disabled={chatSimulationBusy} style={styles.dangerBtn}>Eliminar</button>
+                <button type="button" onClick={()=>deleteChatSimulationSymbol(row.id)} disabled={chatSimulationBusy} style={{height:36,borderRadius:9,border:'1px solid rgba(248,113,113,.30)',background:'rgba(127,29,29,.18)',color:'#fecaca',fontWeight:900,cursor:'pointer'}}>Eliminar</button>
               </div>)}
             </div>
           </div>
@@ -1070,8 +1079,8 @@ export default function GestionOperativaPage() {
               <div style={{...styles.fieldHelp,fontSize:12,margin:'8px 0 6px'}}>Activas: {bank.items.length}</div>
               <div style={{display:'grid',gap:6,maxHeight:190,overflowY:'auto',paddingRight:3}}>
                 {bank.items.map(x=><div key={x.id} style={{display:'grid',gridTemplateColumns:'1fr 76px',alignItems:'center',gap:8,padding:'7px 8px',border:'1px solid rgba(148,163,184,.14)',borderRadius:8,minWidth:0,background:'rgba(8,28,53,.48)'}}>
-                  <span title={x.text} style={{fontSize:14,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{x.text}</span>
-                  <button type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText(bank.kind,x.id)} style={styles.dangerBtn}>Eliminar</button>
+                  <span title={x.text} style={{fontSize:14,fontWeight:750,lineHeight:1.35,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{x.text}</span>
+                  <button type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText(bank.kind,x.id)} style={{height:36,borderRadius:9,border:'1px solid rgba(248,113,113,.30)',background:'rgba(127,29,29,.18)',color:'#fecaca',fontWeight:900,cursor:'pointer'}}>Eliminar</button>
                 </div>)}
               </div>
             </div>)}
@@ -1205,6 +1214,14 @@ export default function GestionOperativaPage() {
               <button style={styles.closeButton} onClick={() => setStudentModal(null)}>×</button>
             </div>
             <p style={styles.muted}><strong style={{ color: '#fff' }}>{formatPersonName(studentModal.row.full_name)}</strong><br />{studentModal.row.email}</p>
+            {studentModal.kind === 'counter' && (studentModal.operation === 'add_package' || studentModal.operation === 'remove_package') ? (
+              <>
+                <div style={styles.fieldLabel}>Cantidad de clases</div>
+                <div style={{...styles.inputShell,maxWidth:220,marginBottom:12}}>
+                  <input type="number" min={1} step={1} value={classAmount} onChange={(e)=>setClassAmount(Math.max(1,Math.floor(Number(e.target.value)||1)))} style={{...styles.inputInside,paddingLeft:14,fontSize:15,fontWeight:850}} />
+                </div>
+              </>
+            ) : null}
             <div style={styles.fieldLabel}>Motivo administrativo</div>
             <textarea autoFocus value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Escribe el motivo..." style={styles.textarea} />
             <div style={{ ...styles.fieldHelp, marginTop: 7 }}>Escribe un motivo de al menos 3 caracteres.</div>
