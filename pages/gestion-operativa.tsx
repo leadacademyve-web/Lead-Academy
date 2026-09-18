@@ -1008,7 +1008,7 @@ export default function GestionOperativaPage() {
             <p style={{...styles.publishIntro,fontSize:14.5,maxWidth:920}}>Combina nombres, símbolos, porcentajes, estrategias activas, expresiones y plantillas. Los mensajes se publican en el CHAT LIVE existente.</p>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:12}}>
-            <span style={{fontSize:13,fontWeight:950,color:chatSimulation?.enabled?'#86efac':'#94a3b8'}}>{chatSimulation?.enabled?'ACTIVA':'INACTIVA'}</span>
+            <span style={{fontSize:14,fontWeight:950,color:chatSimulation?.enabled?'#86efac':'#94a3b8'}}>{chatSimulation?.enabled?'ACTIVA':'INACTIVA'}</span>
             <button type="button" disabled={chatSimulationBusy} onClick={()=>saveChatSimulationSettings(!chatSimulation?.enabled)} style={{width:74,height:38,borderRadius:999,border:'1px solid rgba(148,163,184,.28)',background:chatSimulation?.enabled?'#059669':'#334155',padding:4,cursor:'pointer',opacity:chatSimulationBusy ? .6 : 1}}>
               <span style={{display:'block',width:28,height:28,borderRadius:'50%',background:'#fff',transform:chatSimulation?.enabled?'translateX(34px)':'translateX(0)',transition:'transform .18s ease'}} />
             </button>
@@ -1016,22 +1016,22 @@ export default function GestionOperativaPage() {
         </div>
 
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:10,marginTop:16}}>
-          <div><div style={styles.fieldLabel}>Frecuencia mínima (seg)</div><div style={styles.inputShell}><input type="number" min={5} value={chatSimMinInterval} onChange={e=>setChatSimMinInterval(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div></div>
-          <div><div style={styles.fieldLabel}>Frecuencia máxima (seg)</div><div style={styles.inputShell}><input type="number" min={5} value={chatSimMaxInterval} onChange={e=>setChatSimMaxInterval(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div></div>
-          <div><div style={styles.fieldLabel}>Máximo por sesión</div><div style={styles.inputShell}><input type="number" min={1} max={1000} value={chatSimMaxMessages} onChange={e=>setChatSimMaxMessages(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div></div>
-          <div><div style={styles.fieldLabel}>Mensajes ganadores (%)</div><div style={styles.inputShell}><input type="number" min={0} max={100} value={chatSimWinnerPct} onChange={e=>setChatSimWinnerPct(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div><div style={styles.fieldHelp}>Ej: 85 = aproximadamente 85% positivos y 15% negativos.</div></div>
-          <div><div style={styles.fieldLabel}>Pérdida mínima (%)</div><div style={styles.inputShell}><input type="number" max={-1} value={chatSimLossMinPct} onChange={e=>setChatSimLossMinPct(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div><div style={styles.fieldHelp}>Ej: -15</div></div>
-          <div><div style={styles.fieldLabel}>Pérdida máxima (%)</div><div style={styles.inputShell}><input type="number" max={-1} value={chatSimLossMaxPct} onChange={e=>setChatSimLossMaxPct(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div><div style={styles.fieldHelp}>Ej: -5. Puede salir “Me sacó con -10%”.</div></div>
+          <div><div style={{...styles.fieldLabel,fontSize:13}}>Frecuencia mínima (seg)</div><div style={styles.inputShell}><input type="number" min={5} value={chatSimMinInterval} onChange={e=>setChatSimMinInterval(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div></div>
+          <div><div style={{...styles.fieldLabel,fontSize:13}}>Frecuencia máxima (seg)</div><div style={styles.inputShell}><input type="number" min={5} value={chatSimMaxInterval} onChange={e=>setChatSimMaxInterval(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div></div>
+          <div><div style={{...styles.fieldLabel,fontSize:13}}>Máximo por sesión</div><div style={styles.inputShell}><input type="number" min={1} max={1000} value={chatSimMaxMessages} onChange={e=>setChatSimMaxMessages(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div></div>
+          <div><div style={{...styles.fieldLabel,fontSize:13}}>Mensajes ganadores (%)</div><div style={styles.inputShell}><input type="number" min={0} max={100} value={chatSimWinnerPct} onChange={e=>setChatSimWinnerPct(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div><div style={{...styles.fieldHelp,fontSize:12,fontSize:12}}>Ej: 85 = aproximadamente 85% positivos y 15% negativos.</div></div>
+          <div><div style={{...styles.fieldLabel,fontSize:13}}>Pérdida mínima (%)</div><div style={styles.inputShell}><input type="number" max={-1} value={chatSimLossMinPct} onChange={e=>setChatSimLossMinPct(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div><div style={{...styles.fieldHelp,fontSize:12,fontSize:12}}>Ej: -15</div></div>
+          <div><div style={{...styles.fieldLabel,fontSize:13}}>Pérdida máxima (%)</div><div style={styles.inputShell}><input type="number" max={-1} value={chatSimLossMaxPct} onChange={e=>setChatSimLossMaxPct(e.target.value)} style={{...styles.inputInside,paddingLeft:16}} /></div><div style={{...styles.fieldHelp,fontSize:12,fontSize:12}}>Ej: -5. Puede salir “Me sacó con -10%”.</div></div>
         </div>
         <div style={{display:'flex',gap:10,marginTop:12,flexWrap:'wrap'}}>
           <button type="button" disabled={chatSimulationBusy} onClick={()=>saveChatSimulationSettings()} style={styles.button}>Guardar configuración</button>
           <button type="button" disabled={chatSimulationBusy} onClick={deleteOnlySimulatedChat} style={{...styles.buttonSecondary,borderColor:'rgba(248,113,113,.34)',color:'#fecaca'}}>Borrar solo simulados</button>
-          <span style={{alignSelf:'center',color:'rgba(255,255,255,.68)',fontSize:13,fontWeight:750}}>Enviados: {chatSimulation?.messages_sent || 0} / {chatSimulation?.max_messages_per_session || Number(chatSimMaxMessages)||0}</span>
+          <span style={{alignSelf:'center',color:'rgba(255,255,255,.68)',fontSize:14,fontWeight:750}}>Enviados: {chatSimulation?.messages_sent || 0} / {chatSimulation?.max_messages_per_session || Number(chatSimMaxMessages)||0}</span>
         </div>
 
         <div style={{display:'grid',gridTemplateColumns:'minmax(390px,.82fr) minmax(520px,1.18fr)',gap:14,marginTop:16,alignItems:'start'}}>
           <div style={{padding:14,borderRadius:14,border:'1px solid rgba(52,211,153,.20)',background:'rgba(3,18,29,.58)'}}>
-            <div style={{...styles.fieldLabel,fontSize:14}}>Símbolos y rentabilidad</div>
+            <div style={{...styles.fieldLabel,fontSize:15}}>Símbolos y rentabilidad</div>
             <div style={{display:'grid',gridTemplateColumns:'minmax(120px,1fr) 88px 88px 102px',gap:8}}>
               <div style={styles.inputShell}><input value={chatSimTicker} onChange={e=>setChatSimTicker(e.target.value.toUpperCase())} placeholder="AAPL" style={{...styles.inputInside,paddingLeft:14}} /></div>
               <div style={styles.inputShell}><input type="number" value={chatSimMinPct} onChange={e=>setChatSimMinPct(e.target.value)} placeholder="Min %" style={{...styles.inputInside,paddingLeft:12}} /></div>
@@ -1040,18 +1040,18 @@ export default function GestionOperativaPage() {
             </div>
             <div style={{display:'grid',gap:7,marginTop:10,maxHeight:180,overflowY:'auto',paddingRight:3}}>
               {chatSimulationSymbols.map(row=><div key={row.id} style={{display:'grid',gridTemplateColumns:'1fr auto auto 72px',gap:10,alignItems:'center',padding:'9px 10px',borderRadius:9,background:'rgba(6,30,42,.72)',border:'1px solid rgba(148,163,184,.12)'}}>
-                <strong style={{fontSize:14}}>{row.ticker}</strong><span style={{fontSize:13.5}}>{Number(row.min_pct)}%</span><span style={{fontSize:13.5}}>→ {Number(row.max_pct)}%</span>
-                <button type="button" onClick={()=>deleteChatSimulationSymbol(row.id)} disabled={chatSimulationBusy} style={{padding:'8px 12px',borderRadius:8,border:'1px solid rgba(248,113,113,.30)',background:'rgba(127,29,29,.18)',color:'#fecaca',fontWeight:900,cursor:'pointer'}}>Eliminar</button>
+                <strong style={{fontSize:15}}>{row.ticker}</strong><span style={{fontSize:14}}>{Number(row.min_pct)}%</span><span style={{fontSize:14}}>→ {Number(row.max_pct)}%</span>
+                <button type="button" onClick={()=>deleteChatSimulationSymbol(row.id)} disabled={chatSimulationBusy} style={styles.dangerBtn}>Eliminar</button>
               </div>)}
             </div>
           </div>
 
           <div style={{padding:14,borderRadius:14,border:'1px solid rgba(96,165,250,.20)',background:'rgba(3,18,29,.58)'}}>
-            <div style={{...styles.fieldLabel,fontSize:14}}>Estrategias para esta simulación</div>
-            <div style={{...styles.fieldHelp,marginTop:0,marginBottom:9}}>Habilita solamente las estrategias que quieres que aparezcan.</div>
+            <div style={{...styles.fieldLabel,fontSize:15}}>Estrategias para esta simulación</div>
+            <div style={{...styles.fieldHelp,fontSize:12,marginTop:0,marginBottom:9}}>Habilita solamente las estrategias que quieres que aparezcan.</div>
             <div style={{display:'grid',gap:7,maxHeight:220,overflowY:'auto',paddingRight:3}}>
               {tradeStrategies.filter(s=>s.active).map(s=>{const selected=chatSimulationStrategyIds.includes(s.id);return <button key={s.id} type="button" disabled={chatSimulationBusy} onClick={()=>toggleChatSimulationStrategy(s.id,!selected)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,width:'100%',padding:'9px 11px',borderRadius:9,border:selected?'1px solid rgba(52,211,153,.42)':'1px solid rgba(37,99,235,.34)',background:selected?'rgba(5,150,105,.14)':'rgba(8,28,53,.72)',color:'#fff',cursor:'pointer',textAlign:'left'}}>
-                <span style={{fontSize:13.5,fontWeight:850}}>{s.name}</span><span style={{fontSize:12,fontWeight:950,color:selected?'#86efac':'#94a3b8'}}>{selected?'✓ HABILITADA':'DESHABILITADA'}</span>
+                <span style={{fontSize:14,fontWeight:850}}>{s.name}</span><span style={{fontSize:13,fontWeight:950,color:selected?'#86efac':'#94a3b8'}}>{selected?'✓ HABILITADA':'DESHABILITADA'}</span>
               </button>})}
             </div>
           </div>
@@ -1062,23 +1062,23 @@ export default function GestionOperativaPage() {
               {title:'Plantillas positivas', value:chatSimTemplate, set:setChatSimTemplate, placeholder:'{expression} {ticker} +{pct}%', items:chatSimulationTemplates, kind:'template' as const, add:()=>addChatSimulationContent('template')},
               {title:'Plantillas no positivas', value:chatSimLossTemplate, set:setChatSimLossTemplate, placeholder:'Me sacó {ticker} con {pct}%', items:chatSimulationLossTemplates, kind:'loss_template' as const, add:addChatSimulationLossTemplate}
             ].map(bank=><div key={bank.title} style={{padding:14,borderRadius:14,border:'1px solid rgba(37,99,235,.28)',background:'rgba(3,18,29,.58)',minWidth:0}}>
-              <div style={{...styles.fieldLabel,fontSize:14}}>{bank.title}</div>
+              <div style={{...styles.fieldLabel,fontSize:15}}>{bank.title}</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 100px',gap:8}}>
                 <div style={styles.inputShell}><input value={bank.value} onChange={e=>bank.set(e.target.value)} placeholder={bank.placeholder} style={{...styles.inputInside,paddingLeft:14}} /></div>
                 <button type="button" disabled={chatSimulationBusy||!bank.value.trim()} onClick={bank.add} style={{...styles.button,padding:'9px 10px'}}>+ Agregar</button>
               </div>
-              <div style={{...styles.fieldHelp,margin:'8px 0 6px'}}>Activas: {bank.items.length}</div>
+              <div style={{...styles.fieldHelp,fontSize:12,margin:'8px 0 6px'}}>Activas: {bank.items.length}</div>
               <div style={{display:'grid',gap:6,maxHeight:190,overflowY:'auto',paddingRight:3}}>
                 {bank.items.map(x=><div key={x.id} style={{display:'grid',gridTemplateColumns:'1fr 76px',alignItems:'center',gap:8,padding:'7px 8px',border:'1px solid rgba(148,163,184,.14)',borderRadius:8,minWidth:0,background:'rgba(8,28,53,.48)'}}>
-                  <span title={x.text} style={{fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{x.text}</span>
-                  <button type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText(bank.kind,x.id)} style={{padding:'8px 12px',borderRadius:8,border:'1px solid rgba(248,113,113,.30)',background:'rgba(127,29,29,.18)',color:'#fecaca',fontWeight:900,cursor:'pointer'}}>Eliminar</button>
+                  <span title={x.text} style={{fontSize:14,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{x.text}</span>
+                  <button type="button" disabled={chatSimulationBusy} onClick={()=>removeChatSimulationText(bank.kind,x.id)} style={styles.dangerBtn}>Eliminar</button>
                 </div>)}
               </div>
             </div>)}
             <div style={{gridColumn:'1 / -1',...styles.fieldHelp,marginTop:-3,padding:'0 2px'}}>Variables: <strong>{'{ticker}'}</strong>, <strong>{'{pct}'}</strong>, <strong>{'{strategy}'}</strong>, <strong>{'{expression}'}</strong> · Nombres: {chatSimulation?.name_count || 0}</div>
           </div>
         </div>
-        {chatSimulationNotice?<div style={{marginTop:13,padding:'10px 12px',borderRadius:10,border:'1px solid rgba(52,211,153,.25)',background:'rgba(5,150,105,.10)',color:'#d1fae5',fontSize:13.5,fontWeight:750}}>{chatSimulationNotice}</div>:null}
+        {chatSimulationNotice?<div style={{marginTop:13,padding:'10px 12px',borderRadius:10,border:'1px solid rgba(52,211,153,.25)',background:'rgba(5,150,105,.10)',color:'#d1fae5',fontSize:14,fontWeight:750}}>{chatSimulationNotice}</div>:null}
       </div>
 
       <div style={styles.studentsCard}>
