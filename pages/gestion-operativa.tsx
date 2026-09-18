@@ -147,6 +147,7 @@ export default function GestionOperativaPage() {
   const [sessionPickerOpen, setSessionPickerOpen] = useState(false);
   const [deleteSessionTarget, setDeleteSessionTarget] = useState<ReplaySession | null>(null);
   const [deletingSession, setDeletingSession] = useState(false);
+  const [deleteSessionError, setDeleteSessionError] = useState<string | null>(null);
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [todayClassTopic, setTodayClassTopic] = useState('');
@@ -351,9 +352,11 @@ export default function GestionOperativaPage() {
     });
     setDeletingSession(false);
     if (error) {
+      setDeleteSessionError(error.message);
       setMessage(`No se pudo eliminar la sesión: ${error.message}`);
       return;
     }
+    setDeleteSessionError(null);
     if (selectedSessionId === deleteSessionTarget.session_id) setSelectedSessionId('');
     setDeleteSessionTarget(null);
     setMessage('Sesión LIVE de prueba eliminada correctamente.');
@@ -1156,7 +1159,7 @@ export default function GestionOperativaPage() {
                     type="button"
                     title="Eliminar sesión de prueba"
                     aria-label="Eliminar sesión LIVE"
-                    onClick={() => setDeleteSessionTarget(s)}
+                    onClick={() => { setDeleteSessionError(null); setDeleteSessionTarget(s); }}
                     style={{border:'1px solid rgba(248,113,113,.28)',borderRadius:10,background:'rgba(127,29,29,.16)',color:'#fca5a5',fontSize:18,fontWeight:900,cursor:'pointer'}}
                   >×</button>
                 </div>
@@ -1181,6 +1184,7 @@ export default function GestionOperativaPage() {
               <span style={styles.mutedSmall}>Finalizó: {formatSessionDate(deleteSessionTarget.ended_at)}</span>
             </div>
             <div style={{...styles.fieldHelp,marginTop:10}}>Se eliminarán únicamente los datos vinculados a esta sesión de prueba. Una sesión con repetición publicada está protegida y el servidor rechazará su eliminación.</div>
+            {deleteSessionError ? <div style={{marginTop:10,padding:'10px 12px',borderRadius:9,border:'1px solid rgba(248,113,113,.35)',background:'rgba(127,29,29,.16)',color:'#fecaca',fontSize:12,fontWeight:800}}>No se pudo eliminar: {deleteSessionError}</div> : null}
             <div style={styles.modalActions}>
               <button disabled={deletingSession} style={styles.buttonSecondary} onClick={() => setDeleteSessionTarget(null)}>Cancelar</button>
               <button disabled={deletingSession} onClick={deleteUnpublishedLiveSession} style={{...styles.button,borderColor:'rgba(248,113,113,.38)',background:'rgba(185,28,28,.88)'}}>{deletingSession?'Eliminando...':'Eliminar sesión'}</button>
