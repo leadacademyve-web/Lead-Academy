@@ -188,6 +188,12 @@ export default function GestionOperativaPage() {
   const [chatSimTemplate, setChatSimTemplate] = useState('');
   const [chatSimulationBusy, setChatSimulationBusy] = useState(false);
   const [chatSimulationNotice, setChatSimulationNotice] = useState<string | null>(null);
+  const [metricsSimulationEnabled,setMetricsSimulationEnabled]=useState(false);
+  const [metricsSimStudents,setMetricsSimStudents]=useState('18');
+  const [metricsSimPresentLive,setMetricsSimPresentLive]=useState('0');
+  const [metricsSimPaused,setMetricsSimPaused]=useState('0');
+  const [metricsSimConnected,setMetricsSimConnected]=useState('0');
+  const [metricsSimulationBusy,setMetricsSimulationBusy]=useState(false);
 
   async function load() {
     const { data: authData } = await supabase.auth.getUser();
@@ -199,13 +205,20 @@ export default function GestionOperativaPage() {
     const { data: adminOk, error: adminError } = await supabase.rpc('is_portal_admin');
     if (adminError || !adminOk) {
       setAuthorized(false);
-      setLoading(false);
+      if (!metricsSimResult.error && metricsSimResult.data) {
+      setMetricsSimulationEnabled(Boolean(metricsSimResult.data.enabled));
+      setMetricsSimStudents(String(metricsSimResult.data.students ?? 18));
+      setMetricsSimPresentLive(String(metricsSimResult.data.present_live ?? 0));
+      setMetricsSimPaused(String(metricsSimResult.data.paused ?? 0));
+      setMetricsSimConnected(String(metricsSimResult.data.connected_now ?? 0));
+    }
+    setLoading(false);
       return;
     }
 
     setAuthorized(true);
 
-    const [studentsResult, replayResult, topicResult, courseDateResult, strategiesResult, tradeModeResult, winRateResult, chatSimResult, chatSimSymbolsResult, chatSimStrategiesResult, chatSimExpressionsResult, chatSimTemplatesResult, chatSimLossTemplatesResult] = await Promise.all([
+    const [studentsResult, replayResult, topicResult, courseDateResult, strategiesResult, tradeModeResult, winRateResult, chatSimResult, chatSimSymbolsResult, chatSimStrategiesResult, chatSimExpressionsResult, chatSimTemplatesResult, chatSimLossTemplatesResult, metricsSimResult] = await Promise.all([
       supabase.rpc('admin_operational_students'),
       supabase.rpc('admin_replay_sessions'),
       supabase.from('portal_settings').select('value').eq('key', 'today_class_topic').maybeSingle(),
@@ -219,6 +232,7 @@ export default function GestionOperativaPage() {
       supabase.from('live_chat_simulation_expressions').select('id,expression').eq('active', true).order('created_at', { ascending: true }),
       supabase.from('live_chat_simulation_templates').select('id,template').eq('active', true).order('created_at', { ascending: true }),
       supabase.from('live_chat_simulation_loss_templates').select('id,template').eq('active', true).order('created_at', { ascending: true }),
+      supabase.from('admin_metrics_simulation_settings').select('enabled,students,present_live,paused,connected_now').eq('id',1).maybeSingle(),
     ]);
 
     if (studentsResult.error) {
@@ -728,6 +742,22 @@ export default function GestionOperativaPage() {
     await load();
   }
 
+  async function saveMetricsSimulation(nextEnabled=metricsSimulationEnabled){
+    setMetricsSimulationBusy(true);
+    const {error}=await supabase.from('admin_metrics_simulation_settings').upsert({
+      id:1,enabled:nextEnabled,
+      students:Math.max(0,Math.floor(Number(metricsSimStudents)||0)),
+      present_live:Math.max(0,Math.floor(Number(metricsSimPresentLive)||0)),
+      paused:Math.max(0,Math.floor(Number(metricsSimPaused)||0)),
+      connected_now:Math.max(0,Math.floor(Number(metricsSimConnected)||0)),
+      updated_at:new Date().toISOString()
+    },{onConflict:'id'});
+    setMetricsSimulationBusy(false);
+    if(error){setChatSimulationNotice(`Métricas: ${error.message}`);return;}
+    setMetricsSimulationEnabled(nextEnabled);
+    setChatSimulationNotice(nextEnabled?'Simulación de métricas activada.':'Simulación de métricas desactivada. Se muestran valores reales.');
+  }
+
   if (loading) {
     return <main style={styles.page}><div style={styles.card}>Cargando Gestión Operativa...</div></main>;
   }
@@ -1021,6 +1051,27 @@ export default function GestionOperativaPage() {
             <button type="button" disabled={chatSimulationBusy} onClick={()=>saveChatSimulationSettings(!chatSimulation?.enabled)} style={{width:74,height:38,borderRadius:999,border:'1px solid rgba(148,163,184,.28)',background:chatSimulation?.enabled?'#059669':'#334155',padding:4,cursor:'pointer',opacity:chatSimulationBusy ? .6 : 1}}>
               <span style={{display:'block',width:28,height:28,borderRadius:'50%',background:'#fff',transform:chatSimulation?.enabled?'translateX(34px)':'translateX(0)',transition:'transform .18s ease'}} />
             </button>
+          </div>
+        </div>
+
+        <div style={{marginTop:14,padding:14,borderRadius:12,border:'1px solid rgba(88,167,255,.24)',background:'rgba(5,18,38,.55)'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:14}}>
+            <div><div style={{fontSize:13,fontWeight:950,color:'#7cc0ff'}}>SIMULACIÓN DE MÉTRICAS</div><div style={{fontSize:12.5,color:'rgba(255,255,255,.72)',marginTop:3}}>Independiente del simulador de comentarios. INACTIVA muestra los valores reales.</div></div>
+            <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <span style={{fontSize:12,fontWeight:950,color:metricsSimulationEnabled?'#86efac':'#94a3b8'}}>{metricsSimulationEnabled?'ACTIVA':'INACTIVA'}</span>
+              <button type="button" disabled={metricsSimulationBusy} onClick={()=>saveMetricsSimulation(!metricsSimulationEnabled)} style={{width:62,height:34,borderRadius:999,border:'1px solid rgba(148,163,184,.28)',background:metricsSimulationEnabled?'#059669':'#334155',padding:3,cursor:'pointer'}}>
+                <span style={{display:'block',width:26,height:26,borderRadius:'50%',background:'#fff',transform:metricsSimulationEnabled?'translateX(28px)':'translateX(0)',transition:'transform .18s ease'}} />
+              </button>
+            </div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr)) auto',gap:10,marginTop:12,alignItems:'end'}}>
+            {[
+              ['Estudiantes',metricsSimStudents,setMetricsSimStudents],
+              ['Presentes LIVE',metricsSimPresentLive,setMetricsSimPresentLive],
+              ['Pausados',metricsSimPaused,setMetricsSimPaused],
+              ['Conectados ahora',metricsSimConnected,setMetricsSimConnected],
+            ].map(([label,value,setter]:any)=><div key={label}><div style={{...styles.fieldLabel,fontSize:12}}>{label}</div><div style={styles.inputShell}><input type="number" min={0} value={value} onChange={e=>setter(e.target.value)} style={{...styles.inputInside,paddingLeft:14}} /></div></div>)}
+            <button type="button" disabled={metricsSimulationBusy} onClick={()=>saveMetricsSimulation()} style={{...styles.primaryBtn,height:42,whiteSpace:'nowrap'}}>{metricsSimulationBusy?'Guardando…':'Guardar métricas'}</button>
           </div>
         </div>
 

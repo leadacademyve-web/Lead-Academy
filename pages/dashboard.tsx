@@ -634,6 +634,7 @@ export default function DashboardPage() {
   const [adminLiveWorking, setAdminLiveWorking] = useState(false);
   const [adminLiveNotice, setAdminLiveNotice] = useState<string | null>(null);
   const [showAdminMetrics, setShowAdminMetrics] = useState(true);
+  const [metricsSimulation,setMetricsSimulation]=useState({enabled:false,students:0,present_live:0,paused:0,connected_now:0});
   const [showTradeJournal, setShowTradeJournal] = useState(false);
   const [showTradeForm, setShowTradeForm] = useState(false);
   const [tradeJournalView, setTradeJournalView] = useState<'resumen' | 'simulador'>('resumen');
@@ -676,6 +677,20 @@ export default function DashboardPage() {
   const liveVideoIframeRef = useRef<HTMLIFrameElement | null>(null);
   const liveWatchingRef = useRef(false);
   const livePresenceUserIdRef = useRef<string>('');
+
+useEffect(()=>{
+  let alive=true;
+  const loadMetricsSimulation=async()=>{
+    const {data}=await supabase.from('admin_metrics_simulation_settings').select('enabled,students,present_live,paused,connected_now').eq('id',1).maybeSingle();
+    if(alive && data) setMetricsSimulation({
+      enabled:Boolean(data.enabled),students:Number(data.students||0),present_live:Number(data.present_live||0),
+      paused:Number(data.paused||0),connected_now:Number(data.connected_now||0)
+    });
+  };
+  loadMetricsSimulation();
+  const timer=window.setInterval(loadMetricsSimulation,5000);
+  return()=>{alive=false;window.clearInterval(timer);};
+},[]);
 
 const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
@@ -2693,10 +2708,10 @@ return normalized;
                   }}
                 >
                   {[
-                    { label: 'Estudiantes', value: adminStudentStats.total, icon: 'classes' as PortalIconName, color: '#b46cff', bg: 'rgba(125,65,190,.16)', border: 'rgba(180,108,255,.38)' },
-                    { label: 'Presentes LIVE', value: liveAudience.filter((row) => row.is_watching).length, icon: 'live' as PortalIconName, color: '#20e493', bg: 'rgba(0,132,84,.16)', border: 'rgba(32,228,147,.38)' },
-                    { label: 'Pausados', value: adminStudentStats.paused, icon: 'pause' as PortalIconName, color: '#ffae21', bg: 'rgba(165,99,0,.16)', border: 'rgba(255,174,33,.38)' },
-                    { label: 'Conectados ahora', value: liveAudience.length, icon: 'wifi' as PortalIconName, color: '#58a7ff', bg: 'rgba(27,104,205,.16)', border: 'rgba(88,167,255,.38)' },
+                    { label: 'Estudiantes', value: metricsSimulation.enabled ? metricsSimulation.students : adminStudentStats.total, icon: 'classes' as PortalIconName, color: '#b46cff', bg: 'rgba(125,65,190,.16)', border: 'rgba(180,108,255,.38)' },
+                    { label: 'Presentes LIVE', value: metricsSimulation.enabled ? metricsSimulation.present_live : liveAudience.filter((row) => row.is_watching).length, icon: 'live' as PortalIconName, color: '#20e493', bg: 'rgba(0,132,84,.16)', border: 'rgba(32,228,147,.38)' },
+                    { label: 'Pausados', value: metricsSimulation.enabled ? metricsSimulation.paused : adminStudentStats.paused, icon: 'pause' as PortalIconName, color: '#ffae21', bg: 'rgba(165,99,0,.16)', border: 'rgba(255,174,33,.38)' },
+                    { label: 'Conectados ahora', value: metricsSimulation.enabled ? metricsSimulation.connected_now : liveAudience.length, icon: 'wifi' as PortalIconName, color: '#58a7ff', bg: 'rgba(27,104,205,.16)', border: 'rgba(88,167,255,.38)' },
                   ].map((item) => (
                     <div key={item.label} style={{ minWidth: 0, minHeight: 98, padding: '10px 7px 9px', borderRadius: 14, display: 'grid', gridTemplateRows: '56px auto', alignItems: 'center', justifyItems: 'center', background: 'rgba(4,15,31,.62)', border: '1px solid rgba(114,161,216,.16)', overflow: 'hidden' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', minWidth: 0 }}>
