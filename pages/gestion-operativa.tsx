@@ -1071,7 +1071,7 @@ export default function GestionOperativaPage() {
               ['Pausados',metricsSimPaused,setMetricsSimPaused],
               ['Conectados ahora',metricsSimConnected,setMetricsSimConnected],
             ].map(([label,value,setter]:any)=><div key={label}><div style={{...styles.fieldLabel,fontSize:12}}>{label}</div><div style={styles.inputShell}><input type="number" min={0} value={value} onChange={e=>setter(e.target.value)} style={{...styles.inputInside,paddingLeft:14}} /></div></div>)}
-            <button type="button" disabled={metricsSimulationBusy} onClick={()=>saveMetricsSimulation()} style={{...styles.primaryBtn,height:42,whiteSpace:'nowrap'}}>{metricsSimulationBusy?'Guardando…':'Guardar métricas'}</button>
+            <button type="button" disabled={metricsSimulationBusy} onClick={()=>saveMetricsSimulation()} style={{...styles.primaryBtn,height:42,whiteSpace:'nowrap'}}>{metricsSimulationBusy?'Guardando…':'Guardar'}</button>
           </div>
         </div>
 
