@@ -933,8 +933,8 @@ export default function GestionOperativaPage() {
       </div>
 
       {/* FECHA DEL PRÓXIMO CURSO INTENSIVO */}
-      <div style={{ ...styles.todayTopicCard, maxWidth:'none', margin:0, gridColumn:'1',gridRow:'2', borderColor: 'rgba(245,158,11,.34)', background: 'radial-gradient(circle at 0% 0%,rgba(245,158,11,.12),transparent 34%), linear-gradient(180deg,rgba(24,20,12,.94),rgba(12,16,27,.92))' }}>
-        <div style={{...styles.todayTopicHeader,minHeight:104}}>
+      <div style={{ ...styles.todayTopicCard, maxWidth:'none', margin:0, gridColumn:'1 / -1', borderColor: 'rgba(245,158,11,.34)', background: 'radial-gradient(circle at 0% 0%,rgba(245,158,11,.12),transparent 34%), linear-gradient(180deg,rgba(24,20,12,.94),rgba(12,16,27,.92))' }}>
+        <div style={{...styles.todayTopicHeader,minHeight:72}}>
           <div style={styles.todayTopicHeading}>
             <span style={{ ...styles.todayTopicIcon, color: '#fbbf24', borderColor: 'rgba(245,158,11,.42)', background: 'rgba(245,158,11,.10)' }}><Icon name="calendar" size={31} /></span>
             <div>
@@ -960,8 +960,44 @@ export default function GestionOperativaPage() {
         {courseDateNotice ? <div style={courseDateNotice.startsWith('Fecha') ? styles.todayTopicSuccess : styles.todayTopicError}>{courseDateNotice}</div> : null}
       </div>
 
+      {/* BITÁCORA DE TRADES: ADMINISTRACIÓN DE ESTRATEGIAS */}
+      <div style={{ ...styles.publishCard, maxWidth:'none', margin:0, gridColumn:'1 / -1', borderColor: 'rgba(168,85,247,.34)', background: 'radial-gradient(circle at 0% 0%,rgba(168,85,247,.12),transparent 34%), linear-gradient(180deg,rgba(15,12,31,.95),rgba(5,15,30,.91))' }}>
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:18,flexWrap:'wrap',minHeight:76}}>
+          <div>
+            <div style={{...styles.sectionTitle,color:'#c084fc'}}>BITÁCORA DE TRADES</div>
+            <h2 style={{margin:'6px 0 0',fontSize:23,fontWeight:950}}>Estrategias publicadas</h2>
+            <p style={{...styles.publishIntro,fontSize:14.5,maxWidth:820}}>Administra aquí las estrategias disponibles en los desplegables de la Bitácora y del Simulador de Capital.</p>
+          </div>
+        </div>
+
+        <div style={{marginTop:14,padding:14,borderRadius:14,border:'1px solid rgba(148,163,184,.20)',background:'rgba(3,13,28,.52)'}}>
+          <div>
+            <div style={styles.fieldLabel}>Estrategias de la Bitácora</div>
+            <div style={{...styles.fieldHelp,marginTop:0}}>Solo las estrategias publicadas aparecen en los desplegables del Dashboard y se usan al generar ejercicios.</div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 120px',gap:9,minWidth:0,marginTop:12}}>
+            <div style={{...styles.inputShell,minHeight:51}}><input value={newStrategyName} onChange={(e)=>setNewStrategyName(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter')addTradeStrategy();}} placeholder="Nueva estrategia" style={{...styles.inputInside,paddingLeft:16}} /></div>
+            <button type="button" onClick={addTradeStrategy} disabled={tradingAdminBusy||!newStrategyName.trim()} style={{width:'100%',height:51,border:0,borderRadius:10,background:'linear-gradient(180deg,#188cff,#0767e6)',color:'#fff',fontWeight:950,cursor:'pointer',opacity:(tradingAdminBusy || !newStrategyName.trim()) ? .55 : 1}}>+ Agregar</button>
+          </div>
+
+          <div style={{display:'grid',gap:8,marginTop:10}}>
+            {tradeStrategies.map((row)=><div key={row.id} style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 104px 104px 92px',gap:9,alignItems:'center',padding:9,borderRadius:10,border:'1px solid rgba(148,163,184,.14)',background:'rgba(6,20,39,.68)'}}>
+              <input defaultValue={row.name} disabled={tradingAdminBusy} onBlur={(e)=>renameTradeStrategy(row,e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'){(e.currentTarget as HTMLInputElement).blur();}}} style={{height:40,borderRadius:9,border:'1px solid rgba(123,163,207,.30)',background:'#07172a',color:'#fff',padding:'0 12px',fontSize:14,fontWeight:800}} />
+              <span style={{textAlign:'center',fontSize:11,fontWeight:950,color:row.active?'#86efac':'#94a3b8'}}>{row.active?'PUBLICADA':'OCULTA'}</span>
+              <button type="button" disabled={tradingAdminBusy} onClick={()=>toggleTradeStrategy(row)} style={{height:40,borderRadius:9,border:'1px solid rgba(96,165,250,.34)',background:'rgba(30,64,175,.18)',color:'#dbeafe',fontWeight:900,cursor:'pointer'}}>{row.active?'Ocultar':'Publicar'}</button>
+              <button type="button" disabled={tradingAdminBusy} onClick={()=>deleteTradeStrategy(row)} style={{height:40,borderRadius:9,border:'1px solid rgba(248,113,113,.30)',background:'rgba(127,29,29,.18)',color:'#fecaca',fontWeight:900,cursor:'pointer'}}>Eliminar</button>
+            </div>)}
+            {!tradeStrategies.length ? <div style={{padding:12,color:'rgba(255,255,255,.62)'}}>No hay estrategias configuradas.</div> : null}
+          </div>
+        </div>
+
+        {tradingAdminNotice ? <div style={{marginTop:13,padding:'10px 12px',borderRadius:10,border:'1px solid rgba(96,165,250,.25)',background:'rgba(30,64,175,.13)',color:'#dbeafe',fontSize:13.5,fontWeight:750}}>{tradingAdminNotice}</div> : null}
+      </div>
+
+      </div>
+
       {/* SIMULACIÓN CHAT LIVE */}
-      <div style={{...styles.publishCard,maxWidth:'none',margin:0,gridColumn:'1',gridRow:'3',borderColor:'rgba(16,185,129,.34)',background:'radial-gradient(circle at 0% 0%,rgba(16,185,129,.12),transparent 34%), linear-gradient(180deg,rgba(4,24,31,.95),rgba(4,14,29,.90))'}}>
+      <div style={{...styles.publishCard,maxWidth:1980,margin:'0 auto 18px',borderColor:'rgba(16,185,129,.34)',background:'radial-gradient(circle at 0% 0%,rgba(16,185,129,.12),transparent 34%), linear-gradient(180deg,rgba(4,24,31,.95),rgba(4,14,29,.90))'}}>
         <div style={{display:'flex',justifyContent:'space-between',gap:18,alignItems:'flex-start',flexWrap:'wrap'}}>
           <div>
             <div style={{...styles.sectionTitle,color:'#34d399'}}>SIMULACIÓN CHAT LIVE</div>
@@ -1040,43 +1076,6 @@ export default function GestionOperativaPage() {
           </div>
         </div>
         {chatSimulationNotice?<div style={{marginTop:13,padding:'10px 12px',borderRadius:10,border:'1px solid rgba(52,211,153,.25)',background:'rgba(5,150,105,.10)',color:'#d1fae5',fontSize:13.5,fontWeight:750}}>{chatSimulationNotice}</div>:null}
-      </div>
-
-
-      {/* BITÁCORA DE TRADES: ADMINISTRACIÓN DE ESTRATEGIAS */}
-      <div style={{ ...styles.publishCard, maxWidth:'none', margin:0, gridColumn:'2',gridRow:'2 / span 2',alignSelf:'stretch', borderColor: 'rgba(168,85,247,.34)', background: 'radial-gradient(circle at 0% 0%,rgba(168,85,247,.12),transparent 34%), linear-gradient(180deg,rgba(15,12,31,.95),rgba(5,15,30,.91))' }}>
-        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:18,flexWrap:'wrap',minHeight:76}}>
-          <div>
-            <div style={{...styles.sectionTitle,color:'#c084fc'}}>BITÁCORA DE TRADES</div>
-            <h2 style={{margin:'6px 0 0',fontSize:23,fontWeight:950}}>Estrategias publicadas</h2>
-            <p style={{...styles.publishIntro,fontSize:14.5,maxWidth:820}}>Administra aquí las estrategias disponibles en los desplegables de la Bitácora y del Simulador de Capital.</p>
-          </div>
-        </div>
-
-        <div style={{marginTop:14,padding:14,borderRadius:14,border:'1px solid rgba(148,163,184,.20)',background:'rgba(3,13,28,.52)'}}>
-          <div>
-            <div style={styles.fieldLabel}>Estrategias de la Bitácora</div>
-            <div style={{...styles.fieldHelp,marginTop:0}}>Solo las estrategias publicadas aparecen en los desplegables del Dashboard y se usan al generar ejercicios.</div>
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 120px',gap:9,minWidth:0,marginTop:12}}>
-            <div style={{...styles.inputShell,minHeight:51}}><input value={newStrategyName} onChange={(e)=>setNewStrategyName(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter')addTradeStrategy();}} placeholder="Nueva estrategia" style={{...styles.inputInside,paddingLeft:16}} /></div>
-            <button type="button" onClick={addTradeStrategy} disabled={tradingAdminBusy||!newStrategyName.trim()} style={{width:'100%',height:51,border:0,borderRadius:10,background:'linear-gradient(180deg,#188cff,#0767e6)',color:'#fff',fontWeight:950,cursor:'pointer',opacity:(tradingAdminBusy || !newStrategyName.trim()) ? .55 : 1}}>+ Agregar</button>
-          </div>
-
-          <div style={{display:'grid',gap:8,marginTop:10}}>
-            {tradeStrategies.map((row)=><div key={row.id} style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 104px 104px 92px',gap:9,alignItems:'center',padding:9,borderRadius:10,border:'1px solid rgba(148,163,184,.14)',background:'rgba(6,20,39,.68)'}}>
-              <input defaultValue={row.name} disabled={tradingAdminBusy} onBlur={(e)=>renameTradeStrategy(row,e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter'){(e.currentTarget as HTMLInputElement).blur();}}} style={{height:40,borderRadius:9,border:'1px solid rgba(123,163,207,.30)',background:'#07172a',color:'#fff',padding:'0 12px',fontSize:14,fontWeight:800}} />
-              <span style={{textAlign:'center',fontSize:11,fontWeight:950,color:row.active?'#86efac':'#94a3b8'}}>{row.active?'PUBLICADA':'OCULTA'}</span>
-              <button type="button" disabled={tradingAdminBusy} onClick={()=>toggleTradeStrategy(row)} style={{height:40,borderRadius:9,border:'1px solid rgba(96,165,250,.34)',background:'rgba(30,64,175,.18)',color:'#dbeafe',fontWeight:900,cursor:'pointer'}}>{row.active?'Ocultar':'Publicar'}</button>
-              <button type="button" disabled={tradingAdminBusy} onClick={()=>deleteTradeStrategy(row)} style={{height:40,borderRadius:9,border:'1px solid rgba(248,113,113,.30)',background:'rgba(127,29,29,.18)',color:'#fecaca',fontWeight:900,cursor:'pointer'}}>Eliminar</button>
-            </div>)}
-            {!tradeStrategies.length ? <div style={{padding:12,color:'rgba(255,255,255,.62)'}}>No hay estrategias configuradas.</div> : null}
-          </div>
-        </div>
-
-        {tradingAdminNotice ? <div style={{marginTop:13,padding:'10px 12px',borderRadius:10,border:'1px solid rgba(96,165,250,.25)',background:'rgba(30,64,175,.13)',color:'#dbeafe',fontSize:13.5,fontWeight:750}}>{tradingAdminNotice}</div> : null}
-      </div>
-
       </div>
 
       <div style={styles.studentsCard}>
