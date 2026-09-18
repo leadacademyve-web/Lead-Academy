@@ -1068,7 +1068,7 @@ export default function GestionOperativaPage() {
             </div>
 
             <div style={{padding:10,borderRadius:12,border:'1px solid rgba(248,113,113,.15)',background:'rgba(3,18,29,.58)',minWidth:0}}>
-              <div style={styles.fieldLabel}>Plantillas de pérdida</div>
+              <div style={styles.fieldLabel}>Plantillas no positivas</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 72px',gap:5}}>
                 <div style={styles.inputShell}><input value={chatSimLossTemplate} onChange={e=>setChatSimLossTemplate(e.target.value)} placeholder="Me sacó {ticker} con {pct}%" style={{...styles.inputInside,paddingLeft:10,fontSize:12}} /></div>
                 <button type="button" disabled={chatSimulationBusy||!chatSimLossTemplate.trim()} onClick={addChatSimulationLossTemplate} style={{...styles.button,padding:'7px 6px',fontSize:11}}>Agregar</button>
