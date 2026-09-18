@@ -1050,7 +1050,7 @@ export default function GestionOperativaPage() {
             <div style={{display:'grid',gap:7,marginTop:10,maxHeight:180,overflowY:'auto',paddingRight:3}}>
               {chatSimulationSymbols.map(row=><div key={row.id} style={{display:'grid',gridTemplateColumns:'1fr auto auto 72px',gap:10,alignItems:'center',padding:'9px 10px',borderRadius:9,background:'rgba(6,30,42,.72)',border:'1px solid rgba(148,163,184,.12)'}}>
                 <strong style={{fontSize:15}}>{row.ticker}</strong><span style={{fontSize:14}}>{Number(row.min_pct)}%</span><span style={{fontSize:14}}>→ {Number(row.max_pct)}%</span>
-                <button type="button" onClick={()=>deleteChatSimulationSymbol(row.id)} disabled={chatSimulationBusy} style={{height:36,borderRadius:9,border:'1px solid rgba(248,113,113,.30)',background:'rgba(127,29,29,.18)',color:'#fecaca',fontWeight:900,cursor:'pointer'}}>Eliminar</button>
+                <button type="button" onClick={()=>deleteChatSimulationSymbol(row.id)} disabled={chatSimulationBusy} style={{height:32,alignSelf:'center',margin:'2px 0',borderRadius:9,border:'1px solid rgba(248,113,113,.30)',background:'rgba(127,29,29,.18)',color:'#fecaca',fontWeight:900,cursor:'pointer'}}>Eliminar</button>
               </div>)}
             </div>
           </div>
