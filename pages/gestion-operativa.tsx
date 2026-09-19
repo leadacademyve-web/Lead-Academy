@@ -30,7 +30,7 @@ type VideoPublishType = 'daily' | 'course' | 'special';
 type TradeJournalMode = 'REAL' | 'EDUCATIONAL';
 type TradeStrategyAdminRow = { id: string; name: string; active: boolean; sort_order: number; };
 
-type ChatSimulationSymbol = { id: string; ticker: string; min_pct: number; max_pct: number; active: boolean; };
+type ChatSimulationSymbol = { id: string; ticker: string; min_pct: number; max_pct: number; active: boolean; strategy_id: string | null; };
 type ChatSimulationTextItem = { id: string; text: string; };
 type ChatSimulationState = {
   enabled: boolean;
@@ -184,6 +184,7 @@ export default function GestionOperativaPage() {
   const [chatSimTicker, setChatSimTicker] = useState('');
   const [chatSimMinPct, setChatSimMinPct] = useState('100');
   const [chatSimMaxPct, setChatSimMaxPct] = useState('500');
+  const [chatSimStrategyId, setChatSimStrategyId] = useState('');
   const [chatSimExpression, setChatSimExpression] = useState('');
   const [chatSimTemplate, setChatSimTemplate] = useState('');
   const [chatSimulationBusy, setChatSimulationBusy] = useState(false);
@@ -227,7 +228,7 @@ export default function GestionOperativaPage() {
       supabase.from('portal_settings').select('value').eq('key', 'trade_journal_mode').maybeSingle(),
       supabase.from('portal_settings').select('value').eq('key', 'educational_trade_win_rate').maybeSingle(),
       supabase.rpc('admin_get_live_chat_simulation'),
-      supabase.from('live_chat_simulation_symbols').select('id,ticker,min_pct,max_pct,active').order('ticker', { ascending: true }),
+      supabase.from('live_chat_simulation_symbols').select('id,ticker,min_pct,max_pct,active,strategy_id').order('ticker', { ascending: true }),
       supabase.from('live_chat_simulation_strategies').select('strategy_id').eq('enabled', true),
       supabase.from('live_chat_simulation_expressions').select('id,expression').eq('active', true).order('created_at', { ascending: true }),
       supabase.from('live_chat_simulation_templates').select('id,template').eq('active', true).order('created_at', { ascending: true }),
@@ -653,16 +654,18 @@ export default function GestionOperativaPage() {
     const minPct = Number(chatSimMinPct);
     const maxPct = Number(chatSimMaxPct);
     if (!ticker) return setChatSimulationNotice('Escribe un símbolo válido.');
+    if (!chatSimStrategyId) return setChatSimulationNotice('Selecciona la estrategia correspondiente a este símbolo.');
     if (!Number.isFinite(minPct) || !Number.isFinite(maxPct) || minPct < 0 || maxPct < minPct) {
       return setChatSimulationNotice('El rango de rentabilidad del símbolo no es válido.');
     }
     setChatSimulationBusy(true); setChatSimulationNotice(null);
     const { error } = await supabase.from('live_chat_simulation_symbols').upsert({
-      ticker, min_pct: minPct, max_pct: maxPct, active: true,
+      ticker, min_pct: minPct, max_pct: maxPct, active: true, strategy_id: chatSimStrategyId,
     }, { onConflict: 'ticker' });
     setChatSimulationBusy(false);
     if (error) return setChatSimulationNotice(error.message);
     setChatSimTicker('');
+    setChatSimStrategyId('');
     setChatSimulationNotice(`${ticker} agregado a la simulación.`);
     await load();
   }
@@ -1092,28 +1095,25 @@ export default function GestionOperativaPage() {
         <div style={{display:'grid',gridTemplateColumns:'minmax(390px,.82fr) minmax(520px,1.18fr)',gap:14,marginTop:16,alignItems:'start'}}>
           <div style={{padding:14,borderRadius:14,border:'1px solid rgba(52,211,153,.20)',background:'rgba(3,18,29,.58)'}}>
             <div style={{...styles.fieldLabel,fontSize:15}}>Símbolos y rentabilidad</div>
-            <div style={{display:'grid',gridTemplateColumns:'minmax(120px,1fr) 88px 88px 102px',gap:8}}>
+            <div style={{display:'grid',gridTemplateColumns:'minmax(100px,.7fr) 88px 88px minmax(190px,1.3fr) 102px',gap:8}}>
               <div style={styles.inputShell}><input value={chatSimTicker} onChange={e=>setChatSimTicker(e.target.value.toUpperCase())} placeholder="AAPL" style={{...styles.inputInside,paddingLeft:14}} /></div>
               <div style={styles.inputShell}><input type="number" value={chatSimMinPct} onChange={e=>setChatSimMinPct(e.target.value)} placeholder="Min %" style={{...styles.inputInside,paddingLeft:12}} /></div>
               <div style={styles.inputShell}><input type="number" value={chatSimMaxPct} onChange={e=>setChatSimMaxPct(e.target.value)} placeholder="Max %" style={{...styles.inputInside,paddingLeft:12}} /></div>
-              <button type="button" disabled={chatSimulationBusy} onClick={addChatSimulationSymbol} style={{...styles.button,padding:'9px 12px'}}>+ Agregar</button>
+              <div style={styles.inputShell}><select value={chatSimStrategyId} onChange={e=>setChatSimStrategyId(e.target.value)} style={{...styles.inputInside,paddingLeft:12,appearance:'auto'}}><option value="">Seleccionar estrategia</option>{tradeStrategies.filter(s=>s.active).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+              <button type="button" disabled={chatSimulationBusy||!chatSimStrategyId} onClick={addChatSimulationSymbol} style={{...styles.button,padding:'9px 12px'}}>+ Agregar</button>
             </div>
             <div style={{display:'grid',gap:7,marginTop:10,maxHeight:180,overflowY:'auto',paddingRight:3}}>
-              {chatSimulationSymbols.map(row=><div key={row.id} style={{display:'grid',gridTemplateColumns:'1fr auto auto 72px',gap:10,alignItems:'center',padding:'9px 10px',borderRadius:9,background:'rgba(6,30,42,.72)',border:'1px solid rgba(148,163,184,.12)'}}>
-                <strong style={{fontSize:15}}>{row.ticker}</strong><span style={{fontSize:14}}>{Number(row.min_pct)}%</span><span style={{fontSize:14}}>→ {Number(row.max_pct)}%</span>
+              {chatSimulationSymbols.map(row=>{const strategyName=tradeStrategies.find(s=>s.id===row.strategy_id)?.name || 'Sin estrategia'; return <div key={row.id} style={{display:'grid',gridTemplateColumns:'minmax(70px,.7fr) auto auto minmax(150px,1.3fr) 72px',gap:10,alignItems:'center',padding:'9px 10px',borderRadius:9,background:'rgba(6,30,42,.72)',border:'1px solid rgba(148,163,184,.12)'}}>
+                <strong style={{fontSize:15}}>{row.ticker}</strong><span style={{fontSize:14}}>{Number(row.min_pct)}%</span><span style={{fontSize:14}}>→ {Number(row.max_pct)}%</span><span style={{fontSize:13,fontWeight:850,color:row.strategy_id?'#bfdbfe':'#fca5a5'}}>{strategyName}</span>
                 <button type="button" onClick={()=>deleteChatSimulationSymbol(row.id)} disabled={chatSimulationBusy} style={{height:32,alignSelf:'center',margin:'2px 0',borderRadius:9,border:'1px solid rgba(248,113,113,.30)',background:'rgba(127,29,29,.18)',color:'#fecaca',fontWeight:900,cursor:'pointer'}}>Eliminar</button>
-              </div>)}
+              </div>})}
             </div>
           </div>
 
-          <div style={{padding:14,borderRadius:14,border:'1px solid rgba(96,165,250,.20)',background:'rgba(3,18,29,.58)'}}>
-            <div style={{...styles.fieldLabel,fontSize:15}}>Estrategias para esta simulación</div>
-            <div style={{...styles.fieldHelp,fontSize:12,marginTop:0,marginBottom:9}}>Habilita solamente las estrategias que quieres que aparezcan.</div>
-            <div style={{display:'grid',gap:7,maxHeight:220,overflowY:'auto',paddingRight:3}}>
-              {tradeStrategies.filter(s=>s.active).map(s=>{const selected=chatSimulationStrategyIds.includes(s.id);return <button key={s.id} type="button" disabled={chatSimulationBusy} onClick={()=>toggleChatSimulationStrategy(s.id,!selected)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,width:'100%',padding:'9px 11px',borderRadius:9,border:selected?'1px solid rgba(52,211,153,.42)':'1px solid rgba(37,99,235,.34)',background:selected?'rgba(5,150,105,.14)':'rgba(8,28,53,.72)',color:'#fff',cursor:'pointer',textAlign:'left'}}>
-                <span style={{fontSize:14,fontWeight:850}}>{s.name}</span><span style={{fontSize:13,fontWeight:950,color:selected?'#86efac':'#94a3b8'}}>{selected?'✓ HABILITADA':'DESHABILITADA'}</span>
-              </button>})}
-            </div>
+          <div style={{padding:14,borderRadius:14,border:'1px solid rgba(96,165,250,.20)',background:'rgba(3,18,29,.58)',minHeight:150}}>
+            <div style={{...styles.fieldLabel,fontSize:15}}>Relación símbolo → estrategia</div>
+            <div style={{...styles.fieldHelp,fontSize:13,marginTop:6,lineHeight:1.55}}>Cada símbolo usa exclusivamente la estrategia seleccionada al agregarlo. El porcentaje también sale únicamente del rango configurado para ese símbolo.</div>
+            <div style={{marginTop:12,padding:'10px 12px',borderRadius:10,border:'1px solid rgba(52,211,153,.24)',background:'rgba(5,150,105,.10)',color:'#bbf7d0',fontSize:13,fontWeight:850}}>Ejemplo: MSFT +10% → +12% + su estrategia · GOOGL +100% → +400% + su propia estrategia.</div>
           </div>
 
           <div style={{gridColumn:'1 / -1',display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:14}}>
