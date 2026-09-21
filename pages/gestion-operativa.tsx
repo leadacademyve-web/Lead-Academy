@@ -1092,6 +1092,26 @@ export default function GestionOperativaPage() {
           <span style={{alignSelf:'center',color:'rgba(255,255,255,.68)',fontSize:14,fontWeight:750}}>Enviados: {chatSimulation?.messages_sent || 0} / {chatSimulation?.max_messages_per_session || Number(chatSimMaxMessages)||0}</span>
         </div>
 
+        {chatSimulation ? (() => {
+          const sent = Number(chatSimulation.messages_sent || 0);
+          const limit = Number(chatSimulation.max_messages_per_session || Number(chatSimMaxMessages) || 0);
+          const limitReached = limit > 0 && sent >= limit;
+          const nextAt = chatSimulation.next_message_at ? new Date(chatSimulation.next_message_at) : null;
+          const nextValid = !!nextAt && !Number.isNaN(nextAt.getTime());
+          const status = limitReached
+            ? { tone: 'warning', title: 'Simulación finalizada', text: `Se alcanzó el máximo de ${limit} mensajes configurados para esta sesión LIVE. Aumenta “Máximo por sesión” si deseas continuar enviando comentarios.` }
+            : chatSimulation.enabled && nextValid
+              ? { tone: 'success', title: 'Simulación activa', text: `El generador está funcionando. Próximo mensaje programado para ${nextAt!.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}.` }
+              : chatSimulation.enabled
+                ? { tone: 'warning', title: 'Simulación activa, esperando', text: 'Todavía no hay un próximo mensaje programado. Si no existe una sesión LIVE activa o falta alguna condición de configuración, no se enviarán comentarios hasta que esté disponible.' }
+                : { tone: 'neutral', title: 'Simulación inactiva', text: 'El generador de comentarios está detenido. Activa el interruptor para comenzar a enviar mensajes durante una sesión LIVE.' };
+          const warning = status.tone === 'warning';
+          const success = status.tone === 'success';
+          return <div style={{marginTop:12,padding:'11px 13px',borderRadius:11,border:`1px solid ${warning?'rgba(245,158,11,.38)':success?'rgba(52,211,153,.30)':'rgba(148,163,184,.24)'}`,background:warning?'rgba(245,158,11,.10)':success?'rgba(5,150,105,.10)':'rgba(51,65,85,.18)',color:warning?'#fde68a':success?'#d1fae5':'#cbd5e1',fontSize:13.5,lineHeight:1.45}}>
+            <strong style={{fontWeight:950}}>{status.title}:</strong> <span style={{fontWeight:700}}>{status.text}</span>
+          </div>;
+        })() : null}
+
         <div style={{display:'grid',gridTemplateColumns:'minmax(390px,.82fr) minmax(520px,1.18fr)',gap:14,marginTop:16,alignItems:'stretch'}}>
           <div style={{padding:14,borderRadius:14,border:'1px solid rgba(52,211,153,.20)',background:'rgba(3,18,29,.58)',height:'100%',boxSizing:'border-box'}}>
             <div style={{...styles.fieldLabel,fontSize:15}}>Símbolos y rentabilidad</div>
