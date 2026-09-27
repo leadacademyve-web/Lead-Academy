@@ -759,7 +759,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     setPersonalTradeJournal(false);
     let mode: 'REAL' | 'EDUCATIONAL' = requestedMode || tradeJournalMode;
 
-    if (actualIsAdmin) {
+    if (actualIsAdmin && !requestedMode) {
       const { data: modeSetting, error: modeError } = await supabase
         .from('portal_settings')
         .select('value')
@@ -825,13 +825,13 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     if (isChatAdmin) {
       const { error } = await supabase.rpc('admin_set_trade_journal_mode', { p_mode: mode });
       if (error) { setTradeJournalError(error.message || 'No se pudo cambiar el modo de la bitácora.'); return; }
-      await loadTradeJournal(true, mode);
+      await loadTradeJournal(true, mode, false);
       return;
     }
 
     // Student mode is personal/local: it never changes the administrator's global mode.
     setTradeJournalMode(mode);
-    await loadTradeJournal(true, mode);
+    await loadTradeJournal(true, mode, false);
   }
 
   async function openPersonalTradeJournal() {
@@ -856,7 +856,7 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
       p_trade_count: tradeCount, p_win_rate: winRate, p_gain_min: gainMin, p_gain_max: gainMax, p_loss_min: lossMin, p_loss_max: lossMax
     });
     if (error) setTradeJournalError(error.message || 'No se pudieron regenerar los trades educativos.');
-    else await loadTradeJournal(true, 'EDUCATIONAL');
+    else await loadTradeJournal(true, 'EDUCATIONAL', false);
     setEducationalWorking(false);
   }
 
