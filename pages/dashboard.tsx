@@ -652,6 +652,7 @@ export default function DashboardPage() {
   const [liveTrades, setLiveTrades] = useState<LiveTrade[]>([]);
   const [tradeStrategies, setTradeStrategies] = useState<TradeStrategy[]>(DEFAULT_TRADE_STRATEGIES);
   const [tradeJournalMode, setTradeJournalMode] = useState<'REAL' | 'EDUCATIONAL'>('REAL');
+  const [personalTradeJournal, setPersonalTradeJournal] = useState(false);
   const [educationalTradeCount, setEducationalTradeCount] = useState('1000');
   const [educationalWinRate, setEducationalWinRate] = useState('86');
   const [educationalGainMin, setEducationalGainMin] = useState('12');
@@ -729,14 +730,33 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     }
   }
 
-  async function loadTradeJournal(showLoading = false, requestedMode?: 'REAL' | 'EDUCATIONAL') {
+  async function loadTradeJournal(showLoading = false, requestedMode?: 'REAL' | 'EDUCATIONAL', requestedPersonal?: boolean) {
     if (showLoading) setTradeJournalLoading(true);
     setTradeJournalError(null);
 
     const { data: authData } = await supabase.auth.getUser();
     const authUser = authData.user;
     const actualIsAdmin = isChatAdminEmail(authUser?.email || userEmail);
+    const usePersonal = requestedPersonal ?? personalTradeJournal;
 
+    if (usePersonal) {
+      setPersonalTradeJournal(true);
+      setTradeJournalMode('REAL');
+      const { data, error } = await supabase
+        .from('student_trade_journal')
+        .select('id,ticker,option_type,strategy,result_pct,created_at')
+        .order('created_at', { ascending: false });
+      if (error) {
+        setTradeJournalError('No se pudo cargar tu bitácora personal. Ejecuta primero el SQL de Bitácora Personal.');
+        if (showLoading) setTradeJournalLoading(false);
+        return;
+      }
+      setLiveTrades((data || []).map((row: any) => ({ ...row, trade_source: 'REAL' })) as LiveTrade[]);
+      if (showLoading) setTradeJournalLoading(false);
+      return;
+    }
+
+    setPersonalTradeJournal(false);
     let mode: 'REAL' | 'EDUCATIONAL' = requestedMode || tradeJournalMode;
 
     if (actualIsAdmin) {
@@ -797,7 +817,8 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   }
 
   async function setTradeMode(mode: 'REAL' | 'EDUCATIONAL') {
-    if (mode === tradeJournalMode) return;
+    if (!personalTradeJournal && mode === tradeJournalMode) return;
+    setPersonalTradeJournal(false);
     setTradeJournalError(null);
     setShowTradeForm(false);
 
@@ -811,6 +832,14 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     // Student mode is personal/local: it never changes the administrator's global mode.
     setTradeJournalMode(mode);
     await loadTradeJournal(true, mode);
+  }
+
+  async function openPersonalTradeJournal() {
+    setTradeJournalError(null);
+    setShowTradeForm(false);
+    setPersonalTradeJournal(true);
+    setTradeJournalMode('REAL');
+    await loadTradeJournal(true, 'REAL', true);
   }
 
   async function regenerateEducationalTrades() {
@@ -832,40 +861,74 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
   }
 
   async function saveTradeJournalEntry() {
-    if (!isChatAdmin || savingTrade || tradeJournalMode !== 'REAL') return;
+    const canSave = personalTradeJournal || (isChatAdmin && tradeJournalMode === 'REAL');
+    if (!canSave || savingTrade) return;
     const ticker = tradeForm.ticker.trim().toUpperCase();
     const resultPct = Number(String(tradeForm.resultPct).replace('%', '').replace(',', '.'));
     if (!ticker || !Number.isFinite(resultPct) || resultPct === 0) {
       setTradeJournalError('Completa el ticker y un resultado % distinto de 0.');
       return;
     }
+
     setSavingTrade(true);
     setTradeJournalError(null);
-    const { error } = await supabase.from('live_trade_journal').insert({
-      ticker,
-      option_type: tradeForm.optionType,
-      strategy: tradeForm.strategy,
-      result_pct: resultPct,
-      live_session_id: activeLiveSession?.session_id || null,
-      created_by_email: userEmail || null,
-      trade_source: 'REAL',
-    });
+
+    let error: any = null;
+
+    if (personalTradeJournal) {
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) {
+        setTradeJournalError('Tu sesión no está disponible. Inicia sesión nuevamente.');
+        setSavingTrade(false);
+        return;
+      }
+      const result = await supabase.from('student_trade_journal').insert({
+        user_id: authData.user.id,
+        user_email: authData.user.email || userEmail || null,
+        ticker,
+        option_type: tradeForm.optionType,
+        strategy: tradeForm.strategy,
+        result_pct: resultPct,
+      });
+      error = result.error;
+    } else {
+      const result = await supabase.from('live_trade_journal').insert({
+        ticker,
+        option_type: tradeForm.optionType,
+        strategy: tradeForm.strategy,
+        result_pct: resultPct,
+        live_session_id: activeLiveSession?.session_id || null,
+        created_by_email: userEmail || null,
+        trade_source: 'REAL',
+      });
+      error = result.error;
+    }
+
     if (error) {
       setTradeJournalError(error.message || 'No se pudo guardar el trade.');
       setSavingTrade(false);
       return;
     }
+
     setTradeForm((prev) => ({ ticker: '', optionType: 'CALL', strategy: prev.strategy, resultPct: '' }));
     setShowTradeForm(false);
-    await loadTradeJournal();
+    await loadTradeJournal(false, 'REAL', personalTradeJournal);
     setSavingTrade(false);
   }
 
   async function deleteTradeJournalEntry(id: string) {
-    if (!isChatAdmin || !id || tradeJournalMode !== 'REAL') return;
+    const canDelete = personalTradeJournal || (isChatAdmin && tradeJournalMode === 'REAL');
+    if (!canDelete || !id) return;
     if (!window.confirm('¿Eliminar este trade de la bitácora?')) return;
-    const { error } = await supabase.from('live_trade_journal').delete().eq('id', id);
-    if (error) { setTradeJournalError(error.message || 'No se pudo eliminar el trade.'); return; }
+
+    const result = personalTradeJournal
+      ? await supabase.from('student_trade_journal').delete().eq('id', id)
+      : await supabase.from('live_trade_journal').delete().eq('id', id);
+
+    if (result.error) {
+      setTradeJournalError(result.error.message || 'No se pudo eliminar el trade.');
+      return;
+    }
     setLiveTrades((rows) => rows.filter((row) => row.id !== id));
   }
 
@@ -2315,7 +2378,7 @@ return normalized;
                 {showTradeJournal ? (
                   <div style={{ position:'absolute', inset:0, zIndex:20, width: '100%', height: '100%', overflow: 'hidden', background: 'linear-gradient(180deg,#061326 0%,#031020 100%)', color: '#fff', padding: 18, display:'flex', flexDirection:'column' }}>
                     <div style={{ marginBottom: 14 }}>
-                      <div><div style={{ color: '#a855f7', fontSize: 12, fontWeight: 900, letterSpacing: 1.2 }}>BITÁCORA DE TRADES</div><div style={{ fontSize: 24, fontWeight: 950 }}>{tradeJournalMode==='EDUCATIONAL'?'Escenario estadístico educacional':'Estadísticas acumuladas de estrategias en vivo'}</div></div>
+                      <div><div style={{ color: '#a855f7', fontSize: 12, fontWeight: 900, letterSpacing: 1.2 }}>BITÁCORA DE TRADES</div><div style={{ fontSize: 24, fontWeight: 950 }}>{personalTradeJournal?'Mi historial y estadísticas personales':tradeJournalMode==='EDUCATIONAL'?'Escenario estadístico educacional':'Estadísticas acumuladas de estrategias en vivo'}</div></div>
                     </div>
                     {tradeJournalError ? <div className="notice" style={{ marginBottom: 12 }}>{tradeJournalError}</div> : null}
                     <div style={{display:'flex',alignItems:'stretch',justifyContent:'space-between',gap:12,marginBottom:14}}>
@@ -2324,21 +2387,22 @@ return normalized;
                       </div>
                       <div style={{display:'flex',gap:8,alignItems:'stretch',flexWrap:'wrap',justifyContent:'flex-end'}}>
                         <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 10px',minHeight:48,borderRadius:12,border:'1px solid rgba(96,165,250,.22)',background:'rgba(4,13,28,.76)'}}><span style={{fontSize:11,fontWeight:950,color:tradeJournalMode==='REAL'?'#60a5fa':'rgba(255,255,255,.52)'}}>REAL</span><button type="button" aria-label="Cambiar modo de bitácora" onClick={()=>setTradeMode(tradeJournalMode==='REAL'?'EDUCATIONAL':'REAL')} style={{width:46,height:27,border:0,borderRadius:999,padding:3,cursor:'pointer',background:tradeJournalMode==='EDUCATIONAL'?'#22c55e':'#2563eb',boxShadow:'inset 0 0 0 1px rgba(255,255,255,.15)',transition:'all .18s ease'}}><span style={{display:'block',width:21,height:21,borderRadius:'50%',background:'#fff',boxShadow:'0 2px 5px rgba(0,0,0,.35)',transform:tradeJournalMode==='EDUCATIONAL'?'translateX(19px)':'translateX(0)',transition:'transform .18s ease'}}/></button><span style={{fontSize:11,fontWeight:950,color:tradeJournalMode==='EDUCATIONAL'?'#4ade80':'rgba(255,255,255,.52)'}}>EDUCATIONAL</span></div>
-                        {isChatAdmin && tradeJournalView==='resumen' && tradeJournalMode==='REAL' ? <button type="button" className="btn btn-secondary" style={{minHeight:48,padding:'10px 16px',fontSize:14,fontWeight:950,border:'1px solid rgba(77,145,255,.48)',background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))'}} onClick={() => setShowTradeForm((v) => !v)}>+ Registrar trade</button> : null}
+                        <button type="button" className="btn btn-secondary" onClick={openPersonalTradeJournal} style={{minHeight:48,padding:'10px 16px',fontSize:13,fontWeight:950,border:personalTradeJournal?'1px solid rgba(74,222,128,.72)':'1px solid rgba(77,145,255,.48)',background:personalTradeJournal?'linear-gradient(180deg,rgba(22,163,74,.34),rgba(21,128,61,.28))':'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))',color:personalTradeJournal?'#86efac':'#fff'}}>MI BITÁCORA</button>
+                        {tradeJournalView==='resumen' && (personalTradeJournal || (isChatAdmin && tradeJournalMode==='REAL')) ? <button type="button" className="btn btn-secondary" style={{minHeight:48,padding:'10px 16px',fontSize:14,fontWeight:950,border:'1px solid rgba(77,145,255,.48)',background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))'}} onClick={() => setShowTradeForm((v) => !v)}>+ Registrar trade</button> : null}
                         <button type="button" className="btn btn-secondary" style={{minHeight:48,padding:'10px 16px',fontSize:14,fontWeight:950,border:'1px solid rgba(77,145,255,.48)',background:'linear-gradient(180deg,rgba(31,94,188,.30),rgba(17,52,108,.26))'}} onClick={() => setShowTradeJournal(false)}>← Volver al video</button>
                       </div>
                     </div>
-                    {tradeJournalMode === 'EDUCATIONAL' ? <div style={{display:'grid',gridTemplateColumns:'repeat(6,minmax(105px,1fr)) auto',gap:9,alignItems:'end',margin:'-4px 0 12px',padding:'11px 12px',borderRadius:12,border:'1px solid rgba(34,197,94,.22)',background:'rgba(5,35,45,.72)'}}>{[
+                    {!personalTradeJournal && tradeJournalMode === 'EDUCATIONAL' ? <div style={{display:'grid',gridTemplateColumns:'repeat(6,minmax(105px,1fr)) auto',gap:9,alignItems:'end',margin:'-4px 0 12px',padding:'11px 12px',borderRadius:12,border:'1px solid rgba(34,197,94,.22)',background:'rgba(5,35,45,.72)'}}>{[
                       ['CANTIDAD TRADES',educationalTradeCount,setEducationalTradeCount],['WIN RATE %',educationalWinRate,setEducationalWinRate],['GANANCIA MÍN. %',educationalGainMin,setEducationalGainMin],['GANANCIA MÁX. %',educationalGainMax,setEducationalGainMax],['PÉRDIDA MÍN. %',educationalLossMin,setEducationalLossMin],['PÉRDIDA MÁX. %',educationalLossMax,setEducationalLossMax]
                     ].map(([label,value,setter]:any)=><label key={label} style={{fontSize:10,fontWeight:950,color:'rgba(255,255,255,.72)'}}>{label}<input value={value} onChange={e=>setter(e.target.value)} inputMode={label==='CANTIDAD TRADES'?'numeric':'decimal'} style={{width:'100%',marginTop:6,padding:'10px 11px',borderRadius:9,border:'1px solid rgba(96,165,250,.24)',background:'#07172a',color:'#fff',fontSize:14,fontWeight:900}}/></label>)}<button type="button" disabled={educationalWorking} onClick={regenerateEducationalTrades} style={{minHeight:39,padding:'9px 14px',borderRadius:9,border:'1px solid rgba(34,197,94,.46)',background:'linear-gradient(180deg,#16a34a,#15803d)',color:'#fff',fontSize:11.5,fontWeight:950,cursor:educationalWorking?'wait':'pointer',whiteSpace:'nowrap',opacity:educationalWorking ? .7 : 1}}>{educationalWorking?'GENERANDO...':`REGENERAR ${formatPortalNumber(Math.max(0,Math.round(Number(educationalTradeCount)||0)))}`}</button></div> : null}
                     {tradeJournalView === 'resumen' ? <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column'}}>
-                    <div style={{ display: 'grid', gridTemplateColumns: showTradeForm && isChatAdmin ? 'repeat(5,minmax(0,1fr)) 350px' : 'repeat(6,minmax(0,1fr))', gap: showTradeForm && isChatAdmin ? 12 : 9, marginBottom: 14 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: showTradeForm && (personalTradeJournal || isChatAdmin) ? 'repeat(5,minmax(0,1fr)) 350px' : 'repeat(6,minmax(0,1fr))', gap: showTradeForm && (personalTradeJournal || isChatAdmin) ? 12 : 9, marginBottom: 14 }}>
                       {[
                         ['TOTAL TRADES', formatPortalNumber(tradeStats.total), '#c084fc'], ['TRADES EXITOSOS', formatPortalNumber(tradeStats.winners), '#4ade80'], ['NO EXITOSOS', formatPortalNumber(tradeStats.losers), '#f87171'],
                         ['WIN RATE GLOBAL', `${formatPortalNumber(tradeStats.winRate, 1)}%`, '#60a5fa'], ['RESULTADO ACUMULADO', tradePct(tradeStats.sum), '#fbbf24'], ['PROMEDIO / TRADE', tradePct(tradeStats.avg), '#60a5fa']
                       ].map(([label,value,color]) => <div key={String(label)} style={{ border:'1px solid rgba(96,165,250,.15)', borderRadius:12, padding:'12px 13px', background:'rgba(6,24,47,.78)' }}><div style={{ color:String(color), fontSize:10, fontWeight:900 }}>{label}</div><div style={{ fontSize:25, fontWeight:950, marginTop:7 }}>{value}</div></div>)}
                     </div>
-                    <div style={{ display:'grid', gridTemplateColumns: showTradeForm && isChatAdmin ? 'minmax(0,1fr) 350px' : '1fr', gap:12, flex:1, minHeight:0 }}>
+                    <div style={{ display:'grid', gridTemplateColumns: showTradeForm && (personalTradeJournal || isChatAdmin) ? 'minmax(0,1fr) 350px' : '1fr', gap:12, flex:1, minHeight:0 }}>
                       <div style={{ minWidth:0, minHeight:0, display:'flex', flexDirection:'column' }}>
                         <div style={{ border:'1px solid rgba(96,165,250,.15)', borderRadius:14, overflow:'hidden', background:'rgba(3,16,32,.72)', marginBottom:12 }}>
                           <div style={{ padding:'12px 14px', fontWeight:950, fontSize:15 }}>RENDIMIENTO POR ESTRATEGIA</div>
@@ -2349,11 +2413,11 @@ return normalized;
                           <div style={{ padding:'12px 14px', fontWeight:950, fontSize:15, display:'flex', justifyContent:'space-between', gap:10 }}><span>TRADES RECIENTES</span><span style={{fontSize:13,opacity:.7,fontWeight:750}}>{liveTrades.length} trades · desplaza para ver más</span></div>
                           <div style={{ display:'grid', gridTemplateColumns:'.32fr 1.45fr .55fr .6fr 1.2fr .65fr .75fr 32px', gap:8, padding:'10px 14px', fontSize:14, opacity:.78, fontWeight:850, background:'rgba(7,23,42,.96)' }}><span>#</span><span>Fecha / Hora</span><span>Ticker</span><span>Tipo</span><span>Estrategia</span><span>Resultado</span><span>Estado</span><span></span></div>
                           <div style={{flex:1,minHeight:0,overflowY:'auto',scrollbarGutter:'stable'}}>
-                          {tradeJournalLoading ? <div style={{padding:18,opacity:.7}}>Cargando bitácora...</div> : liveTrades.length ? liveTrades.map((trade, tradeIndex) => <div key={trade.id} style={{ display:'grid', gridTemplateColumns:'.32fr 1.45fr .55fr .6fr 1.2fr .65fr .75fr 32px', gap:8, alignItems:'center', padding:'11px 14px', borderTop:'1px solid rgba(148,163,184,.10)', fontSize:16 }}><span>{formatPortalNumber(liveTrades.length - tradeIndex)}</span><span>{new Date(trade.created_at).toLocaleString('en-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true})} NY</span><b>{trade.ticker}</b><b style={{color:trade.option_type==='CALL'?'#4ade80':'#f87171'}}>{trade.option_type}</b><span>{trade.strategy}</span><b style={{color:Number(trade.result_pct)>0?'#4ade80':'#f87171'}}>{tradePct(Number(trade.result_pct))}</b><span>{Number(trade.result_pct)>0?'🟢 Exitoso':'🔴 No exitoso'}</span>{isChatAdmin && tradeJournalMode==='REAL'?<button onClick={()=>deleteTradeJournalEntry(trade.id)} title="Eliminar" style={{background:'transparent',border:0,color:'#94a3b8',cursor:'pointer'}}>×</button>:<span/>}</div>) : <div style={{padding:18,opacity:.7}}>Aún no hay trades registrados.</div>}
+                          {tradeJournalLoading ? <div style={{padding:18,opacity:.7}}>Cargando bitácora...</div> : liveTrades.length ? liveTrades.map((trade, tradeIndex) => <div key={trade.id} style={{ display:'grid', gridTemplateColumns:'.32fr 1.45fr .55fr .6fr 1.2fr .65fr .75fr 32px', gap:8, alignItems:'center', padding:'11px 14px', borderTop:'1px solid rgba(148,163,184,.10)', fontSize:16 }}><span>{formatPortalNumber(liveTrades.length - tradeIndex)}</span><span>{new Date(trade.created_at).toLocaleString('en-US',{timeZone:'America/New_York',month:'2-digit',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true})} NY</span><b>{trade.ticker}</b><b style={{color:trade.option_type==='CALL'?'#4ade80':'#f87171'}}>{trade.option_type}</b><span>{trade.strategy}</span><b style={{color:Number(trade.result_pct)>0?'#4ade80':'#f87171'}}>{tradePct(Number(trade.result_pct))}</b><span>{Number(trade.result_pct)>0?'🟢 Exitoso':'🔴 No exitoso'}</span>{(personalTradeJournal || (isChatAdmin && tradeJournalMode==='REAL'))?<button onClick={()=>deleteTradeJournalEntry(trade.id)} title="Eliminar" style={{background:'transparent',border:0,color:'#94a3b8',cursor:'pointer'}}>×</button>:<span/>}</div>) : <div style={{padding:18,opacity:.7}}>Aún no hay trades registrados.</div>}
                           </div>
                         </div>
                       </div>
-                      {showTradeForm && isChatAdmin ? <div style={{display:'grid',gap:12,alignSelf:'start'}}>
+                      {showTradeForm && (personalTradeJournal || isChatAdmin) ? <div style={{display:'grid',gap:12,alignSelf:'start'}}>
                       <div style={{ border:'1px solid rgba(96,165,250,.18)', borderRadius:14, padding:14, background:'linear-gradient(180deg,rgba(20,39,64,.98),rgba(8,25,45,.98))' }}>
                         <div style={{fontWeight:950,fontSize:16}}>REGISTRAR NUEVO TRADE</div><div style={{fontSize:11,opacity:.72,marginBottom:13}}>Registra únicamente el resultado porcentual.</div>
                         <label style={{fontSize:11,fontWeight:850}}>Ticker *</label><input value={tradeForm.ticker} onChange={(e)=>setTradeForm({...tradeForm,ticker:e.target.value.toUpperCase()})} placeholder="Ej: SPY, QQQ, NVDA" style={{width:'100%',margin:'6px 0 12px',padding:'11px',borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}} />
