@@ -407,13 +407,6 @@ function strategyLibraryItem(args: {
 }
 
 const LIBRARY_ITEMS: LibraryItem[] = [
-  {
-    id: 'Plan-inversiones.xlsx',
-    title: 'Plan de inversiones Excel',
-    kind: 'download',
-    url: '/Plan-inversiones.xlsx',
-    description: 'Descargar archivo',
-  },
 {
   id: 'tc2000-layout hora',
   title: 'TC2000 Marco tiempo Hora',
@@ -653,6 +646,8 @@ export default function DashboardPage() {
   const [tradeStrategies, setTradeStrategies] = useState<TradeStrategy[]>(DEFAULT_TRADE_STRATEGIES);
   const [tradeJournalMode, setTradeJournalMode] = useState<'REAL' | 'EDUCATIONAL'>('REAL');
   const [personalTradeJournal, setPersonalTradeJournal] = useState(false);
+  const [portalConfirm, setPortalConfirm] = useState<null | { type: 'deleteTrade'; tradeId: string } | { type: 'clearChat' }>(null);
+  const [portalConfirmWorking, setPortalConfirmWorking] = useState(false);
   const [educationalTradeCount, setEducationalTradeCount] = useState('1000');
   const [educationalWinRate, setEducationalWinRate] = useState('86');
   const [educationalGainMin, setEducationalGainMin] = useState('12');
@@ -742,9 +737,15 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     if (usePersonal) {
       setPersonalTradeJournal(true);
       setTradeJournalMode('REAL');
+      if (!authUser?.id) {
+        setTradeJournalError('Tu sesión no está disponible. Inicia sesión nuevamente.');
+        if (showLoading) setTradeJournalLoading(false);
+        return;
+      }
       const { data, error } = await supabase
         .from('student_trade_journal')
         .select('id,ticker,option_type,strategy,result_pct,created_at')
+        .eq('user_id', authUser.id)
         .order('created_at', { ascending: false });
       if (error) {
         setTradeJournalError('No se pudo cargar tu bitácora personal. Ejecuta primero el SQL de Bitácora Personal.');
@@ -916,20 +917,53 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     setSavingTrade(false);
   }
 
-  async function deleteTradeJournalEntry(id: string) {
+  function deleteTradeJournalEntry(id: string) {
     const canDelete = personalTradeJournal || (isChatAdmin && tradeJournalMode === 'REAL');
     if (!canDelete || !id) return;
-    if (!window.confirm('¿Eliminar este trade de la bitácora?')) return;
+    setPortalConfirm({ type: 'deleteTrade', tradeId: id });
+  }
+
+  async function confirmDeleteTradeJournalEntry(id: string) {
+    if (!id || portalConfirmWorking) return;
+    setPortalConfirmWorking(true);
+    setTradeJournalError(null);
+
+    const { data: authData } = await supabase.auth.getUser();
+    const authUser = authData.user;
+    if (!authUser?.id) {
+      setTradeJournalError('Tu sesión no está disponible. Inicia sesión nuevamente.');
+      setPortalConfirmWorking(false);
+      return;
+    }
 
     const result = personalTradeJournal
-      ? await supabase.from('student_trade_journal').delete().eq('id', id)
-      : await supabase.from('live_trade_journal').delete().eq('id', id);
+      ? await supabase
+          .from('student_trade_journal')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', authUser.id)
+          .select('id')
+      : await supabase
+          .from('live_trade_journal')
+          .delete()
+          .eq('id', id)
+          .select('id');
 
     if (result.error) {
       setTradeJournalError(result.error.message || 'No se pudo eliminar el trade.');
+      setPortalConfirmWorking(false);
       return;
     }
+
+    if (!Array.isArray(result.data) || result.data.length !== 1) {
+      setTradeJournalError('El trade no fue eliminado en la base de datos. No se hicieron cambios.');
+      setPortalConfirmWorking(false);
+      return;
+    }
+
     setLiveTrades((rows) => rows.filter((row) => row.id !== id));
+    setPortalConfirm(null);
+    setPortalConfirmWorking(false);
   }
 
   const tradeStats = useMemo(() => {
@@ -1813,12 +1847,15 @@ return normalized;
     setDeletingMessageId(null);
   }
 
-  async function clearAllChatMessages() {
+  function clearAllChatMessages() {
     if (!isChatAdmin || clearingChat || deletingMessageId || !chatMessages.length) return;
+    setPortalConfirm({ type: 'clearChat' });
+  }
 
-    const confirmed = window.confirm('¿Seguro que deseas borrar todos los mensajes del chat en vivo?');
-    if (!confirmed) return;
+  async function confirmClearAllChatMessages() {
+    if (!isChatAdmin || clearingChat || deletingMessageId || !chatMessages.length || portalConfirmWorking) return;
 
+    setPortalConfirmWorking(true);
     setClearingChat(true);
     setChatError(null);
 
@@ -1830,11 +1867,14 @@ return normalized;
     if (error) {
       setChatError(`No se pudo borrar todo el chat. ${error.message || ''}`.trim());
       setClearingChat(false);
+      setPortalConfirmWorking(false);
       return;
     }
 
     setChatMessages([]);
     setClearingChat(false);
+    setPortalConfirm(null);
+    setPortalConfirmWorking(false);
   }
 
 
@@ -3751,6 +3791,44 @@ return normalized;
           >
             ×
           </button>
+        </div>
+      ) : null}
+
+      {portalConfirm ? (
+        <div
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !portalConfirmWorking) setPortalConfirm(null);
+          }}
+          style={{ position: 'fixed', inset: 0, zIndex: 10030, background: 'rgba(0,0,0,.72)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', padding: 20 }}
+        >
+          <div role="dialog" aria-modal="true" style={{ width: 'min(500px,94vw)', borderRadius: 22, border: '1px solid rgba(255,255,255,.14)', background: '#0b172a', boxShadow: '0 30px 90px rgba(0,0,0,.58)', padding: 24 }}>
+            <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: '.8px', color: '#ff858c', marginBottom: 8 }}>
+              {portalConfirm.type === 'deleteTrade' ? 'ELIMINAR TRADE' : 'LIMPIAR CHAT LIVE'}
+            </div>
+            <h2 style={{ margin: '0 0 9px', fontSize: 24 }}>
+              {portalConfirm.type === 'deleteTrade' ? '¿Eliminar este trade?' : '¿Borrar todos los mensajes?'}
+            </h2>
+            <p style={{ margin: 0, color: 'rgba(255,255,255,.68)', fontSize: 13.5, lineHeight: 1.55 }}>
+              {portalConfirm.type === 'deleteTrade'
+                ? 'El registro se eliminará de la bitácora correspondiente. Esta acción no se puede deshacer.'
+                : 'Se eliminarán todos los mensajes del chat en vivo. Esta acción no se puede deshacer.'}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 20 }}>
+              <button type="button" disabled={portalConfirmWorking} onClick={() => setPortalConfirm(null)} className="btn btn-secondary" style={{ minHeight: 46, fontWeight: 900 }}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={portalConfirmWorking}
+                onClick={() => portalConfirm.type === 'deleteTrade'
+                  ? confirmDeleteTradeJournalEntry(portalConfirm.tradeId)
+                  : confirmClearAllChatMessages()}
+                style={{ minHeight: 46, borderRadius: 11, border: '1px solid rgba(248,113,113,.5)', background: 'linear-gradient(180deg,#b72b35,#8f1f29)', color: '#fff', fontWeight: 950, cursor: portalConfirmWorking ? 'wait' : 'pointer', opacity: portalConfirmWorking ? .65 : 1 }}
+              >
+                {portalConfirmWorking ? 'Procesando...' : portalConfirm.type === 'deleteTrade' ? 'Sí, eliminar trade' : 'Sí, borrar mensajes'}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
 
