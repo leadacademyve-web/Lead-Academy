@@ -657,6 +657,10 @@ export default function DashboardPage() {
   const [educationalWorking, setEducationalWorking] = useState(false);
   const [capitalCurveHoverIndex, setCapitalCurveHoverIndex] = useState<number | null>(null);
   const [capitalCurveDragging, setCapitalCurveDragging] = useState(false);
+  const [strategyPanelHeight, setStrategyPanelHeight] = useState(310);
+  const [simulatorChartHeight, setSimulatorChartHeight] = useState(270);
+  const tradeSummarySplitRef = useRef<HTMLDivElement | null>(null);
+  const simulatorSplitRef = useRef<HTMLDivElement | null>(null);
   const [tradeForm, setTradeForm] = useState<{ ticker: string; optionType: TradeOptionType; strategy: TradeStrategy; resultPct: string }>({
     ticker: '', optionType: 'CALL', strategy: DEFAULT_TRADE_STRATEGIES[0], resultPct: ''
   });
@@ -1035,6 +1039,48 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     const ratio = gross > 0 ? (totalGains / gross) * 100 : 0;
     return { totalGains, totalLosses, net, ratio };
   }, [capitalSimulation.rows]);
+
+  function beginStrategyPanelResize(e: any) {
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    const startY = e.clientY;
+    const startHeight = strategyPanelHeight;
+    const onMove = (event: PointerEvent) => {
+      const hostHeight = tradeSummarySplitRef.current?.clientHeight || 620;
+      const maxHeight = Math.max(180, hostHeight - 150);
+      setStrategyPanelHeight(Math.max(150, Math.min(maxHeight, startHeight + (event.clientY - startY))));
+    };
+    const onEnd = () => {
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onEnd);
+      handle.removeEventListener('pointercancel', onEnd);
+    };
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onEnd);
+    handle.addEventListener('pointercancel', onEnd);
+  }
+
+  function beginSimulatorResize(e: any) {
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    const startY = e.clientY;
+    const startHeight = simulatorChartHeight;
+    const onMove = (event: PointerEvent) => {
+      const hostHeight = simulatorSplitRef.current?.clientHeight || 720;
+      const maxHeight = Math.max(210, hostHeight - 360);
+      setSimulatorChartHeight(Math.max(190, Math.min(maxHeight, startHeight + (event.clientY - startY))));
+    };
+    const onEnd = () => {
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onEnd);
+      handle.removeEventListener('pointercancel', onEnd);
+    };
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onEnd);
+    handle.addEventListener('pointercancel', onEnd);
+  }
 
   async function loadPauseStatus(userId: string, showLoading = false) {
     if (showLoading) setPauseStatusLoading(true);
@@ -2444,13 +2490,16 @@ return normalized;
                       ].map(([label,value,color]) => <div key={String(label)} style={{ border:'1px solid rgba(96,165,250,.15)', borderRadius:12, padding:'12px 13px', background:'rgba(6,24,47,.78)' }}><div style={{ color:String(color), fontSize:10, fontWeight:900 }}>{label}</div><div style={{ fontSize:25, fontWeight:950, marginTop:7 }}>{value}</div></div>)}
                     </div>
                     <div style={{ display:'grid', gridTemplateColumns: showTradeForm && (personalTradeJournal || isChatAdmin) ? 'minmax(0,1fr) 350px' : '1fr', gap:12, flex:1, minHeight:0 }}>
-                      <div style={{ minWidth:0, minHeight:0, display:'flex', flexDirection:'column' }}>
-                        <div style={{ border:'1px solid rgba(96,165,250,.15)', borderRadius:14, overflow:'hidden', background:'rgba(3,16,32,.72)', marginBottom:12 }}>
-                          <div style={{ padding:'12px 14px', fontWeight:950, fontSize:15 }}>RENDIMIENTO POR ESTRATEGIA</div>
-                          <div style={{ display:'grid', gridTemplateColumns:'1.7fr .55fr .65fr .75fr .8fr 1fr 1fr 1fr', gap:8, padding:'10px 14px', fontSize:14, opacity:.78, fontWeight:850 }}><span>Estrategia</span><span>Trades</span><span>Exitosos</span><span>No exitosos</span><span>Win Rate</span><span>Resultado</span><span>Prom. exitoso</span><span>Prom. no exitoso</span></div>
-                          {tradeStats.byStrategy.map((row) => <div key={row.strategy} style={{ display:'grid', gridTemplateColumns:'1.7fr .55fr .65fr .75fr .8fr 1fr 1fr 1fr', gap:8, alignItems:'center', padding:'12px 14px', borderTop:'1px solid rgba(148,163,184,.10)', fontSize:16 }}><strong>{row.strategy}</strong><b>{formatPortalNumber(row.total)}</b><b style={{color:'#4ade80'}}>{formatPortalNumber(row.wins)}</b><b style={{color:'#f87171'}}>{formatPortalNumber(row.losses)}</b><b>{formatPortalNumber(row.winRate, 1)}%</b><b style={{color:row.result>=0?'#4ade80':'#f87171'}}>{tradePct(row.result)}</b><b style={{color:'#4ade80'}}>{tradePct(row.avgWin)}</b><b style={{color:'#f87171'}}>{tradePct(row.avgLoss)}</b></div>)}
+                      <div ref={tradeSummarySplitRef} style={{ minWidth:0, minHeight:0, display:'flex', flexDirection:'column' }}>
+                        <div style={{ border:'1px solid rgba(96,165,250,.15)', borderRadius:14, overflow:'hidden', background:'rgba(3,16,32,.72)', height:strategyPanelHeight, minHeight:150, display:'flex', flexDirection:'column', flex:'0 0 auto' }}>
+                          <div style={{ padding:'12px 14px', fontWeight:950, fontSize:15, flex:'0 0 auto' }}>RENDIMIENTO POR ESTRATEGIA</div>
+                          <div style={{ display:'grid', gridTemplateColumns:'1.7fr .55fr .65fr .75fr .8fr 1fr 1fr 1fr', gap:8, padding:'10px 14px', fontSize:14, opacity:.78, fontWeight:850, background:'rgba(7,23,42,.96)', flex:'0 0 auto' }}><span>Estrategia</span><span>Trades</span><span>Exitosos</span><span>No exitosos</span><span>Win Rate</span><span>Resultado</span><span>Prom. exitoso</span><span>Prom. no exitoso</span></div>
+                          <div style={{flex:1,minHeight:0,overflowY:'auto',overscrollBehavior:'contain',scrollbarGutter:'stable'}}>
+                            {tradeStats.byStrategy.map((row) => <div key={row.strategy} style={{ display:'grid', gridTemplateColumns:'1.7fr .55fr .65fr .75fr .8fr 1fr 1fr 1fr', gap:8, alignItems:'center', padding:'12px 14px', borderTop:'1px solid rgba(148,163,184,.10)', fontSize:16 }}><strong>{row.strategy}</strong><b>{formatPortalNumber(row.total)}</b><b style={{color:'#4ade80'}}>{formatPortalNumber(row.wins)}</b><b style={{color:'#f87171'}}>{formatPortalNumber(row.losses)}</b><b>{formatPortalNumber(row.winRate, 1)}%</b><b style={{color:row.result>=0?'#4ade80':'#f87171'}}>{tradePct(row.result)}</b><b style={{color:'#4ade80'}}>{tradePct(row.avgWin)}</b><b style={{color:'#f87171'}}>{tradePct(row.avgLoss)}</b></div>)}
+                          </div>
                         </div>
-                        <div style={{ border:'1px solid rgba(96,165,250,.15)', borderRadius:14, overflow:'hidden', background:'rgba(3,16,32,.72)', flex:1, minHeight:0, display:'flex', flexDirection:'column' }}>
+                        <div onPointerDown={beginStrategyPanelResize} title="Arrastra para cambiar el tamaño de las tablas" style={{height:12,flex:'0 0 12px',cursor:'ns-resize',touchAction:'none',display:'grid',placeItems:'center',userSelect:'none'}}><div style={{width:76,height:4,borderRadius:999,background:'rgba(96,165,250,.48)'}}/></div>
+                        <div style={{ border:'1px solid rgba(96,165,250,.15)', borderRadius:14, overflow:'hidden', background:'rgba(3,16,32,.72)', flex:1, minHeight:130, display:'flex', flexDirection:'column' }}>
                           <div style={{ padding:'12px 14px', fontWeight:950, fontSize:15, display:'flex', justifyContent:'space-between', gap:10 }}><span>TRADES RECIENTES</span><span style={{fontSize:13,opacity:.7,fontWeight:750}}>{liveTrades.length} trades · desplaza para ver más</span></div>
                           <div style={{ display:'grid', gridTemplateColumns:'.32fr 1.45fr .55fr .6fr 1.2fr .65fr .75fr 32px', gap:8, padding:'10px 14px', fontSize:14, opacity:.78, fontWeight:850, background:'rgba(7,23,42,.96)' }}><span>#</span><span>Fecha / Hora</span><span>Ticker</span><span>Tipo</span><span>Estrategia</span><span>Resultado</span><span>Estado</span><span></span></div>
                           <div style={{flex:1,minHeight:0,overflowY:'auto',scrollbarGutter:'stable'}}>
@@ -2489,8 +2538,8 @@ return normalized;
                       </div> : null}
                     </div>
                     </div> : (
-                      <div style={{flex:1,minHeight:0,display:'grid',gridTemplateRows:'auto auto auto minmax(0,1fr)',gap:12,alignContent:'stretch',overflow:'hidden',paddingBottom:0}}>
-                        <div style={{border:'1px solid rgba(96,165,250,.18)',borderRadius:14,padding:14,background:'rgba(3,16,32,.72)'}}>
+                      <div ref={simulatorSplitRef} style={{flex:1,minHeight:0,display:'grid',gridTemplateRows:`auto auto ${simulatorChartHeight}px 12px minmax(130px,1fr)`,gap:0,alignContent:'stretch',overflow:'hidden',paddingBottom:0}}>
+                        <div style={{border:'1px solid rgba(96,165,250,.18)',borderRadius:14,padding:14,background:'rgba(3,16,32,.72)',marginBottom:12}}>
                           <div style={{fontWeight:950,fontSize:18,marginBottom:14}}>CONFIGURAR SIMULACIÓN</div>
                           <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10}}>
                             <label style={{fontSize:16,fontWeight:950}}>Capital inicial $<input value={simCapital} onChange={e=>setSimCapital(e.target.value)} inputMode="decimal" style={{width:'100%',marginTop:8,padding:'15px 13px',fontSize:17,fontWeight:900,borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}}/></label>
@@ -2506,11 +2555,11 @@ return normalized;
                             <select value={simOptionType} onChange={e=>setSimOptionType(e.target.value as any)} style={{padding:'12px 11px',fontSize:14,fontWeight:750,borderRadius:9,border:'1px solid rgba(148,163,184,.22)',background:'#07172a',color:'#fff'}}><option value="ALL">CALL + PUT</option><option>CALL</option><option>PUT</option></select>
                           </div>
                         </div>
-                        <div style={{display:'grid',gridTemplateColumns:'repeat(6,minmax(0,1fr))',gap:9}}>{[
+                        <div style={{display:'grid',gridTemplateColumns:'repeat(6,minmax(0,1fr))',gap:9,marginBottom:12}}>{[
                           ['CAPITAL INICIAL',formatPortalMoney(capitalSimulation.initial)],['CAPITAL FINAL',formatPortalMoney(capitalSimulation.finalBalance)],['GANANCIA / PÉRDIDA',formatPortalMoney(capitalSimulation.profit,true)],['RETORNO',tradePct(capitalSimulation.returnPct)],['TRADES',formatPortalNumber(capitalSimulation.rows.length)],['MÁX. DRAWDOWN',`${formatPortalNumber(capitalSimulation.maxDrawdown,1)}%`]
                         ].map(([l,v])=><div key={String(l)} style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:12,padding:'12px 13px',background:'rgba(6,24,47,.78)'}}><div style={{fontSize:11,fontWeight:900,opacity:.72}}>{l}</div><div style={{fontSize:27,fontWeight:950,marginTop:7,lineHeight:1.05}}>{v}</div></div>)}</div>
-                        <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.35fr) minmax(330px,.65fr)',gap:12,alignItems:'stretch'}}>
-                          <div style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:14,padding:14,background:'rgba(3,16,32,.72)',minHeight:230}}>
+                        <div style={{display:'grid',gridTemplateColumns:'minmax(0,1.35fr) minmax(330px,.65fr)',gap:12,alignItems:'stretch',minHeight:0,overflow:'hidden'}}>
+                          <div style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:14,padding:14,background:'rgba(3,16,32,.72)',minHeight:0,height:'100%',overflow:'hidden'}}>
                             <div style={{display:'grid',gridTemplateColumns:'auto repeat(4,minmax(105px,1fr)) auto',gap:14,alignItems:'center',marginBottom:12}}>
                               <div><div style={{fontWeight:950,fontSize:15}}>CURVA DE CAPITAL</div><div style={{fontSize:10,opacity:.6,marginTop:3}}>Evolución del balance después de cada trade</div></div>
                               <div><div style={{fontSize:9.5,fontWeight:900,opacity:.62}}>TRADES EJECUTADOS</div><div style={{fontSize:17,fontWeight:950,marginTop:3}}>{formatPortalNumber(capitalSimulation.rows.length)} / {formatPortalNumber(capitalSimulation.trades.length)}</div></div>
@@ -2521,7 +2570,7 @@ return normalized;
                             </div>
                             {capitalSimulation.rows.length ? (()=>{const vals=[capitalSimulation.initial,...capitalSimulation.rows.map(r=>r.balance)];const min=Math.min(...vals),max=Math.max(...vals);const span=Math.max(1,max-min);const pts=vals.map((v,i)=>`${(i/(Math.max(1,vals.length-1)))*100},${92-((v-min)/span)*76}`).join(' ');const hoverIndex=capitalCurveHoverIndex===null?null:Math.max(0,Math.min(vals.length-1,capitalCurveHoverIndex));const hoverValue=hoverIndex===null?null:vals[hoverIndex];const hoverRow=hoverIndex && hoverIndex>0?capitalSimulation.rows[hoverIndex-1]:null;const hoverX=hoverIndex===null?0:(hoverIndex/Math.max(1,vals.length-1))*100;const hoverY=hoverValue===null?0:92-((hoverValue-min)/span)*76;return <div style={{height:150,position:'relative',cursor:capitalCurveDragging?'grabbing':'crosshair',userSelect:'none',touchAction:'none'}} onPointerLeave={()=>{if(!capitalCurveDragging)setCapitalCurveHoverIndex(null);}} onPointerDown={(e)=>{e.currentTarget.setPointerCapture(e.pointerId);setCapitalCurveDragging(true);const rect=e.currentTarget.getBoundingClientRect();const ratio=Math.max(0,Math.min(1,(e.clientX-rect.left)/Math.max(1,rect.width)));setCapitalCurveHoverIndex(Math.round(ratio*(vals.length-1)));}} onPointerMove={(e)=>{if(e.pointerType!=='mouse'&&!capitalCurveDragging)return;const rect=e.currentTarget.getBoundingClientRect();const ratio=Math.max(0,Math.min(1,(e.clientX-rect.left)/Math.max(1,rect.width)));setCapitalCurveHoverIndex(Math.round(ratio*(vals.length-1)));}} onPointerUp={(e)=>{if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);setCapitalCurveDragging(false);}} onPointerCancel={()=>setCapitalCurveDragging(false)}><svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{width:'100%',height:'100%',overflow:'visible',pointerEvents:'none'}}><line x1="0" y1="92" x2="100" y2="92" stroke="rgba(148,163,184,.18)" strokeWidth=".5"/><line x1="0" y1="54" x2="100" y2="54" stroke="rgba(148,163,184,.10)" strokeWidth=".5"/><line x1="0" y1="16" x2="100" y2="16" stroke="rgba(148,163,184,.10)" strokeWidth=".5"/><polyline points={pts} fill="none" stroke={capitalSimulation.profit>=0?'#22c55e':'#ef4444'} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round"/>{hoverIndex!==null?<line x1={hoverX} y1="10" x2={hoverX} y2="92" stroke="rgba(255,255,255,.28)" strokeWidth=".35" vectorEffect="non-scaling-stroke"/>:null}</svg>{hoverIndex!==null?<div style={{position:'absolute',left:`${hoverX}%`,top:`${hoverY}%`,width:9,height:9,borderRadius:'50%',background:capitalSimulation.profit>=0?'#22c55e':'#ef4444',boxShadow:`0 0 0 3px ${capitalSimulation.profit>=0?'rgba(34,197,94,.18)':'rgba(239,68,68,.18)'}`,transform:'translate(-50%,-50%)',pointerEvents:'none',zIndex:2}}/>:null}{hoverIndex!==null&&hoverValue!==null?<div style={{position:'absolute',top:6,left:`${hoverX>70?Math.max(2,hoverX-3):Math.min(98,hoverX+3)}%`,transform:hoverX>70?'translateX(-100%)':'translateX(0)',pointerEvents:'none',minWidth:190,padding:'11px 13px',borderRadius:10,border:'1px solid rgba(96,165,250,.35)',background:'rgba(3,13,28,.96)',boxShadow:'0 10px 30px rgba(0,0,0,.35)',fontSize:13,lineHeight:1.45,zIndex:3}}><div style={{fontWeight:950,color:'#fff',fontSize:14}}>{hoverIndex===0?'Capital inicial':`Trade #${formatPortalNumber(hoverIndex)}`}</div><div style={{marginTop:5}}>Balance: <strong style={{fontSize:14}}>{formatPortalMoney(hoverValue)}</strong></div>{hoverRow?<><div>P/L: <strong style={{color:hoverRow.pnl>=0?'#4ade80':'#f87171',fontSize:14}}>{formatPortalMoney(hoverRow.pnl,true)}</strong></div><div>Resultado: <strong style={{color:Number(hoverRow.result_pct)>=0?'#4ade80':'#f87171',fontSize:14}}>{tradePct(Number(hoverRow.result_pct))}</strong></div></>:null}</div>:null}<div style={{position:'absolute',left:0,bottom:-2,fontSize:9,opacity:.55}}>Inicio {formatPortalMoney(capitalSimulation.initial)}</div><div style={{position:'absolute',right:0,bottom:-2,fontSize:9,opacity:.55}}>{formatPortalNumber(capitalSimulation.rows.length)} trades</div></div>})() : <div style={{height:150,display:'grid',placeItems:'center',opacity:.65}}>No hay trades para graficar.</div>}
                           </div>
-                          <div style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:14,padding:16,background:'rgba(3,16,32,.72)',display:'grid',gridTemplateColumns:'1fr 1.15fr',gap:14,alignItems:'center'}}>
+                          <div style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:14,padding:16,background:'rgba(3,16,32,.72)',display:'grid',gridTemplateColumns:'1fr 1.15fr',gap:14,alignItems:'center',minHeight:0,height:'100%',overflow:'hidden'}}>
                             <div>
                               <div style={{fontWeight:950,fontSize:15,marginBottom:12}}>TOTALES</div>
                               <div style={{display:'grid',gap:10}}>
@@ -2539,7 +2588,8 @@ return normalized;
                             </div>
                           </div>
                         </div>
-                        <div style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:14,overflow:'hidden',background:'rgba(3,16,32,.72)',minHeight:0,display:'flex',flexDirection:'column'}}>
+                        <div onPointerDown={beginSimulatorResize} title="Arrastra para cambiar el tamaño del simulador y la tabla" style={{height:12,cursor:'ns-resize',touchAction:'none',display:'grid',placeItems:'center',userSelect:'none'}}><div style={{width:76,height:4,borderRadius:999,background:'rgba(96,165,250,.48)'}}/></div>
+                        <div style={{border:'1px solid rgba(96,165,250,.15)',borderRadius:14,overflow:'hidden',background:'rgba(3,16,32,.72)',minHeight:130,display:'flex',flexDirection:'column'}}>
                           <div style={{padding:'14px 16px',fontWeight:950,fontSize:17,display:'flex',justifyContent:'space-between',gap:10}}><span>BALANCE TRADE POR TRADE</span><span style={{fontSize:12,opacity:.65,fontWeight:700}}>{formatPortalNumber(capitalSimulation.rows.length)} operaciones · desplaza para ver más</span></div>
                           <div style={{display:'grid',gridTemplateColumns:'.35fr 1.15fr .55fr .55fr 1.15fr .65fr .8fr .75fr .85fr .75fr',gap:9,padding:'13px 14px',fontSize:15,opacity:.88,fontWeight:950,background:'rgba(7,23,42,.96)'}}><span>#</span><span>Fecha</span><span>Ticker</span><span>Tipo</span><span>Estrategia</span><span>Resultado</span><span>Inversión</span><span>P/L $</span><span>Balance</span><span>Estado</span></div>
                           <div style={{flex:1,minHeight:0,overflowY:'auto',overflowX:'hidden',overscrollBehavior:'contain',scrollbarGutter:'stable',paddingBottom:8}}>
