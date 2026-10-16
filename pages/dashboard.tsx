@@ -199,8 +199,19 @@ function normalizeLibraryVideos(rows: Partial<ClassVideo>[], streamUrl: string) 
   return liveVideo ? [liveVideo, ...replayRows] : replayRows;
 }
 
+function isCloudflarePlayerUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' &&
+      (parsed.hostname === 'cloudflarestream.com' || parsed.hostname.endsWith('.cloudflarestream.com')) &&
+      /^\/[^/]+\/iframe\/?$/.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
 function isEmbedUrl(url: string) {
-  return /(player\.vimeo\.com|vimeo\.com\/event|loom\.com\/embed)/i.test(url);
+  return /(player\.vimeo\.com|vimeo\.com\/event|loom\.com\/embed)/i.test(url) || isCloudflarePlayerUrl(url);
 }
 
 function splitPhone(fullPhone?: string | null) {
@@ -692,8 +703,26 @@ useEffect(()=>{
   return()=>{alive=false;window.clearInterval(timer);};
 },[]);
 
-const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
+// Reversible feature flag. If absent, Vimeo remains the original LIVE player.
+  // This is a playback URL, never a WHIP ingest URL or a secret stream key.
+  const cloudflareLiveUrl = useMemo(() => {
+    const configured = String(process.env.NEXT_PUBLIC_CLOUDFLARE_LIVE_PLAYER_URL || '').trim();
+    return isCloudflarePlayerUrl(configured) ? configured : '';
+  }, []);
+  const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
 
+  const liveProviderSettingsKey = process.env.NEXT_PUBLIC_LIVE_PROVIDER_PREVIEW === 'true' ? 'live_stream_provider_preview' : 'live_stream_provider';
+  const [liveProvider, setLiveProvider] = useState<'vimeo' | 'cloudflare'>('vimeo');
+  useEffect(() => {
+    let active = true;
+    async function refreshProvider() {
+      const { data, error } = await supabase.from('portal_settings').select('value').eq('key', liveProviderSettingsKey).maybeSingle();
+      if (active && !error) setLiveProvider(data?.value === 'cloudflare' ? 'cloudflare' : 'vimeo');
+    }
+    refreshProvider();
+    const interval = window.setInterval(refreshProvider, 5000);
+    return () => { active = false; window.clearInterval(interval); };
+  }, [liveProviderSettingsKey]);
   const isChatAdmin = useMemo(() => isChatAdminEmail(userEmail), [userEmail]);
 
   useEffect(() => {
@@ -1237,10 +1266,14 @@ const streamUrl = useMemo(() => 'https://vimeo.com/event/5863546/embed', []);
     setLiveAttendanceLoading(false);
   }
 
-  const selectedVideo = useMemo(
-    () => videos.find((video) => video.id === selectedVideoId) || null,
-    [videos, selectedVideoId]
-  );
+  const selectedVideo = useMemo(() => {
+    const original = videos.find((video) => video.id === selectedVideoId) || null;
+    if (!original?.is_live) return original;
+    // Vimeo is the safe default; Cloudflare requires an explicitly configured valid playback URL.
+    return liveProvider === 'cloudflare' && cloudflareLiveUrl
+      ? { ...original, video_url: cloudflareLiveUrl }
+      : original;
+  }, [videos, selectedVideoId, liveProvider, cloudflareLiveUrl, streamUrl]);
 
 
   const selectedLibraryItem = useMemo(
@@ -1333,6 +1366,7 @@ const { data, error } = await query;
 if (error) throw error;
 
 const normalized = normalizeLibraryVideos((data || []) as Partial<ClassVideo>[], streamUrl);
+// Override only the LIVE playback destination; Vimeo replay rows are untouched.
 return normalized;
   }
 
@@ -1460,7 +1494,7 @@ return normalized;
     return () => {
       mounted = false;
     };
-  }, [router, streamUrl]);
+  }, [router, streamUrl, cloudflareLiveUrl]);
 
   useEffect(() => {
     setVideoUnavailable(false);
@@ -1973,7 +2007,7 @@ return normalized;
 
   function subscribeToVimeoPlaybackEvents() {
     const iframe = liveVideoIframeRef.current;
-    if (!iframe?.contentWindow || !selectedVideo?.is_live) return;
+    if (!iframe?.contentWindow || !selectedVideo?.is_live || isCloudflarePlayerUrl(selectedVideo.video_url)) return;
 
     ['play', 'pause', 'ended'].forEach((eventName) => {
       iframe.contentWindow?.postMessage(
@@ -2032,8 +2066,15 @@ return normalized;
   }, [accessActive, userEmail, userName, selectedVideoId]);
 
   useEffect(() => {
+    liveWatchingRef.current = false;
+    publishLivePresence(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveProvider]);
+
+  useEffect(() => {
     function handleVimeoMessage(event: MessageEvent) {
-      if (!selectedVideo?.is_live) return;
+      if (!selectedVideo?.is_live || isCloudflarePlayerUrl(selectedVideo.video_url)) return;
+      if (event.source !== liveVideoIframeRef.current?.contentWindow) return;
       if (typeof event.data !== 'object' || !event.data) return;
 
       const eventName = String((event.data as any).event || '');
@@ -2049,7 +2090,7 @@ return normalized;
     window.addEventListener('message', handleVimeoMessage);
     return () => window.removeEventListener('message', handleVimeoMessage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVideoId, accessActive, userEmail]);
+  }, [selectedVideoId, accessActive, userEmail, liveProvider, cloudflareLiveUrl]);
 
   useEffect(() => {
     if (!isChatAdmin || !accessActive) return;
@@ -2716,9 +2757,16 @@ return normalized;
   transform: 'translate(-50%, -50%)',
 }}>
                     <iframe
+                      key={selectedVideo!.video_url}
                       ref={liveVideoIframeRef}
-                      onLoad={subscribeToVimeoPlaybackEvents}
-                      src={`${selectedVideo!.video_url}${selectedVideo!.video_url.includes('?') ? '&' : '?'}quality=1080&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
+                      onLoad={() => {
+                        if (selectedVideo?.is_live && isCloudflarePlayerUrl(selectedVideo.video_url)) {
+                          // Presence indicates the embedded player loaded, not verified media playback.
+                          liveWatchingRef.current = true;
+                          publishLivePresence(true);
+                        } else subscribeToVimeoPlaybackEvents();
+                      }}
+                      src={isCloudflarePlayerUrl(selectedVideo!.video_url) ? selectedVideo!.video_url : `${selectedVideo!.video_url}${selectedVideo!.video_url.includes('?') ? '&' : '?'}quality=1080&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
                       title={selectedVideo?.title || 'Clase'}
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
                       allowFullScreen

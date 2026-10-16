@@ -115,6 +115,8 @@ function Icon({ name, size = 24 }: { name: 'wifi' | 'video' | 'pause' | 'cap' | 
 }
 
 const INTENSIVE_COURSE_DATE_KEY = 'intensive_course_start_date';
+const IS_LIVE_PREVIEW = process.env.NEXT_PUBLIC_LIVE_PROVIDER_PREVIEW === 'true';
+const LIVE_PROVIDER_KEY = IS_LIVE_PREVIEW ? 'live_stream_provider_preview' : 'live_stream_provider';
 
 function dateInputFromSetting(value?: string | null) {
   if (!value) return '';
@@ -129,6 +131,9 @@ function courseDateSettingValue(dateValue: string) {
 
 export default function GestionOperativaPage() {
   const router = useRouter();
+  const [liveProvider, setLiveProvider] = useState<'vimeo' | 'cloudflare'>('vimeo');
+  const [providerSaving, setProviderSaving] = useState(false);
+  const [providerNotice, setProviderNotice] = useState<string | null>(null);
   const [rows, setRows] = useState<StudentRow[]>([]);
   const [replaySessions, setReplaySessions] = useState<ReplaySession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -206,20 +211,13 @@ export default function GestionOperativaPage() {
     const { data: adminOk, error: adminError } = await supabase.rpc('is_portal_admin');
     if (adminError || !adminOk) {
       setAuthorized(false);
-      if (!metricsSimResult.error && metricsSimResult.data) {
-      setMetricsSimulationEnabled(Boolean(metricsSimResult.data.enabled));
-      setMetricsSimStudents(String(metricsSimResult.data.students ?? 18));
-      setMetricsSimPresentLive(String(metricsSimResult.data.present_live ?? 0));
-      setMetricsSimPaused(String(metricsSimResult.data.paused ?? 0));
-      setMetricsSimConnected(String(metricsSimResult.data.connected_now ?? 0));
-    }
     setLoading(false);
       return;
     }
 
     setAuthorized(true);
 
-    const [studentsResult, replayResult, topicResult, courseDateResult, strategiesResult, tradeModeResult, winRateResult, chatSimResult, chatSimSymbolsResult, chatSimStrategiesResult, chatSimExpressionsResult, chatSimTemplatesResult, chatSimLossTemplatesResult, metricsSimResult] = await Promise.all([
+    const [studentsResult, replayResult, topicResult, courseDateResult, strategiesResult, tradeModeResult, winRateResult, chatSimResult, chatSimSymbolsResult, chatSimStrategiesResult, chatSimExpressionsResult, chatSimTemplatesResult, chatSimLossTemplatesResult, metricsSimResult, liveProviderResult] = await Promise.all([
       supabase.rpc('admin_operational_students'),
       supabase.rpc('admin_replay_sessions'),
       supabase.from('portal_settings').select('value').eq('key', 'today_class_topic').maybeSingle(),
@@ -234,8 +232,10 @@ export default function GestionOperativaPage() {
       supabase.from('live_chat_simulation_templates').select('id,template').eq('active', true).order('created_at', { ascending: true }),
       supabase.from('live_chat_simulation_loss_templates').select('id,template').eq('active', true).order('created_at', { ascending: true }),
       supabase.from('admin_metrics_simulation_settings').select('enabled,students,present_live,paused,connected_now').eq('id',1).maybeSingle(),
+      supabase.from('portal_settings').select('value').eq('key', LIVE_PROVIDER_KEY).maybeSingle(),
     ]);
 
+    if (!liveProviderResult.error) setLiveProvider(liveProviderResult.data?.value === 'cloudflare' ? 'cloudflare' : 'vimeo');
     if (studentsResult.error) {
       setMessage(studentsResult.error.message);
       setRows([]);
@@ -474,6 +474,21 @@ export default function GestionOperativaPage() {
     setSelectedSessionId('');
     setMessage(successMessage);
     await load();
+  }
+
+  async function saveLiveProvider(next: 'vimeo' | 'cloudflare') {
+    if (providerSaving || next === liveProvider) return;
+    setProviderSaving(true);
+    setProviderNotice(null);
+    // Database function enforces is_portal_admin() on the server, not merely in the UI.
+    const { error } = await supabase.rpc(IS_LIVE_PREVIEW ? 'admin_set_live_stream_provider_preview' : 'admin_set_live_stream_provider', { p_provider: next });
+    setProviderSaving(false);
+    if (error) {
+      setProviderNotice(`No se pudo cambiar la plataforma: ${error.message}`);
+      return;
+    }
+    setLiveProvider(next);
+    setProviderNotice(`Reproductor LIVE cambiado a ${next === 'cloudflare' ? 'Cloudflare WebRTC' : 'Vimeo'}. OBS debe enviar señal al destino seleccionado.`);
   }
 
   async function saveTodayClassTopic() {
@@ -810,6 +825,25 @@ export default function GestionOperativaPage() {
           <div><strong style={styles.statNumber}>{rows.length}</strong><div style={styles.statLabel}>Con acceso/clases</div></div>
         </div>
       </div>
+
+      {/* SELECTOR DE REPRODUCTOR LIVE: no cambia las salidas de OBS */}
+      <section style={{...styles.publishCard,maxWidth:1980,margin:'0 auto 18px',borderColor:'rgba(56,189,248,.35)'}}>
+        <div style={{...styles.sectionTitle,color:'#7dd3fc'}}>TRANSMISIÓN EN VIVO</div>
+        <h2 style={{margin:'8px 0',fontSize:23,fontWeight:900}}>Plataforma que ven los estudiantes</h2>
+        <p style={styles.publishIntro}>Selecciona el reproductor LIVE. Vimeo seguirá utilizándose para las grabaciones y repeticiones. Esta selección no inicia ni cambia las salidas de OBS.</p>
+        <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:16}}>
+          {(['cloudflare','vimeo'] as const).map((provider) => (
+            <button key={provider} type="button" disabled={providerSaving}
+              onClick={() => saveLiveProvider(provider)}
+              aria-pressed={liveProvider === provider}
+              style={{padding:'14px 22px',borderRadius:12,cursor:providerSaving?'wait':'pointer',fontWeight:900,color:'#fff',border:liveProvider===provider?'2px solid #38bdf8':'1px solid #475569',background:liveProvider===provider?'#075985':'#172033',opacity:providerSaving?.65:1}}>
+              {liveProvider === provider ? '● ' : '○ '}{provider === 'cloudflare' ? 'Cloudflare WebRTC' : 'Vimeo LIVE'}
+            </button>
+          ))}
+        </div>
+        <div style={{marginTop:12,color:'#cbd5e1',fontSize:13}}>{IS_LIVE_PREVIEW ? 'MODO PRUEBA · ' : ''}Activo: <strong>{liveProvider === 'cloudflare' ? 'Cloudflare WebRTC' : 'Vimeo LIVE'}</strong>. Los estudiantes actualizan la selección aproximadamente cada 5 segundos.</div>
+        {providerNotice ? <div role="status" style={{marginTop:12,color:'#bae6fd',fontSize:13}}>{providerNotice}</div> : null}
+      </section>
 
       {/* MÓDULOS OPERATIVOS 2 × 2 — solo reorganización visual */}
       <div style={{maxWidth:1980,margin:'0 auto 18px',display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:14,alignItems:'start'}}>
