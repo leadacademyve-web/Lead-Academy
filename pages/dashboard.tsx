@@ -82,7 +82,7 @@ function formatDate(value?: string | null) {
   return d.toLocaleString('en-US');
 }
 
-// Fecha de referencia para la pantalla de espera: lunes a viernes, 7:00 AM de Nueva York.
+// Fecha de referencia para la pantalla de espera: lunes a viernes, 9:00 AM de Nueva York.
 // Se usa solo si no existe una fecha futura configurada para la clase.
 function nextWeekdayClassNY() {
   const now = new Date();
@@ -96,13 +96,13 @@ function nextWeekdayClassNY() {
   const base = new Date(Date.UTC(year, month - 1, day, 12));
   const dayOfWeek = base.getUTCDay();
   let offset = 0;
-  if (dayOfWeek === 0 || dayOfWeek === 6 || hour > 7 || (hour === 7 && minute > 0)) offset = 1;
+  if (dayOfWeek === 0 || dayOfWeek === 6 || hour > 9 || (hour === 9 && minute > 0)) offset = 1;
   while (true) {
     const candidate = new Date(base.getTime() + offset * 86400000);
     if (candidate.getUTCDay() !== 0 && candidate.getUTCDay() !== 6) {
       return {
         date: new Intl.DateTimeFormat('es-ES', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(candidate),
-        time: '7:00 AM · Nueva York'
+        time: '9:00 AM · Nueva York'
       };
     }
     offset++;
@@ -2481,8 +2481,8 @@ return normalized;
         <div style={{ fontSize: 'clamp(12px, 1.1vw, 17px)', fontWeight: 700, letterSpacing: '0.14em', marginBottom: 15 }}>
           PRÓXIMA CLASE EN VIVO
         </div>
-        <h2 style={{ fontSize: 'clamp(26px, 3.6vw, 56px)', fontWeight: 600, margin: '0 0 12px', lineHeight: 1.15, textTransform: 'capitalize' }}>
-          {scheduledLive.date}
+        <h2 style={{ fontSize: 'clamp(26px, 3.6vw, 56px)', fontWeight: 600, margin: '0 0 12px', lineHeight: 1.15, textTransform: 'none' }}>
+          {scheduledLive.date.charAt(0).toUpperCase() + scheduledLive.date.slice(1)}
         </h2>
         <div style={{ fontSize: 'clamp(17px, 1.7vw, 26px)', fontWeight: 600 }}>
           {scheduledLive.time}
@@ -2492,7 +2492,7 @@ return normalized;
         </p>
       </div>
       <div style={{ position: 'absolute', left: 18, bottom: 16, fontSize: 12, opacity: .9, textAlign: 'left' }}>
-        Programada · Lunes a viernes, 7:00 AM (Nueva York)
+        Programada · Lunes a viernes, 9:00 AM (Nueva York)
       </div>
     </div>
   );
@@ -3113,7 +3113,7 @@ return normalized;
                     <div style={{ textAlign: 'right', paddingLeft: 10, borderLeft: '1px solid rgba(255,255,255,.10)' }}>
                       <div style={{ fontSize: 10, letterSpacing: .8, fontWeight: 800, color: 'rgba(255,255,255,.58)' }}>HORA NY</div>
                       <div style={{ fontSize: 20, fontWeight: 900, color: '#65a1ff', marginTop: 5 }}>{nowText || '—'}</div>
-                      <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,.62)', marginTop: 4, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>{nyDateText || '—'}</div>
+                      <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,.62)', marginTop: 4, textTransform: 'none', whiteSpace: 'nowrap' }}>{nyDateText || '—'}</div>
                     </div>
                   </div>
 
