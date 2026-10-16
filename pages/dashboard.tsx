@@ -82,6 +82,43 @@ function formatDate(value?: string | null) {
   return d.toLocaleString('en-US');
 }
 
+// Fecha de referencia para la pantalla de espera: lunes a viernes, 7:00 AM de Nueva York.
+// Se usa solo si no existe una fecha futura configurada para la clase.
+function nextWeekdayClassNY() {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', year: 'numeric', month: 'numeric',
+    day: 'numeric', weekday: 'short', hour: 'numeric', minute: 'numeric', hourCycle: 'h23'
+  }).formatToParts(now);
+  const part = (type: string) => parts.find((p) => p.type === type)?.value || '';
+  const year = Number(part('year')), month = Number(part('month')), day = Number(part('day'));
+  const hour = Number(part('hour')), minute = Number(part('minute'));
+  const base = new Date(Date.UTC(year, month - 1, day, 12));
+  const dayOfWeek = base.getUTCDay();
+  let offset = 0;
+  if (dayOfWeek === 0 || dayOfWeek === 6 || hour > 7 || (hour === 7 && minute > 0)) offset = 1;
+  while (true) {
+    const candidate = new Date(base.getTime() + offset * 86400000);
+    if (candidate.getUTCDay() !== 0 && candidate.getUTCDay() !== 6) {
+      return {
+        date: new Intl.DateTimeFormat('es-ES', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(candidate),
+        time: '7:00 AM · Nueva York'
+      };
+    }
+    offset++;
+  }
+}
+
+function scheduledLiveDisplay(publishedAt?: string | null) {
+  if (!publishedAt) return nextWeekdayClassNY();
+  const date = new Date(publishedAt);
+  if (Number.isNaN(date.getTime())) return nextWeekdayClassNY();
+  return {
+    date: new Intl.DateTimeFormat('es-ES', { timeZone: 'America/New_York', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(date),
+    time: new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true }).format(date) + ' · Nueva York'
+  };
+}
+
 function formatNextClassDateNY(value?: string | null) {
   if (!value) return '';
   const d = new Date(value);
@@ -2428,6 +2465,37 @@ return normalized;
     !liveAttendanceLoading &&
     !liveAttendanceRequired &&
     (!selectedVideo?.is_live || isChatAdmin || liveAttendanceConfirmed);
+  const cloudflareWaiting = Boolean(selectedVideo?.is_live) &&
+    isCloudflarePlayerUrl(selectedVideo.video_url) &&
+    !activeLiveSession && !liveSessionLoading && !liveAccessBlocked;
+  const scheduledLive = scheduledLiveDisplay(nextScheduledClass?.published_at);
+  const waitingScreen = (
+    <div style={{
+      position: 'relative', width: '100%', height: '100%', overflow: 'hidden',
+      display: 'grid', placeItems: 'center', textAlign: 'center',
+      backgroundImage: 'linear-gradient(rgba(2,8,21,.48), rgba(2,8,21,.70)), url("/Thumbnail.avif")',
+      backgroundPosition: 'center', backgroundSize: 'contain', backgroundRepeat: 'no-repeat',
+      backgroundColor: '#020814', color: '#fff'
+    }}>
+      <div style={{ padding: '20px 28px', maxWidth: '90%', textShadow: '0 2px 12px rgba(0,0,0,.9)' }}>
+        <div style={{ fontSize: 'clamp(12px, 1.1vw, 17px)', fontWeight: 700, letterSpacing: '0.14em', marginBottom: 15 }}>
+          PRÓXIMA CLASE EN VIVO
+        </div>
+        <h2 style={{ fontSize: 'clamp(26px, 3.6vw, 56px)', fontWeight: 600, margin: '0 0 12px', lineHeight: 1.15, textTransform: 'capitalize' }}>
+          {scheduledLive.date}
+        </h2>
+        <div style={{ fontSize: 'clamp(17px, 1.7vw, 26px)', fontWeight: 600 }}>
+          {scheduledLive.time}
+        </div>
+        <p style={{ fontSize: 'clamp(12px, 1vw, 16px)', opacity: .86, marginTop: 20 }}>
+          La transmisión comenzará próximamente
+        </p>
+      </div>
+      <div style={{ position: 'absolute', left: 18, bottom: 16, fontSize: 12, opacity: .9, textAlign: 'left' }}>
+        Programada · Lunes a viernes, 7:00 AM (Nueva York)
+      </div>
+    </div>
+  );
   const showIframe = hasPlayableVideo && isEmbedUrl(selectedVideo.video_url);
   const totalClassesForCurrentPlan = totalClassesForPlan(accessPlan);
   const classesUsed =
@@ -2725,6 +2793,8 @@ return normalized;
                       <h2 style={{ marginTop: 0, marginBottom: 12, fontSize: 42 }}>Verificando clase en vivo...</h2>
                     </div>
                   </div>
+                ) : liveSessionUnavailable && isCloudflarePlayerUrl(selectedVideo?.video_url || '') ? (
+                  waitingScreen
                 ) : liveSessionUnavailable ? (
                   <div style={{ display: 'grid', placeItems: 'center', height: '100%', padding: 24, textAlign: 'center' }}>
                     <div style={{ maxWidth: 720 }}>
@@ -2758,6 +2828,8 @@ return normalized;
                       </button>
                     </div>
                   </div>
+                ) : cloudflareWaiting ? (
+                  waitingScreen
                 ) : showIframe ? (
                   <div style={{
   position: 'relative',
