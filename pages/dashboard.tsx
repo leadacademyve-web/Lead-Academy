@@ -210,6 +210,19 @@ function isCloudflarePlayerUrl(url: string) {
   }
 }
 
+// Cloudflare Stream player poster experiment. Only modifies the playback iframe URL.
+// If the live WebRTC player ignores `poster`, this has no effect on the stream.
+function withCloudflareLivePoster(url: string) {
+  if (!isCloudflarePlayerUrl(url)) return url;
+  try {
+    const playerUrl = new URL(url);
+    playerUrl.searchParams.set('poster', 'https://lead-academy-lake.vercel.app/Thumbnail.avif');
+    return playerUrl.toString();
+  } catch {
+    return url;
+  }
+}
+
 function isEmbedUrl(url: string) {
   return /(player\.vimeo\.com|vimeo\.com\/event|loom\.com\/embed)/i.test(url) || isCloudflarePlayerUrl(url);
 }
@@ -2766,7 +2779,7 @@ return normalized;
                           publishLivePresence(true);
                         } else subscribeToVimeoPlaybackEvents();
                       }}
-                      src={isCloudflarePlayerUrl(selectedVideo!.video_url) ? selectedVideo!.video_url : `${selectedVideo!.video_url}${selectedVideo!.video_url.includes('?') ? '&' : '?'}quality=1080&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
+                      src={isCloudflarePlayerUrl(selectedVideo!.video_url) ? withCloudflareLivePoster(selectedVideo!.video_url) : `${selectedVideo!.video_url}${selectedVideo!.video_url.includes('?') ? '&' : '?'}quality=1080&autoplay=1&muted=0&playsinline=1&title=0&byline=0&portrait=0&dnt=1`}
                       title={selectedVideo?.title || 'Clase'}
                       allow="autoplay; fullscreen; picture-in-picture; encrypted-media; web-share"
                       allowFullScreen
