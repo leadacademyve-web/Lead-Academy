@@ -11,6 +11,7 @@ type ClassVideo = {
   description: string | null;
   video_url: string;
   published_at: string | null;
+  class_date: string | null;
   is_live: boolean;
   is_published: boolean;
 };
@@ -178,7 +179,13 @@ function formatReplayTitle(publishedAt?: string | null, fallbackTitle?: string |
 }
 
 function labelForVideo(video: ClassVideo) {
-  return video.is_live ? 'Clase en vivo' : formatReplayTitle(video.published_at, video.title);
+  if (video.is_live) return 'Clase en vivo';
+  // class_date is the actual class day; published_at only controls publication/access.
+  if (video.class_date) {
+    const dateOnly = video.class_date.slice(0, 10);
+    return formatReplayTitle(`${dateOnly}T12:00:00Z`, null);
+  }
+  return formatReplayTitle(video.published_at, video.title);
 }
 
 function sublabelForVideo(video: ClassVideo) {
@@ -196,6 +203,7 @@ function buildLiveVideo(streamUrl: string): ClassVideo | null {
     description: 'Streaming configurado desde variable de entorno.',
     video_url: streamUrl,
     published_at: null,
+    class_date: null,
     is_live: true,
     is_published: true,
   };
@@ -213,10 +221,11 @@ function normalizeLibraryVideos(rows: Partial<ClassVideo>[], streamUrl: string) 
     .slice(0, 5)
     .map((video) => ({
       id: String(video.id || ''),
-      title: formatReplayTitle(String(video.published_at || ''), String(video.title || '')),
+      title: String(video.title || ''),
       description: video.description ? String(video.description) : null,
       video_url: String(video.video_url || ''),
       published_at: video.published_at ? String(video.published_at) : null,
+      class_date: video.class_date ? String(video.class_date) : null,
       is_live: false,
       is_published: true,
     } as ClassVideo));
@@ -1401,7 +1410,7 @@ if (typeof window !== 'undefined') {
   async function loadLibraryVideos(accessStartValue: string | null, planValue?: string | null) {
     const query = supabase
       .from('class_videos')
-      .select('id,title,description,video_url,published_at,is_live,is_published')
+      .select('id,title,description,video_url,published_at,class_date,is_live,is_published')
       .eq('is_published', true)
       .order('published_at', { ascending: false });
 
